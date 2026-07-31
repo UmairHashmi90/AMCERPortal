@@ -1,0 +1,29 @@
+@model ERPaperless.Models.LovAutocompleteViewModel
+@{
+    var options = Model.Options ?? Enumerable.Empty<ERPaperless.Models.ERLovOptionViewModel>();
+    var labelCss = string.IsNullOrWhiteSpace(Model.LabelCss) ? "form-label" : Model.LabelCss;
+    var inputCss = string.IsNullOrWhiteSpace(Model.InputCss)
+        ? "form-select searchable-dropdown lov-autocomplete"
+        : Model.InputCss;
+}
+
+@if (!string.IsNullOrWhiteSpace(Model.Label))
+{
+    <label class="@labelCss" for="@Model.SearchId">@Model.Label</label>
+}
+
+<input type="search"
+       id="@Model.SearchId"
+       class="@inputCss"
+       list="@Model.ListId"
+       data-lov-hidden="@Model.HiddenFieldName"
+       autocomplete="off"
+       placeholder="@Model.Placeholder"
+       @(Model.Disabled ? "disabled=\"disabled\"" : "") />
+<input type="hidden" id="@Model.HiddenFieldName" name="@Model.HiddenFieldName" value="" />
+<datalist id="@Model.ListId">
+    @foreach (var item in options)
+    {
+        <option value="@item.Name" data-value="@item.Id"></option>
+    }
+</datalist>

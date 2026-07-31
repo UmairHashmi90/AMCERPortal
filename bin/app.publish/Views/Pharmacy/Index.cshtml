@@ -1,0 +1,216 @@
+@model ERPaperless.Models.PharmacyIndexViewModel
+@{
+    ViewBag.Title = "Pharmacy";
+    bool canWork = ViewBag.CanWorkOnPage == true;
+}
+
+<section class="page-section">
+    <div class="section-head">
+        <h2>
+            Pharmacy Requests
+            <span class="badge @(canWork ? "bg-success" : "bg-secondary") ms-1">@ViewBag.PageModeLabel</span>
+        </h2>
+       
+    </div>
+
+    <div class="queue-refresh-bar toolbar-row mb-2">
+        <button type="button" class="btn btn-outline-secondary btn-sm" id="btnRefreshPharmacyGrids">
+            Refresh
+        </button>
+        <span class="queue-refresh-timer text-muted small">
+            Next refresh in <strong id="pharmacyRefreshCountdown">10</strong>s
+        </span>
+        <span class="queue-refresh-status text-muted small" id="pharmacyRefreshStatus"></span>
+    </div>
+
+    <div class="queue-search-row mb-3">
+        <input type="search"
+               id="pharmacyGridSearch"
+               class="form-control form-control-sm queue-search-input"
+               placeholder="Search by bed / patient name / MR / item..."
+               autocomplete="off" />
+    </div>
+
+    <div id="pharmacyPkgAlert" class="alert py-2 d-none" role="alert"></div>
+
+    <div id="pharmacyGridsHost">
+        @Html.Partial("~/Views/Pharmacy/_PharmacyIndexGrids.cshtml", Model)
+    </div>
+
+    <input type="hidden" id="pharmacyRefreshUrl" value="@Url.Action("RefreshOrders", "Pharmacy")" />
+    <input type="hidden" id="pharmacyAckPackageUrl" value="@Url.Action("AcknowledgePackageOrder", "Pharmacy")" />
+</section>
+
+@section scripts {
+    <script>
+        (function () {
+            "use strict";
+
+            var refreshUrlEl = document.getElementById("pharmacyRefreshUrl");
+            var hostEl = document.getElementById("pharmacyGridsHost");
+            var btnEl = document.getElementById("btnRefreshPharmacyGrids");
+            var countdownEl = document.getElementById("pharmacyRefreshCountdown");
+            var statusEl = document.getElementById("pharmacyRefreshStatus");
+            var searchEl = document.getElementById("pharmacyGridSearch");
+            var ackUrlEl = document.getElementById("pharmacyAckPackageUrl");
+            var alertBox = document.getElementById("pharmacyPkgAlert");
+
+            var secondsLeft = 10;
+            var timerId = null;
+            var refreshing = false;
+
+            function showPharmacyAlert(message, isError) {
+                if (!alertBox) return;
+                alertBox.textContent = message || "";
+                alertBox.classList.remove("d-none", "alert-success", "alert-danger");
+                alertBox.classList.add(isError ? "alert-danger" : "alert-success");
+            }
+
+            function applyGridSearch() {
+                if (!searchEl) return;
+                var term = (searchEl.value || "").trim().toLowerCase();
+                document.querySelectorAll(".pharmacy-pkg-data-row").forEach(function (row) {
+                    var haystack = row.getAttribute("data-search") || row.textContent.toLowerCase();
+                    row.style.display = !term || haystack.indexOf(term) >= 0 ? "" : "none";
+                });
+            }
+
+            function lockPharmacyRow(tr, item) {
+                if (!tr) return;
+                tr.classList.remove("pharmacy-pkg-row-pending", "pharmacy-pkg-row-discontinued");
+                tr.classList.add("pharmacy-pkg-row-charged");
+                tr.setAttribute("data-pharmacy-charged", "1");
+
+                var statusCell = tr.querySelector(".pharmacy-pkg-status");
+                if (statusCell) {
+                    statusCell.innerHTML = '<span class="text-success">Charged</span>';
+                }
+
+                var ackCell = tr.querySelector(".pharmacy-pkg-ack-cell");
+                if (ackCell) ackCell.innerHTML = '<span class="text-success small">&#10003;</span>';
+
+                var ackByCell = tr.querySelector(".pharmacy-pkg-ack-by");
+                if (ackByCell) {
+                    ackByCell.innerHTML =
+                        (item.ackByName || "-") +
+                        (item.ackDate ? '<div class="text-muted">' + item.ackDate + '</div>' : "");
+                }
+            }
+
+            function setStatus(message, isError) {
+                if (!statusEl) return;
+                statusEl.textContent = message || "";
+                statusEl.classList.toggle("text-danger", !!isError);
+                statusEl.classList.toggle("text-muted", !isError);
+            }
+
+            function renderCountdown() {
+                if (countdownEl) countdownEl.textContent = String(secondsLeft);
+            }
+
+            function resetCountdown() {
+                secondsLeft = 10;
+                renderCountdown();
+            }
+
+            function refreshGrids() {
+                if (refreshing || !refreshUrlEl || !hostEl || !refreshUrlEl.value) return;
+                refreshing = true;
+                if (btnEl) btnEl.disabled = true;
+                setStatus("Refreshing...", false);
+
+                fetch(refreshUrlEl.value, {
+                    method: "GET",
+                    credentials: "same-origin",
+                    headers: { "X-Requested-With": "XMLHttpRequest" }
+                })
+                .then(function (r) {
+                    if (!r.ok) throw new Error("Could not refresh pharmacy orders.");
+                    return r.text();
+                })
+                .then(function (html) {
+                    hostEl.innerHTML = html;
+                    applyGridSearch();
+                    resetCountdown();
+                    setStatus("Updated " + new Date().toLocaleTimeString(), false);
+                })
+                .catch(function (err) {
+                    setStatus(err.message || "Refresh failed.", true);
+                })
+                .finally(function () {
+                    refreshing = false;
+                    if (btnEl) btnEl.disabled = false;
+                });
+            }
+
+            function tick() {
+                secondsLeft -= 1;
+                if (secondsLeft <= 0) {
+                    refreshGrids();
+                    return;
+                }
+                renderCountdown();
+            }
+
+            if (btnEl) btnEl.addEventListener("click", refreshGrids);
+            if (searchEl) searchEl.addEventListener("input", applyGridSearch);
+
+            document.addEventListener("change", function (e) {
+                var checkbox = e.target;
+                if (!checkbox.classList || !checkbox.classList.contains("pharmacy-pkg-ack-checkbox")) return;
+
+                var tr = checkbox.closest("tr.pharmacy-pkg-row");
+                if (!tr) return;
+
+                if (tr.getAttribute("data-discontinued") === "1") {
+                    checkbox.checked = false;
+                    showPharmacyAlert("Discontinued items cannot be charged.", true);
+                    return;
+                }
+
+                if (tr.getAttribute("data-pharmacy-charged") === "1") {
+                    checkbox.checked = true;
+                    checkbox.disabled = true;
+                    return;
+                }
+
+                if (!checkbox.checked) return;
+
+                checkbox.disabled = true;
+                var patientId = tr.getAttribute("data-patient-id") || "";
+
+                fetch(ackUrlEl ? ackUrlEl.value : "", {
+                    method: "POST",
+                    credentials: "same-origin",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-Requested-With": "XMLHttpRequest"
+                    },
+                    body: JSON.stringify({
+                        PatientId: patientId,
+                        OrderId: parseInt(tr.getAttribute("data-id") || "0", 10)
+                    })
+                })
+                .then(function (r) { return r.json(); })
+                .then(function (result) {
+                    if (!result.ok) {
+                        checkbox.checked = false;
+                        checkbox.disabled = false;
+                        throw new Error(result.message || "Could not charge item.");
+                    }
+                    showPharmacyAlert(result.message || "Item charged.", false);
+                    lockPharmacyRow(tr, result.order || {});
+                })
+                .catch(function (err) {
+                    showPharmacyAlert(err.message || "Could not charge item.", true);
+                });
+            });
+
+            renderCountdown();
+            timerId = window.setInterval(tick, 1000);
+            window.addEventListener("beforeunload", function () {
+                if (timerId) window.clearInterval(timerId);
+            });
+        })();
+    </script>
+}

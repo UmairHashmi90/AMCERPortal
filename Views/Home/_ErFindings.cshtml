@@ -1,0 +1,193 @@
+@model ERPaperless.Models.ErFormViewModel
+@{
+    bool canEdit = ViewBag.CanEditClinical == true;
+    bool isMO = ViewBag.IsMO == true;
+    var smLabel = "lov-radio-title";
+    var rf = Model.ReviewForm ?? new ERPaperless.Models.ErReviewFormStateViewModel();
+}
+
+<section class="panel-card findings-panel">
+    <h3>
+        Clinical Findings
+        @if (!canEdit)
+        {
+            <small class="text-muted fw-normal">(read-only)</small>
+        }
+    </h3>
+
+    <div class="findings-grid">
+        <div class="findings-quad-row">
+            <div class="findings-cell">
+                <div class="findings-cell-head">CNS</div>
+                <div class="findings-cell-body">
+                    <div class="findings-subfield">
+                        @Html.Partial("~/Views/Shared/_LovSelect.cshtml", new ERPaperless.Models.LovSelectViewModel
+                        {
+                            Label = "GCS",
+                            LabelCss = smLabel,
+                            FieldId = "GcsCode",
+                            FieldName = "GcsCode",
+                            SelectCss = "form-select form-select-sm findings-compact-input er-save-field",
+                            Options = Model.GcsOptions,
+                            SelectedValue = rf.GcsCode,
+                            Disabled = !canEdit
+                        })
+                    </div>
+                    <div class="findings-subfield">
+                        @Html.Partial("~/Views/Shared/_LovRadioList.cshtml", new ERPaperless.Models.LovRadioListViewModel
+                        {
+                            Label = "Planters",
+                            LabelCss = smLabel,
+                            GroupName = "PlanterCode",
+                            GroupId = "planter",
+                            Options = Model.PlanterOptions,
+                            SelectedValue = rf.PlanterCode,
+                            Disabled = !canEdit
+                        })
+                    </div>
+                </div>
+            </div>
+            <div class="findings-cell">
+                <div class="findings-cell-head">CVS</div>
+                <div class="findings-cell-body">
+                    @Html.Partial("~/Views/Shared/_LovRadioList.cshtml", new ERPaperless.Models.LovRadioListViewModel
+                    {
+                        Label = "",
+                        LabelCss = smLabel,
+                        GroupName = "CvsCode",
+                        GroupId = "cvs",
+                        Options = Model.CvsOptions,
+                        SelectedValue = rf.CvsCode,
+                        Disabled = !canEdit
+                    })
+                </div>
+            </div>
+            <div class="findings-cell">
+                <div class="findings-cell-head">Respiratory</div>
+                <div class="findings-cell-body">
+                    @Html.Partial("~/Views/Shared/_LovRadioList.cshtml", new ERPaperless.Models.LovRadioListViewModel
+                    {
+                        Label = "",
+                        LabelCss = smLabel,
+                        GroupName = "RespiratoryCode",
+                        GroupId = "respiratory",
+                        Options = Model.RespiratoryOptions,
+                        SelectedValue = rf.RespiratoryCode,
+                        Disabled = !canEdit
+                    })
+                </div>
+            </div>
+            <div class="findings-cell findings-outcome-cell">
+                <div class="findings-cell-head">Outcome</div>
+                <div class="findings-cell-body">
+                    @Html.Partial("~/Views/Shared/_LovRadioList.cshtml", new ERPaperless.Models.LovRadioListViewModel
+                    {
+                        Label = "",
+                        LabelCss = smLabel,
+                        GroupName = "OutcomeCode",
+                        GroupId = "outcome",
+                        Options = Model.OutcomeOptions,
+                        SelectedValue = rf.OutcomeCode,
+                        Disabled = !isMO
+                    })
+                </div>
+            </div>
+        </div>
+
+        <div class="findings-lower-block">
+            <div class="findings-lower-grid">
+                <div class="findings-gi-group-col">
+                    <div class="findings-cell-head findings-cell-head-accent">Gastrointestinal</div>
+                    <div class="findings-gi-pair">
+                        <div class="findings-cell">
+                            <div class="findings-cell-head">Bowel Sound</div>
+                            <div class="findings-cell-body">
+                                @Html.Partial("~/Views/Shared/_LovRadioList.cshtml", new ERPaperless.Models.LovRadioListViewModel
+                                {
+                                    Label = "",
+                                    LabelCss = smLabel,
+                                    GroupName = "BowelSoundCode",
+                                    GroupId = "bowelSound",
+                                    Options = Model.BowelSoundOptions,
+                                    SelectedValue = rf.BowelSoundCode,
+                                    Disabled = !canEdit
+                                })
+                            </div>
+                        </div>
+                        <div class="findings-cell">
+                            <div class="findings-cell-head">Abdomen</div>
+                            <div class="findings-cell-body">
+                                @Html.Partial("~/Views/Shared/_LovRadioList.cshtml", new ERPaperless.Models.LovRadioListViewModel
+                                {
+                                    Label = "",
+                                    LabelCss = smLabel,
+                                    GroupName = "AbdomenCode",
+                                    GroupId = "abdomen",
+                                    Options = Model.AbdomenOptions,
+                                    SelectedValue = rf.AbdomenCode,
+                                    Disabled = !canEdit
+                                })
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="findings-cell">
+                    <div class="findings-cell-head">Category</div>
+                    <div class="findings-cell-body">
+                        @Html.Partial("~/Views/Shared/_LovRadioList.cshtml", new ERPaperless.Models.LovRadioListViewModel
+                        {
+                            Label = "",
+                            LabelCss = smLabel,
+                            GroupName = "AdmissionCategoryCode",
+                            GroupId = "admissionCategory",
+                            Options = Model.AdmissionCategoryOptions,
+                            SelectedValue = rf.AdmissionCategoryCode,
+                            Disabled = !canEdit
+                        })
+                    </div>
+                </div>
+                <div class="findings-cell">
+                    <div class="findings-cell-head">Received From</div>
+                    <div class="findings-cell-body">
+                        @Html.Partial("~/Views/Shared/_LovRadioList.cshtml", new ERPaperless.Models.LovRadioListViewModel
+                        {
+                            Label = "",
+                            LabelCss = smLabel,
+                            GroupName = "ReceivedFromCode",
+                            GroupId = "receivedFrom",
+                            Options = Model.ReceivedFromOptions,
+                            SelectedValue = rf.ReceivedFromCode,
+                            Disabled = !canEdit
+                        })
+                    </div>
+                </div>
+            </div>
+            <div class="findings-handover-fields">
+                <div class="findings-handover-field">
+                    <label class="form-label form-label-sm">Discussed With</label>
+                    <input type="text" id="DiscussedWith" class="form-control form-control-sm findings-compact-input"
+                           value="@(rf.DiscussedWith ?? "")" placeholder="Consultant name..."
+                           @(canEdit ? "" : "disabled=\"disabled\"") />
+                </div>
+                <div class="findings-handover-field">
+                    <label class="form-label form-label-sm">Referred To</label>
+                    <input type="text" id="ReferredTo" class="form-control form-control-sm findings-compact-input"
+                           value="@(rf.ReferredTo ?? "")" placeholder="Department / Hospital..."
+                           @(canEdit ? "" : "disabled=\"disabled\"") />
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (isMO)
+    {
+        <div class="outcome-form-action-wrap mt-3 d-none" id="outcomeFormActionWrap">
+            <button type="button"
+                    id="btnOpenOutcomeFormModal"
+                    class="btn btn-outline-primary outcome-form-action-btn"
+                    data-target-modal="">
+                <span id="outcomeFormActionName">Form</span>
+            </button>
+        </div>
+    }
+</section>

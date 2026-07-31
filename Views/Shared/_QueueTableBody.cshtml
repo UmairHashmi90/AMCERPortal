@@ -1,0 +1,51 @@
+@model IEnumerable<ERPaperless.Models.QueueItemViewModel>
+@{
+    var returnTo = ViewBag.QueueReturnTo as string ?? string.Empty;
+    var colSpan = 9;
+}
+
+@if (Model == null || !Model.Any())
+{
+    <tr class="queue-empty-row">
+        <td colspan="@colSpan" class="text-center text-muted py-3">
+            No tasks in the queue right now.
+        </td>
+    </tr>
+}
+else
+{
+    foreach (var item in Model)
+    {
+        var searchText = string.Join(" ",
+            item.BedNo ?? "",
+            item.MrNo ?? "",
+            item.Name ?? "",
+            item.RequestDetail ?? "").ToLowerInvariant();
+
+        <tr class="queue-data-row" data-search="@searchText">
+            <td>@item.SrNo</td>
+            <td>@item.BedNo</td>
+            <td>@item.MrNo</td>
+            <td>@item.Name</td>
+            <td>@item.RequestDate</td>
+            <td>@item.RequestBy</td>
+            <td>@item.RequestDetail</td>
+            <td><span class="status-chip @item.StatusClass">@item.StatusLabel</span></td>
+            <td class="text-center">
+                @if (!string.IsNullOrWhiteSpace(item.PatientId))
+                {
+                    @Html.ActionLink(
+                        "View Form",
+                        "ErForm",
+                        "EmergencyForm",
+                        new { patientId = item.PatientId, returnTo = returnTo },
+                        new { @class = "btn btn-sm btn-outline-danger queue-view-form-btn" })
+                }
+                else
+                {
+                    <span class="text-muted">-</span>
+                }
+            </td>
+        </tr>
+    }
+}

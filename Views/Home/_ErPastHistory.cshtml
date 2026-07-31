@@ -1,0 +1,60 @@
+@model ERPaperless.Models.ErFormViewModel
+@{
+    bool canEdit = ViewBag.CanEditClinical == true;
+    var pastHistories = (Model.PastHistories ?? Enumerable.Empty<ERPaperless.Models.ERLovOptionViewModel>()).ToList();
+    var rf = Model.ReviewForm ?? new ERPaperless.Models.ErReviewFormStateViewModel();
+    var selectedPast = rf.SelectedPastHistoryCodes ?? new HashSet<int>();
+    const int initialVisibleCount = 5;
+}
+
+<section class="panel-card h-100">
+    <div class="row g-3">
+        <div class="col-sm-12">
+            <div class="lov-section-head">
+                <h3>Past Medical History</h3>
+                <input type="search"
+                       id="pastHistorySearch"
+                       class="form-control form-control-sm lov-section-search"
+                       data-lov-filter="past-history"
+                       placeholder="Search Medical ..."
+                       autocomplete="off" />
+            </div>
+            <div class="lov-check-list lov-check-list-2col">
+                @for (var i = 0; i < pastHistories.Count; i++)
+                {
+                    var item = pastHistories[i];
+                    var isInitialVisible = i < initialVisibleCount;
+                    var isChecked = selectedPast.Contains(item.Id);
+                    <div class="form-check lov-filter-row @(isInitialVisible ? "" : "d-none")"
+                         data-lov-group="past-history"
+                         data-lov-name="@((item.Name ?? string.Empty).ToLowerInvariant())"
+                         data-initial-visible="@(isInitialVisible ? "true" : "false")">
+                        <input class="form-check-input past-history-check" type="checkbox"
+                               id="pmh-@item.Id"
+                               value="@item.Id"
+                               @(isChecked ? "checked=\"checked\"" : "")
+                               @(canEdit ? "" : "disabled=\"disabled\"") />
+                        <label class="form-check-label" for="pmh-@item.Id">@item.Name</label>
+                    </div>
+                }
+                <p id="pastHistoryNoResult" class="text-muted small mb-0 d-none" data-lov-empty="past-history">
+                    No past history found.
+                </p>
+            </div>
+            <div class="mt-2">
+                <h6 class="text-muted text-uppercase small mb-2">Other (specify)...</h6>
+                <textarea id="PastMedicalHistory"
+                          class="form-control form-control-sm"
+                          rows="2"
+                          placeholder="Other (specify)..."
+                          @(canEdit ? "" : "disabled=\"disabled\"")>@(rf.PastMedicalHistory ?? "")</textarea>
+            </div>
+        </div>
+        <div class="mt-2">
+            <h6 class="text-muted text-uppercase small mb-2">Surgical</h6>
+            <textarea id="PastSurgicalHistory" class="form-control" rows="2"
+                      placeholder="@(canEdit ? "Enter past surgical procedures..." : "-")"
+                      @(canEdit ? "" : "disabled=\"disabled\"")>@(rf.PastSurgicalHistory ?? "")</textarea>
+            </div>
+        </div>
+</section>

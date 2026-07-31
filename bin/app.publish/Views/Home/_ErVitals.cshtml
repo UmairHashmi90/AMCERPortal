@@ -1,0 +1,217 @@
+@model ERPaperless.Models.ErFormViewModel
+@*
+    Vitals History table panel + Add Vital modal.
+    The Add Vital modal is only rendered for MO / Nursing (CanEditVitals).
+    JavaScript for sparklines and row-click lives in ErForm.cshtml @section scripts.
+*@
+@{
+    bool canEdit = ViewBag.CanEditVitals == true;
+    var vitalHistory = (Model.VitalHistory ?? Enumerable.Empty<ERPaperless.Models.VitalRecordViewModel>())
+        .OrderByDescending(v => v.RecordedOn)
+        .ToList();
+}
+
+<section class="panel-card">
+    <div class="panel-head panel-head-actions">
+        <h3>Vitals History</h3>
+        @if (canEdit)
+        {
+            <button type="button" class="btn btn-sm patient-form-nav-btn btn-danger"
+                    data-bs-toggle="modal" data-bs-target="#addVitalModal">
+                + Add Vital
+            </button>
+        }
+    </div>
+
+    <div class="table-wrap vitals-table-wrap grid-max-7">
+        <table class="app-table vitals-history-table" id="vitalsHistoryTable">
+            <thead>
+                <tr>
+                    <th>Date / Time</th>
+                    <th>Heart Rate</th>
+                    <th>Pulse</th>
+                    <th>BP</th>
+                    <th>Resp</th>
+                    <th>Temp</th>
+                    <th>Height</th>
+                    <th>Weight</th>
+                    <th>BMI</th>
+                    <th>SPO2</th>
+                    <th>Glucose F</th>
+                    <th>Glucose R</th>
+                    <th>Fall Risk</th>
+                    <th>Pain Score</th>
+                    @if (canEdit) { <th></th> }
+                </tr>
+            </thead>
+            <tbody>
+                @if (!vitalHistory.Any())
+                {
+                    <tr>
+                        <td colspan="@(canEdit ? 15 : 14)" class="text-center text-muted py-3">
+                            No vitals recorded yet.
+                        </td>
+                    </tr>
+                }
+                @foreach (var vital in vitalHistory)
+                {
+                    <tr class="vitals-row @(vital.IsDeleted ? "vitals-row-deleted" : "")"
+                        data-recorded="@vital.RecordedOn.ToString("dd/MM HH:mm")"
+                        data-heart="@vital.HeartRate"
+                        data-pulse="@vital.Pulse"
+                        data-rr="@vital.RespiratoryRate"
+                        data-bp="@vital.BloodPressure"
+                        data-spo2="@vital.Spo2"
+                        data-temp="@vital.Temperature"
+                        data-glucose-r="@vital.GlucoseR"
+                        data-bmi="@vital.MetricBMI"
+                        data-fall-risk="@vital.FallRisk"
+                        data-pain-score="@vital.PainScore">
+                        <td>@vital.RecordedOn.ToString("dd/MM/yyyy HH:mm")</td>
+                        <td>@vital.HeartRate</td>
+                        <td>@vital.Pulse</td>
+                        <td>@vital.BloodPressure</td>
+                        <td>@vital.RespiratoryRate</td>
+                        <td>@vital.Temperature</td>
+                        <td>@vital.Height</td>
+                        <td>@vital.Weight</td>
+                        <td>@vital.MetricBMI</td>
+                        <td>@(vital.Spo2.HasValue ? vital.Spo2 + "%" : "")</td>
+                        <td>@vital.GlucoseF</td>
+                        <td>@vital.GlucoseR</td>
+                        <td>@vital.FallRisk</td>
+                        <td>@vital.PainScore</td>
+                        @if (canEdit)
+                        {
+                            <td class="text-end">
+                                @if (vital.IsDeleted)
+                                {
+                                    <span class="text-danger small">Deleted</span>
+                                }
+                                else
+                                {
+                                    using (Html.BeginForm("DeleteVital", "EmergencyForm", FormMethod.Post,
+                                                new { @class = "d-inline" }))
+                                    {
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="vitalId" value="@vital.Id" />
+                                        <input type="hidden" name="patientId" value="@Model.PatientId" />
+                                        <button type="submit"
+                                                class="btn btn-link btn-sm text-danger p-0"
+                                                onclick="return confirm('Delete this vital record?');">
+                                            Delete
+                                        </button>
+                                    }
+                                }
+                            </td>
+                        }
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</section>
+
+@* ── Add Vital Modal (MO / Nursing only) ─────────────────────────────────── *@
+@if (canEdit)
+{
+    <div class="modal fade" id="addVitalModal" tabindex="-1"
+         data-bs-backdrop="static" data-bs-keyboard="false"
+         aria-labelledby="addVitalModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                @using (Html.BeginForm("AddVital", "EmergencyForm", FormMethod.Post,
+                            new { @class = "modal-form" }))
+                {
+                    @Html.AntiForgeryToken()
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="addVitalModalLabel">Add New Vital</h5>
+                        <button type="button" class="btn-close"
+                                data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="alert alert-danger py-2 d-none" id="addVitalError"></div>
+                        @Html.Hidden("PatientId", Model.AddVitalInput.PatientId)
+                        <div class="modal-grid">
+                            <div>
+                                <label class="form-label">Heart Rate <small class="text-muted">/min</small></label>
+                                @Html.TextBox("HeartRate", Model.AddVitalInput.HeartRate,
+                                    new { @class = "form-control", type = "number", min = "0", max = "240" })
+                            </div>
+                            <div>
+                                <label class="form-label">Pulse <small class="text-muted">/min</small></label>
+                                @Html.TextBox("Pulse", Model.AddVitalInput.Pulse,
+                                    new { @class = "form-control", type = "number", min = "0", max = "240" })
+                            </div>
+                            <div>
+                                <label class="form-label">BP Systolic</label>
+                                @Html.TextBox("BP1", Model.AddVitalInput.BP1,
+                                    new { @class = "form-control", type = "number", min = "0", max = "300" })
+                            </div>
+                            <div>
+                                <label class="form-label">BP Diastolic</label>
+                                @Html.TextBox("BP2", Model.AddVitalInput.BP2,
+                                    new { @class = "form-control", type = "number", min = "0", max = "300" })
+                            </div>
+                            <div>
+                                <label class="form-label">Resp <small class="text-muted">/min</small></label>
+                                @Html.TextBox("RespiratoryRate", Model.AddVitalInput.RespiratoryRate,
+                                    new { @class = "form-control", type = "number", min = "5", max = "80" })
+                            </div>
+                            <div>
+                                <label class="form-label">Temperature <small class="text-muted">F</small></label>
+                                @Html.TextBox("Temperature", Model.AddVitalInput.Temperature,
+                                    new { @class = "form-control", type = "number", step = "0.1", min = "0", max = "110" })
+                            </div>
+                            <div>
+                                <label class="form-label">Height</label>
+                                @Html.TextBox("Height", Model.AddVitalInput.Height,
+                                    new { @class = "form-control", type = "number", min = "0", max = "300" })
+                            </div>
+                            <div>
+                                <label class="form-label">Weight</label>
+                                @Html.TextBox("Weight", Model.AddVitalInput.Weight,
+                                    new { @class = "form-control", type = "number", step = "0.01", min = "0", max = "500" })
+                            </div>
+                            <div>
+                                <label class="form-label">Metric BMI</label>
+                                @Html.TextBox("MetricBMI", Model.AddVitalInput.MetricBMI,
+                                    new { @class = "form-control", type = "number", min = "0", max = "200" })
+                            </div>
+                            <div>
+                                <label class="form-label">SPO2 <small class="text-muted">%</small></label>
+                                @Html.TextBox("Spo2", Model.AddVitalInput.Spo2,
+                                    new { @class = "form-control", type = "number", min = "0", max = "100" })
+                            </div>
+                            <div>
+                                <label class="form-label">Glucose F <small class="text-muted">mg/dL</small></label>
+                                @Html.TextBox("GlucoseF", Model.AddVitalInput.GlucoseF,
+                                    new { @class = "form-control", type = "number", step = "0.01", min = "0", max = "800" })
+                            </div>
+                            <div>
+                                <label class="form-label">Glucose R <small class="text-muted">mg/dL</small></label>
+                                @Html.TextBox("GlucoseR", Model.AddVitalInput.GlucoseR,
+                                    new { @class = "form-control", type = "number", step = "0.01", min = "0", max = "800" })
+                            </div>
+                            <div>
+                                <label class="form-label">Fall Risk</label>
+                                @Html.TextBox("FallRisk", Model.AddVitalInput.FallRisk,
+                                    new { @class = "form-control", type = "number", min = "0", max = "10" })
+                            </div>
+                            <div>
+                                <label class="form-label">Pain Score</label>
+                                @Html.TextBox("PainScore", Model.AddVitalInput.PainScore,
+                                    new { @class = "form-control", type = "number", min = "0", max = "10" })
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary btn-sm"
+                                data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-danger btn-sm" id="btnSaveVital">Save Vital</button>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+}

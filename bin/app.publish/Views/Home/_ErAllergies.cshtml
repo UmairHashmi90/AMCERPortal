@@ -1,0 +1,72 @@
+@model ERPaperless.Models.ErFormViewModel
+@{
+    bool canEdit = ViewBag.CanEditClinical == true;
+    var drugAllergies = (Model.DrugAllergies ?? Enumerable.Empty<ERPaperless.Models.DrugAllergyItemViewModel>()).ToList();
+    var rf = Model.ReviewForm ?? new ERPaperless.Models.ErReviewFormStateViewModel();
+    const int initialVisibleCount = 7;
+}
+
+<section class="panel-card h-100">
+    <div class="lov-section-head">
+        <h3>Drug Allergy</h3>
+        <input type="search"
+               id="drugAllergySearch"
+               class="form-control form-control-sm lov-section-search"
+               data-lov-filter="drug-allergy"
+               placeholder="Search generic..."
+               autocomplete="off"
+               @(canEdit ? "" : "disabled=\"disabled\"") />
+    </div>
+
+    <div class="drug-allergy-head d-flex align-items-center gap-2 px-1 mb-1">
+        <span class="text-muted small fw-semibold" style="flex: 1 1 45%;">Generic</span>
+        <span class="text-muted small fw-semibold" style="flex: 1 1 55%;">Remarks</span>
+    </div>
+
+    <div class="complaints-grid">
+        @for (var i = 0; i < drugAllergies.Count; i++)
+        {
+            var c = drugAllergies[i];
+            var isInitialVisible = i < initialVisibleCount || c.IsSelected;
+            <div class="complaint-row lov-filter-row @(isInitialVisible ? "" : "d-none")"
+                 data-lov-group="drug-allergy"
+                 data-lov-name="@((c.Name ?? string.Empty).ToLowerInvariant())"
+                 data-initial-visible="@(isInitialVisible ? "true" : "false")">
+                <label class="complaint-check">
+                    <input type="checkbox"
+                           class="complaint-toggle"
+                           id="da-chk-@c.Id"
+                           value="@c.Id"
+                           data-allergy-code="@c.Id"
+                           data-target-id="da-rmk-@c.Id"
+                           @(c.IsSelected ? "checked=\"checked\"" : "")
+                           @(canEdit ? "" : "disabled=\"disabled\"") />
+                    <span>@(c.Name ?? "")</span>
+                </label>
+                <input type="text"
+                       id="da-rmk-@c.Id"
+                       class="form-control complaint-remark"
+                       value="@(c.Remark ?? "")"
+                       placeholder="Remarks..."
+                       @(!c.IsSelected || !canEdit ? "disabled=\"disabled\"" : "") />
+            </div>
+        }
+        <p id="drugAllergyNoResult" class="text-muted small mb-0 d-none" data-lov-empty="drug-allergy">
+            No generics found.
+        </p>
+    </div>
+
+    <div class="mt-3">
+        <label class="form-label" for="FoodAllergy">Food Allergy</label>
+        <textarea id="FoodAllergy" class="form-control" rows="2"
+                  placeholder="@(canEdit ? "Enter food allergy..." : "-")"
+                  @(canEdit ? "" : "disabled=\"disabled\"")>@(rf.FoodAllergy ?? "")</textarea>
+
+        @*<input type="text"
+               id="FoodAllergy"
+               class="form-control"
+               value="@(rf.FoodAllergy ?? "")"
+               placeholder="@(canEdit ? "Enter food allergy..." : "-")"
+               @(canEdit ? "" : "disabled=\"disabled\"") />*@
+    </div>
+</section>

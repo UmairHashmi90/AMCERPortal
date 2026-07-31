@@ -1,0 +1,368 @@
+@model ERPaperless.Models.ErFormViewModel
+@{
+    bool isMO = ViewBag.IsMO == true;
+    bool canEditSurgical = ViewBag.CanEditSurgical == true;
+    var drugRoutes = (Model.DrugRouteOptions ?? Enumerable.Empty<ERPaperless.Models.ERLovOptionViewModel>()).ToList();
+    var rf = Model.ReviewForm ?? new ERPaperless.Models.ErReviewFormStateViewModel();
+    var medicineOrders = (rf.MedicineOrders ?? new List<ERPaperless.Models.PackageOrderRowViewModel>())
+        .OrderByDescending(x => x.RequestedOn)
+        .ToList();
+    var surgicalOrders = (rf.SurgicalOrders ?? new List<ERPaperless.Models.PackageOrderRowViewModel>())
+        .OrderByDescending(x => x.RequestedOn)
+        .ToList();
+    var ackUser = ViewBag.UserFullName ?? User.Identity.Name ?? "";
+    Func<ERPaperless.Models.PackageOrderRowViewModel, string> routeName = row =>
+        drugRoutes.FirstOrDefault(r => r.Id == row.DrugRouteCode)?.Name ?? "";
+}
+
+<datalist id="drugRouteOptions">
+    @foreach (var route in drugRoutes)
+    {
+        <option value="@route.Name" data-value="@route.Id"></option>
+    }
+</datalist>
+
+<datalist id="erMedicineItemOptions">
+    @foreach (var item in Model.ErItemOptions ?? Enumerable.Empty<ERPaperless.Models.ERItemViewModel>())
+    {
+        if (item.ItemCode > 0 && !string.IsNullOrWhiteSpace(item.ItemName) && !item.IsSurgical)
+        {
+            <option value="@item.ItemName" data-value="@item.ItemCode"></option>
+        }
+    }
+</datalist>
+
+<datalist id="erSurgicalItemOptions">
+    @foreach (var item in Model.ErItemOptions ?? Enumerable.Empty<ERPaperless.Models.ERItemViewModel>())
+    {
+        if (item.ItemCode > 0 && !string.IsNullOrWhiteSpace(item.ItemName) && item.IsSurgical)
+        {
+            <option value="@item.ItemName" data-value="@item.ItemCode"></option>
+        }
+    }
+</datalist>
+
+<section class="panel-card">
+    <h3>
+        Plan / Treatment
+        @if (!isMO) { <small class="text-muted fw-normal">(Medicine: MO | Surgical: Nursing only)</small> }
+    </h3>
+
+    <div class="package-section mb-4">
+        <div class="package-section-head er-section-toolbar">
+            <span class="er-section-toolbar-title">Medicine Package</span>
+            <div class="er-section-toolbar-search">
+                <input type="search"
+                       id="medicinePackageSearch"
+                       class="form-select searchable-dropdown lov-autocomplete er-touch-input package-grid-loader er-section-search-input"
+                       list="medicinePackageOptions"
+                       data-lov-hidden="MedicinePackageCode"
+                       autocomplete="off"
+                       placeholder="Search medicine package..."
+                       @(isMO ? "" : "disabled=\"disabled\"") />
+                <input type="hidden" id="MedicinePackageCode" name="MedicinePackageCode" value="" />
+            </div>
+            @if (isMO)
+            {
+                <button type="button" class="btn er-section-add-custom-btn btn-sm" id="btnAddCustomMedicine">+ Add</button>
+                <button type="button" class="btn er-section-save-btn" id="btnSaveMedicinePackage">Save Medicine</button>
+            }
+        </div>
+        <datalist id="medicinePackageOptions">
+            @foreach (var item in Model.MedicinePackageOptions ?? Enumerable.Empty<ERPaperless.Models.ERLovOptionViewModel>())
+            {
+                <option value="@item.Name" data-value="@item.Id"></option>
+            }
+        </datalist>
+        <div class="table-wrap grid-max-7">
+            <table class="app-table package-grid-table" id="medicinePackageTable"
+                   data-package-type="1" data-ack-user="@ackUser">
+                <thead>
+                    <tr>
+                        <th style="width:3%"></th>
+                        <th style="width:22%">Drug Name</th>
+                        <th style="width:8%">Dose</th>
+                        <th style="width:12%">Route</th>
+                        <th style="width:7%">Disc.</th>
+                        <th style="width:18%">Reason / Remarks</th>
+                        <th style="width:8%">Pharmacy</th>
+                        <th style="width:10%">Charged By</th>
+                        @if (isMO) { <th style="width:3%"></th> }
+                    </tr>
+                </thead>
+                <tbody id="medicinePackageBody">
+                    @if (!medicineOrders.Any())
+                    {
+                        <tr id="medicinePackagePlaceholder">
+                            <td colspan="@(isMO ? 9 : 8)" class="text-center text-muted py-3">
+                                Select a medicine package to load items, or save existing rows.
+                            </td>
+                        </tr>
+                    }
+                    else
+                    {
+                        foreach (var row in medicineOrders)
+                        {
+                            var locked = row.IsPharmacyCharged;
+                            var rName = routeName(row);
+                            var ackDate = row.AckDate.HasValue ? row.AckDate.Value.ToString("dd-MMM-yyyy") : "";
+                            var rowClass = locked
+                                ? "pkg-row-pharmacy-charged pkg-row-locked"
+                                : row.Discontinue
+                                    ? "pkg-row-discontinued"
+                                    : "";
+                            <tr class="pkg-data-row @rowClass"
+                                data-order-id="@row.Id"
+                                data-item-code="@row.PackageDetailCode"
+                                data-package-code="@row.PackageCode"
+                                data-pharmacy-charged="@(locked ? "1" : "0")"
+                                data-discontinued="@(row.Discontinue ? "1" : "0")">
+                                <td class="text-center pkg-status text-muted"></td>
+                                <td><span class="pkg-item-name">@row.ItemName</span></td>
+                                <td><input type="text" class="form-control form-control-sm pkg-dose pkg-grid-input" value="@(row.Dose ?? "")" @((locked || !isMO) ? "readonly=\"readonly\"" : "") /></td>
+                                <td>
+                                    <input type="search" class="form-control form-control-sm pkg-route pkg-grid-input searchable-dropdown"
+                                           list="drugRouteOptions" value="@rName" placeholder="Route" @((locked || !isMO) ? "readonly=\"readonly\"" : "") />
+                                    <input type="hidden" class="pkg-route-code" value="@(row.DrugRouteCode ?? 0)" />
+                                </td>
+                                <td class="text-center">
+                                    <input type="checkbox" class="form-check-input pkg-discontinue pkg-grid-check"
+                                           @(row.Discontinue ? "checked=\"checked\"" : "") @((locked || !isMO) ? "disabled=\"disabled\"" : "") />
+                                </td>
+                                <td>
+                                    <input type="text" class="form-control form-control-sm pkg-remarks pkg-grid-input"
+                                           value="@(row.Remarks ?? "")" placeholder="Remarks"
+                                           @((locked || !row.Discontinue || !isMO) ? "readonly=\"readonly\"" : "") />
+                                </td>
+                                <td class="text-center">
+                                    <span class="pkg-pharmacy-status small fw-semibold">
+                                        @if (row.Discontinue)
+                                        {
+                                            <span class="text-danger">Disc.</span>
+                                        }
+                                        else if (locked)
+                                        {
+                                            <span class="text-success">Charged</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">Pending</span>
+                                        }
+                                    </span>
+                                </td>
+                                <td class="pkg-pharmacy-by text-muted small">
+                                    @if (locked)
+                                    {
+                                        @(row.AckByName ?? "")
+                                        if (!string.IsNullOrWhiteSpace(ackDate))
+                                        {
+                                            <div class="text-muted">@ackDate</div>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <span>-</span>
+                                    }
+                                </td>
+                                @if (isMO)
+                                {
+                                    <td class="text-center">
+                                        <button type="button" class="btn btn-link btn-sm text-danger p-0 pkg-remove-btn @(locked ? "d-none" : "")" title="Remove">&#x2715;</button>
+                                    </td>
+                                }
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="package-section mb-4">
+        <div class="package-section-head er-section-toolbar">
+            <span class="er-section-toolbar-title">Surgical Package @if (!canEditSurgical) { <small class="text-muted">(Read-only)</small> }</span>
+            <div class="er-section-toolbar-search">
+                <input type="search"
+                       id="surgicalPackageSearch"
+                       class="form-select searchable-dropdown lov-autocomplete er-touch-input package-grid-loader er-section-search-input"
+                       list="surgicalPackageOptions"
+                       data-lov-hidden="SurgicalPackageCode"
+                       autocomplete="off"
+                       placeholder="Search surgical package..."
+                       @(canEditSurgical ? "" : "disabled=\"disabled\"") />
+                <input type="hidden" id="SurgicalPackageCode" name="SurgicalPackageCode" value="" />
+            </div>
+            @if (canEditSurgical)
+            {
+                <button type="button" class="btn er-section-add-custom-btn btn-sm" id="btnAddCustomSurgical">+ Add</button>
+                <button type="button" class="btn er-section-save-btn" id="btnSaveSurgicalPackage">Save Surgical</button>
+            }
+        </div>
+        <datalist id="surgicalPackageOptions">
+            @foreach (var item in Model.SurgicalPackageOptions ?? Enumerable.Empty<ERPaperless.Models.ERLovOptionViewModel>())
+            {
+                <option value="@item.Name" data-value="@item.Id"></option>
+            }
+        </datalist>
+        <div class="table-wrap grid-max-7">
+            <table class="app-table package-grid-table" id="surgicalPackageTable"
+                   data-package-type="2" data-ack-user="@ackUser">
+                <thead>
+                    <tr>
+                        <th style="width:3%"></th>
+                        <th style="width:22%">Surgical Name</th>
+                        <th style="width:8%">QTY</th>
+                        <th style="width:12%">Route</th>
+                        <th style="width:7%">Disc.</th>
+                        <th style="width:18%">Reason / Remarks</th>
+                        <th style="width:8%">Pharmacy</th>
+                        <th style="width:10%">Charged By</th>
+                        @if (canEditSurgical) { <th style="width:3%"></th> }
+                    </tr>
+                </thead>
+                <tbody id="surgicalPackageBody">
+                    @if (!surgicalOrders.Any())
+                    {
+                        <tr id="surgicalPackagePlaceholder">
+                            <td colspan="@(canEditSurgical ? 9 : 8)" class="text-center text-muted py-3">
+                                Select a surgical package to load items, or save existing rows.
+                            </td>
+                        </tr>
+                    }
+                    else
+                    {
+                        foreach (var row in surgicalOrders)
+                        {
+                            var locked = row.IsPharmacyCharged;
+                            var rName = routeName(row);
+                            var ackDate = row.AckDate.HasValue ? row.AckDate.Value.ToString("dd-MMM-yyyy") : "";
+                            var rowClass = locked
+                                ? "pkg-row-pharmacy-charged pkg-row-locked"
+                                : row.Discontinue
+                                    ? "pkg-row-discontinued"
+                                    : "";
+                            <tr class="pkg-data-row @rowClass"
+                                data-order-id="@row.Id"
+                                data-item-code="@row.PackageDetailCode"
+                                data-package-code="@row.PackageCode"
+                                data-pharmacy-charged="@(locked ? "1" : "0")"
+                                data-discontinued="@(row.Discontinue ? "1" : "0")">
+                                <td class="text-center pkg-status text-muted"></td>
+                                <td><span class="pkg-item-name">@row.ItemName</span></td>
+                                <td><input type="text" class="form-control form-control-sm pkg-dose pkg-qty pkg-grid-input" value="@(row.Dose ?? "")" @((locked || !canEditSurgical) ? "readonly=\"readonly\"" : "") /></td>
+                                <td>
+                                    <input type="search" class="form-control form-control-sm pkg-route pkg-grid-input searchable-dropdown"
+                                           list="drugRouteOptions" value="@rName" placeholder="Route" @((locked || !canEditSurgical) ? "readonly=\"readonly\"" : "") />
+                                    <input type="hidden" class="pkg-route-code" value="@(row.DrugRouteCode ?? 0)" />
+                                </td>
+                                <td class="text-center">
+                                    <input type="checkbox" class="form-check-input pkg-discontinue pkg-grid-check"
+                                           @(row.Discontinue ? "checked=\"checked\"" : "") @((locked || !canEditSurgical) ? "disabled=\"disabled\"" : "") />
+                                </td>
+                                <td>
+                                    <input type="text" class="form-control form-control-sm pkg-remarks pkg-grid-input"
+                                           value="@(row.Remarks ?? "")" placeholder="Remarks"
+                                           @((locked || !row.Discontinue || !canEditSurgical) ? "readonly=\"readonly\"" : "") />
+                                </td>
+                                <td class="text-center">
+                                    <span class="pkg-pharmacy-status small fw-semibold">
+                                        @if (row.Discontinue)
+                                        {
+                                            <span class="text-danger">Disc.</span>
+                                        }
+                                        else if (locked)
+                                        {
+                                            <span class="text-success">Charged</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">Pending</span>
+                                        }
+                                    </span>
+                                </td>
+                                <td class="pkg-pharmacy-by text-muted small">
+                                    @if (locked)
+                                    {
+                                        @(row.AckByName ?? "")
+                                        if (!string.IsNullOrWhiteSpace(ackDate))
+                                        {
+                                            <div class="text-muted">@ackDate</div>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <span>-</span>
+                                    }
+                                </td>
+                                @if (canEditSurgical)
+                                {
+                                    <td class="text-center">
+                                        <button type="button" class="btn btn-link btn-sm text-danger p-0 pkg-remove-btn @(locked ? "d-none" : "")" title="Remove">&#x2715;</button>
+                                    </td>
+                                }
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="row g-3 er-plan-lov-row">
+        <div class="col-md-6">
+            <div class="findings-cell">
+                <div class="findings-cell-head">Condition Upon Release</div>
+                <div class="findings-cell-body">
+                    @Html.Partial("~/Views/Shared/_LovRadioList.cshtml", new ERPaperless.Models.LovRadioListViewModel
+                    {
+                        Label = "",
+                        LabelCss = "lov-radio-title",
+                        GroupName = "ConditionUponReleaseCode",
+                        GroupId = "conditionUponRelease",
+                        Options = Model.ConditionUponReleaseOptions,
+                        SelectedValue = rf.ConditionUponReleaseCode,
+                        Disabled = !isMO
+                    })
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="findings-cell">
+                <div class="findings-cell-head">ADR</div>
+                <div class="findings-cell-body">
+                    @Html.Partial("~/Views/Shared/_LovRadioList.cshtml", new ERPaperless.Models.LovRadioListViewModel
+                    {
+                        Label = "",
+                        LabelCss = "lov-radio-title",
+                        GroupName = "AdrCode",
+                        GroupId = "adr",
+                        Options = Model.AdrOptions,
+                        SelectedValue = rf.AdrCode,
+                        Disabled = !isMO
+                    })
+                </div>
+            </div>
+        </div>
+        <div class="col-12">
+            <label class="form-label">Treatment</label>
+            <textarea id="TreatmentNotes" class="form-control" rows="3"
+                      placeholder="@(isMO ? "Enter treatment plan and orders..." : "Restricted to MO.")"
+                      @(isMO ? "" : "disabled=\"disabled\"")>@(rf.TreatmentNotes ?? "")</textarea>
+        </div>
+    </div>
+</section>
+
+<section class="panel-card">
+    <h3>
+        Consultant Plan
+        @if (!isMO) { <small class="text-muted fw-normal">(MO only)</small> }
+    </h3>
+    <textarea id="ConsultantPlan" class="form-control" rows="4"
+              placeholder="@(isMO ? "Enter consultant recommendations and plan..." : "Restricted to MO.")"
+              @(isMO ? "" : "disabled=\"disabled\"")>@(rf.ConsultantPlan ?? "")</textarea>
+</section>
+
+@if (isMO || canEditSurgical)
+{
+    <input type="hidden" id="packageDetailsUrl" value="@Url.Action("GetPackageDetails", "EmergencyForm")" />
+}

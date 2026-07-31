@@ -1,0 +1,25 @@
+@model ERPaperless.Models.LovDropdownViewModel
+@{
+    var options = Model.Options ?? Enumerable.Empty<ERPaperless.Models.ERLovOptionViewModel>();
+    var labelCss = string.IsNullOrWhiteSpace(Model.LabelCss) ? "form-label" : Model.LabelCss;
+    var selectCss = string.IsNullOrWhiteSpace(Model.SelectCss)
+        ? "form-select"
+        : Model.SelectCss;
+    var placeholder = string.IsNullOrWhiteSpace(Model.Placeholder) ? "-- select --" : Model.Placeholder;
+}
+
+@if (!string.IsNullOrWhiteSpace(Model.Label))
+{
+    <label class="@labelCss" for="@Model.FieldId">@Model.Label</label>
+}
+
+<select id="@Model.FieldId"
+        name="@Model.FieldName"
+        class="@selectCss"
+        @(Model.Disabled ? "disabled=\"disabled\"" : "")>
+    <option value="">@placeholder</option>
+    @foreach (var item in options)
+    {
+        <option value="@item.Id">@item.Name</option>
+    }
+</select>

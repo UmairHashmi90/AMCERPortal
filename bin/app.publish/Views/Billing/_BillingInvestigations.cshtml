@@ -1,0 +1,52 @@
+@model System.Collections.Generic.IEnumerable<ERPaperless.Models.InvestigationRowViewModel>
+@{
+    bool canWork = ViewBag.CanWorkOnPage == true;
+    var investigations = (Model ?? Enumerable.Empty<ERPaperless.Models.InvestigationRowViewModel>()).ToList();
+    var patientId = ViewBag.ErPatientId as string ?? "";
+    var showPatient = ViewBag.ShowPatientColumns == true;
+    var colCount = showPatient ? 11 : 8;
+}
+
+<section class="panel-card billing-inv-panel">
+    <div class="section-head mb-2">
+        <h3 class="mb-1">Lab Investigations</h3>
+    </div>
+
+    <div id="billingInvAlert" class="alert py-2 d-none" role="alert"></div>
+
+    <div class="table-wrap grid-max-7">
+        <table class="app-table billing-inv-table" id="billingInvestigationsTable">
+            <thead>
+                <tr>
+                    <th style="width:4%">#</th>
+                    @if (showPatient)
+                    {
+                        <th style="width:8%">Bed</th>
+                        <th style="width:12%">Patient</th>
+                    }
+                    <th style="width:22%">Test / Investigation</th>
+                    <th style="width:20%">Remarks / Result</th>
+                    <th style="width:14%">Requested</th>
+                    <th style="width:12%">Requested By</th>
+                    <th style="width:10%">Status</th>
+                    <th style="width:8%">Ack</th>
+                    <th style="width:10%">Ack By</th>
+                    @if (showPatient)
+                    {
+                        <th style="width:8%">Form</th>
+                    }
+                </tr>
+            </thead>
+            <tbody id="billingInvestigationsBody">
+                @Html.Partial("~/Views/Billing/_BillingInvestigationsBody.cshtml", Model)
+            </tbody>
+        </table>
+    </div>
+
+    <input type="hidden" id="billingAckInvestigationUrl"
+           value="@Url.Action("AcknowledgeInvestigation", "Billing")" />
+    @if (!showPatient)
+    {
+        <input type="hidden" id="billingErPatientId" value="@patientId" />
+    }
+</section>

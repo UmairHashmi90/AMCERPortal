@@ -1,0 +1,571 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="packages\EntityFramework.6.5.2\build\EntityFramework.props" Condition="Exists('packages\EntityFramework.6.5.2\build\EntityFramework.props')" />
+  <Import Project="packages\Microsoft.CodeDom.Providers.DotNetCompilerPlatform.2.0.1\build\net46\Microsoft.CodeDom.Providers.DotNetCompilerPlatform.props" Condition="Exists('packages\Microsoft.CodeDom.Providers.DotNetCompilerPlatform.2.0.1\build\net46\Microsoft.CodeDom.Providers.DotNetCompilerPlatform.props')" />
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProductVersion>
+    </ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{4E1D6B37-5BC5-4D70-BE92-972E11E1BA83}</ProjectGuid>
+    <ProjectTypeGuids>{349c5851-65df-11da-9384-00065b846f21};{fae04ec0-301f-11d3-bf4b-00c04f79efbc}</ProjectTypeGuids>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>ERPaperless</RootNamespace>
+    <AssemblyName>ERPaperless</AssemblyName>
+    <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
+    <MvcBuildViews>false</MvcBuildViews>
+    <UseIISExpress>true</UseIISExpress>
+    <Use64BitIISExpress />
+    <IISExpressSSLPort>44314</IISExpressSSLPort>
+    <IISExpressAnonymousAuthentication />
+    <IISExpressWindowsAuthentication />
+    <IISExpressUseClassicPipelineMode />
+    <UseGlobalApplicationHostFile />
+    <NuGetPackageImportStamp>
+    </NuGetPackageImportStamp>
+    <TargetFrameworkProfile />
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="BouncyCastle.Crypto, Version=1.8.6.0, Culture=neutral, PublicKeyToken=0e99375e54769942">
+      <HintPath>packages\BouncyCastle.1.8.6.1\lib\BouncyCastle.Crypto.dll</HintPath>
+    </Reference>
+    <Reference Include="BouncyCastle.Cryptography, Version=2.0.0.0, Culture=neutral, PublicKeyToken=072edcf4a5328938, processorArchitecture=MSIL">
+      <HintPath>packages\BouncyCastle.Cryptography.2.4.0\lib\net461\BouncyCastle.Cryptography.dll</HintPath>
+    </Reference>
+    <Reference Include="DevExpress.Data.v24.1, Version=24.1.6.0, Culture=neutral, PublicKeyToken=b88d1754d700e49a, processorArchitecture=MSIL">
+      <HintPath>packages\DevExpress.Data.24.1.6\lib\net452\DevExpress.Data.v24.1.dll</HintPath>
+    </Reference>
+    <Reference Include="DevExpress.Drawing.v24.1, Version=24.1.6.0, Culture=neutral, PublicKeyToken=b88d1754d700e49a, processorArchitecture=MSIL">
+      <HintPath>packages\DevExpress.Drawing.24.1.6\lib\net452\DevExpress.Drawing.v24.1.dll</HintPath>
+    </Reference>
+    <Reference Include="DevExpress.Office.v24.1.Core, Version=24.1.6.0, Culture=neutral, PublicKeyToken=b88d1754d700e49a, processorArchitecture=MSIL">
+      <HintPath>packages\DevExpress.Office.Core.24.1.6\lib\net452\DevExpress.Office.v24.1.Core.dll</HintPath>
+    </Reference>
+    <Reference Include="DevExpress.Pdf.v24.1.Core, Version=24.1.6.0, Culture=neutral, PublicKeyToken=b88d1754d700e49a, processorArchitecture=MSIL">
+      <HintPath>packages\DevExpress.Pdf.Core.24.1.6\lib\net452\DevExpress.Pdf.v24.1.Core.dll</HintPath>
+    </Reference>
+    <Reference Include="DevExpress.Pdf.v24.1.Drawing, Version=24.1.6.0, Culture=neutral, PublicKeyToken=b88d1754d700e49a, processorArchitecture=MSIL">
+      <HintPath>packages\DevExpress.Pdf.Drawing.24.1.6\lib\net452\DevExpress.Pdf.v24.1.Drawing.dll</HintPath>
+    </Reference>
+    <Reference Include="DevExpress.Printing.v24.1.Core, Version=24.1.6.0, Culture=neutral, PublicKeyToken=b88d1754d700e49a, processorArchitecture=MSIL">
+      <HintPath>packages\DevExpress.Printing.Core.24.1.6\lib\net452\DevExpress.Printing.v24.1.Core.dll</HintPath>
+    </Reference>
+    <Reference Include="DevExpress.RichEdit.v24.1.Core, Version=24.1.6.0, Culture=neutral, PublicKeyToken=b88d1754d700e49a, processorArchitecture=MSIL">
+      <HintPath>packages\DevExpress.RichEdit.Core.24.1.6\lib\net452\DevExpress.RichEdit.v24.1.Core.dll</HintPath>
+    </Reference>
+    <Reference Include="EntityFramework, Version=6.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089, processorArchitecture=MSIL">
+      <HintPath>packages\EntityFramework.6.5.2\lib\net45\EntityFramework.dll</HintPath>
+    </Reference>
+    <Reference Include="EntityFramework.SqlServer, Version=6.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089, processorArchitecture=MSIL">
+      <HintPath>packages\EntityFramework.6.5.2\lib\net45\EntityFramework.SqlServer.dll</HintPath>
+    </Reference>
+    <Reference Include="itextsharp, Version=5.5.13.4, Culture=neutral, PublicKeyToken=8354ae6d2174ddca, processorArchitecture=MSIL">
+      <HintPath>packages\iTextSharp.5.5.13.4\lib\net461\itextsharp.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="Microsoft.ReportViewer.Common, Version=15.0.0.0, Culture=neutral, PublicKeyToken=89845dcd8080cc91, processorArchitecture=MSIL">
+      <HintPath>packages\Microsoft.ReportingServices.ReportViewerControl.WebForms.150.1652.0\lib\net40\Microsoft.ReportViewer.Common.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.ReportViewer.DataVisualization, Version=15.0.0.0, Culture=neutral, PublicKeyToken=89845dcd8080cc91, processorArchitecture=MSIL">
+      <HintPath>packages\Microsoft.ReportingServices.ReportViewerControl.WebForms.150.1652.0\lib\net40\Microsoft.ReportViewer.DataVisualization.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.ReportViewer.Design, Version=15.0.0.0, Culture=neutral, PublicKeyToken=89845dcd8080cc91, processorArchitecture=MSIL">
+      <HintPath>packages\Microsoft.ReportingServices.ReportViewerControl.WebForms.150.1652.0\lib\net40\Microsoft.ReportViewer.Design.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.ReportViewer.ProcessingObjectModel, Version=15.0.0.0, Culture=neutral, PublicKeyToken=89845dcd8080cc91, processorArchitecture=MSIL">
+      <HintPath>packages\Microsoft.ReportingServices.ReportViewerControl.WebForms.150.1652.0\lib\net40\Microsoft.ReportViewer.ProcessingObjectModel.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.ReportViewer.WebDesign, Version=15.0.0.0, Culture=neutral, PublicKeyToken=89845dcd8080cc91, processorArchitecture=MSIL">
+      <HintPath>packages\Microsoft.ReportingServices.ReportViewerControl.WebForms.150.1652.0\lib\net40\Microsoft.ReportViewer.WebDesign.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.ReportViewer.WebForms, Version=15.0.0.0, Culture=neutral, PublicKeyToken=89845dcd8080cc91, processorArchitecture=MSIL">
+      <HintPath>packages\Microsoft.ReportingServices.ReportViewerControl.WebForms.150.1652.0\lib\net40\Microsoft.ReportViewer.WebForms.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.SqlServer.Types, Version=14.0.0.0, Culture=neutral, PublicKeyToken=89845dcd8080cc91, processorArchitecture=MSIL">
+      <HintPath>packages\Microsoft.SqlServer.Types.14.0.314.76\lib\net40\Microsoft.SqlServer.Types.dll</HintPath>
+    </Reference>
+    <Reference Include="QRCoder">
+      <HintPath>..\..\..\HMIS\HMIS\QRCoder.dll</HintPath>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Net.Http.Formatting, Version=5.2.9.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>packages\Microsoft.AspNet.WebApi.Client.5.2.9\lib\net45\System.Net.Http.Formatting.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Runtime.Serialization" />
+    <Reference Include="System.Security" />
+    <Reference Include="System.Web.DynamicData" />
+    <Reference Include="System.Web.Entity" />
+    <Reference Include="System.Web.ApplicationServices" />
+    <Reference Include="System.ComponentModel.DataAnnotations" />
+    <Reference Include="System.Web.Extensions" />
+    <Reference Include="System.Web.Http, Version=5.2.9.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>packages\Microsoft.AspNet.WebApi.Core.5.2.9\lib\net45\System.Web.Http.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Web.Http.WebHost, Version=5.2.9.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>packages\Microsoft.AspNet.WebApi.WebHost.5.2.9\lib\net45\System.Web.Http.WebHost.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Web" />
+    <Reference Include="System.Web.Abstractions" />
+    <Reference Include="System.Web.Routing" />
+    <Reference Include="System.Xml" />
+    <Reference Include="System.Configuration" />
+    <Reference Include="System.Web.Services" />
+    <Reference Include="System.EnterpriseServices" />
+    <Reference Include="Microsoft.Web.Infrastructure, Version=2.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <Private>True</Private>
+      <HintPath>packages\Microsoft.Web.Infrastructure.2.0.0\lib\net40\Microsoft.Web.Infrastructure.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Net.Http">
+    </Reference>
+    <Reference Include="System.Net.Http.WebRequest">
+    </Reference>
+    <Reference Include="System.Web.Helpers, Version=3.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <Private>True</Private>
+      <HintPath>packages\Microsoft.AspNet.WebPages.3.2.9\lib\net45\System.Web.Helpers.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Web.Mvc, Version=5.2.9.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <Private>True</Private>
+      <HintPath>packages\Microsoft.AspNet.Mvc.5.2.9\lib\net45\System.Web.Mvc.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Web.Optimization">
+      <HintPath>packages\Microsoft.AspNet.Web.Optimization.1.1.3\lib\net40\System.Web.Optimization.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Web.Razor, Version=3.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <Private>True</Private>
+      <HintPath>packages\Microsoft.AspNet.Razor.3.2.9\lib\net45\System.Web.Razor.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Web.WebPages, Version=3.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <Private>True</Private>
+      <HintPath>packages\Microsoft.AspNet.WebPages.3.2.9\lib\net45\System.Web.WebPages.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Web.WebPages.Deployment, Version=3.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <Private>True</Private>
+      <HintPath>packages\Microsoft.AspNet.WebPages.3.2.9\lib\net45\System.Web.WebPages.Deployment.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Web.WebPages.Razor, Version=3.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <Private>True</Private>
+      <HintPath>packages\Microsoft.AspNet.WebPages.3.2.9\lib\net45\System.Web.WebPages.Razor.dll</HintPath>
+    </Reference>
+    <Reference Include="Newtonsoft.Json">
+      <HintPath>packages\Newtonsoft.Json.13.0.3\lib\net45\Newtonsoft.Json.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="WebGrease">
+      <Private>True</Private>
+      <HintPath>packages\WebGrease.1.6.0\lib\WebGrease.dll</HintPath>
+    </Reference>
+    <Reference Include="Antlr3.Runtime">
+      <Private>True</Private>
+      <HintPath>packages\Antlr.3.5.0.2\lib\Antlr3.Runtime.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="Microsoft.CodeDom.Providers.DotNetCompilerPlatform">
+      <HintPath>packages\Microsoft.CodeDom.Providers.DotNetCompilerPlatform.2.0.1\lib\net45\Microsoft.CodeDom.Providers.DotNetCompilerPlatform.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="ApiControllers\ReportsController.cs" />
+    <Compile Include="App_Start\BundleConfig.cs" />
+    <Compile Include="App_Start\DependencyConfig.cs" />
+    <Compile Include="App_Start\FilterConfig.cs" />
+    <Compile Include="App_Start\RouteConfig.cs" />
+    <Compile Include="App_Start\WebApiConfig.cs" />
+    <Compile Include="Controllers\AccountController.cs" />
+    <Compile Include="Controllers\BaseController.cs" />
+    <Compile Include="Controllers\BillingController.cs" />
+    <Compile Include="Controllers\EmergencyFormController.cs" />
+    <Compile Include="Controllers\HomeController.cs" />
+    <Compile Include="Controllers\PharmacyController.cs" />
+    <Compile Include="Controllers\ReportsController.cs" />
+    <Compile Include="Controllers\DicomController.cs" />
+    <Compile Include="Filters\ERPageModeAttribute.cs" />
+    <Compile Include="Filters\RequireERRoleAttribute.cs" />
+    <Compile Include="Global.asax.cs">
+      <DependentUpon>Global.asax</DependentUpon>
+    </Compile>
+    <Compile Include="Models\dbERPatient.Context.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>dbERPatient.Context.tt</DependentUpon>
+    </Compile>
+    <Compile Include="Models\dbAMCEntities.Partial.cs" />
+    <Compile Include="Models\dbERPatient.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>dbERPatient.tt</DependentUpon>
+    </Compile>
+    <Compile Include="Models\dbERPatient.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>dbERPatient.edmx</DependentUpon>
+    </Compile>
+    <Compile Include="Models\AddVitalInputViewModel.cs" />
+    <Compile Include="Models\AssignPatientInputViewModel.cs" />
+    <Compile Include="Models\BillingPatientFormViewModel.cs" />
+    <Compile Include="Models\PharmacyPackageOrdersGridViewModel.cs" />
+    <Compile Include="Models\PharmacyPatientFormViewModel.cs" />
+    <Compile Include="Models\PrescriptionVisitRowViewModel.cs" />
+    <Compile Include="Models\ReportInvestigationRowViewModel.cs" />
+    <Compile Include="Models\ReportsPatientFormViewModel.cs" />
+    <Compile Include="Models\ChiefComplaintItemViewModel.cs" />
+    <Compile Include="Models\ERItemViewModel.cs" />
+    <Compile Include="Models\ERItemPackageViewModel.cs" />
+    <Compile Include="Models\ERPackageDetailViewModel.cs" />
+    <Compile Include="Models\DrugRouteViewModel.cs" />
+    <Compile Include="Models\ERLovItemViewModel.cs" />
+    <Compile Include="Models\ERLovOptionViewModel.cs" />
+    <Compile Include="Models\ERLovType.cs" />
+    <Compile Include="Models\ERServiceGroupViewModel.cs" />
+    <Compile Include="Models\ERRoleModel.cs" />
+    <Compile Include="Models\ErFormViewModel.cs" />
+    <Compile Include="Models\KpiCardViewModel.cs" />
+    <Compile Include="Models\LocationCardViewModel.cs" />
+    <Compile Include="Models\LoginViewModel.cs" />
+    <Compile Include="Models\PatientFormContextViewModel.cs" />
+    <Compile Include="Models\LovAutocompleteViewModel.cs" />
+    <Compile Include="Models\LovRadioListViewModel.cs" />
+    <Compile Include="Models\LovSelectViewModel.cs" />
+    <Compile Include="Models\LovDropdownViewModel.cs" />
+    <Compile Include="Models\DocumentRowViewModel.cs" />
+    <Compile Include="Models\ErReviewFormStateViewModel.cs" />
+    <Compile Include="Models\InvestigationRowViewModel.cs" />
+    <Compile Include="Models\PackageOrderRowViewModel.cs" />
+    <Compile Include="Models\OutcomeFormStateViewModel.cs" />
+    <Compile Include="Models\OutcomeAutoPopulateViewModel.cs" />
+    <Compile Include="Models\QueueItemViewModel.cs" />
+    <Compile Include="Models\SaveErReviewFormInputViewModel.cs" />
+    <Compile Include="Models\SaveOutcomeFormInputViewModel.cs" />
+    <Compile Include="Models\SavePackageOrdersInputViewModel.cs" />
+    <Compile Include="Models\tblClinicalDocumentER.cs">
+      <DependentUpon>dbERPatient.tt</DependentUpon>
+    </Compile>
+    <Compile Include="Models\tblDeathCertificate.cs">
+      <DependentUpon>dbERPatient.tt</DependentUpon>
+    </Compile>
+    <Compile Include="Models\tblDischargeSummary.cs">
+      <DependentUpon>dbERPatient.tt</DependentUpon>
+    </Compile>
+    <Compile Include="Models\tblDrugRoute.cs">
+      <DependentUpon>dbERPatient.tt</DependentUpon>
+    </Compile>
+    <Compile Include="Models\tblERDischargeMedicine.cs">
+      <DependentUpon>dbERPatient.tt</DependentUpon>
+    </Compile>
+    <Compile Include="Models\tblERPatient.cs">
+      <DependentUpon>dbERPatient.tt</DependentUpon>
+    </Compile>
+    <Compile Include="Models\tblERPatientChiefComplaint.cs">
+      <DependentUpon>dbERPatient.tt</DependentUpon>
+    </Compile>
+    <Compile Include="Models\tblERPatientDocument.cs">
+      <DependentUpon>dbERPatient.tt</DependentUpon>
+    </Compile>
+    <Compile Include="Models\tblERPatientDrugAllergy.cs">
+      <DependentUpon>dbERPatient.tt</DependentUpon>
+    </Compile>
+    <Compile Include="Models\tblERPatientInvestigation.cs">
+      <DependentUpon>dbERPatient.tt</DependentUpon>
+    </Compile>
+    <Compile Include="Models\tblERPatientPackageOrder.cs">
+      <DependentUpon>dbERPatient.tt</DependentUpon>
+    </Compile>
+    <Compile Include="Models\tblERPatientPastHistory.cs">
+      <DependentUpon>dbERPatient.tt</DependentUpon>
+    </Compile>
+    <Compile Include="Models\tblERPatientReviewForm.cs">
+      <DependentUpon>dbERPatient.tt</DependentUpon>
+    </Compile>
+    <Compile Include="Models\tblERPatientVital.cs">
+      <DependentUpon>dbERPatient.tt</DependentUpon>
+    </Compile>
+    <Compile Include="Models\tblException.cs">
+      <DependentUpon>dbERPatient.tt</DependentUpon>
+    </Compile>
+    <Compile Include="Models\tblLAMA.cs">
+      <DependentUpon>dbERPatient.tt</DependentUpon>
+    </Compile>
+    <Compile Include="Models\tblPatientReferral.cs">
+      <DependentUpon>dbERPatient.tt</DependentUpon>
+    </Compile>
+    <Compile Include="Models\VitalRecordViewModel.cs" />
+    <Compile Include="Models\WardBedStatus.cs" />
+    <Compile Include="Abstractions\Application\IBillingService.cs" />
+    <Compile Include="Abstractions\Application\IErFormService.cs" />
+    <Compile Include="Abstractions\Application\IPharmacyService.cs" />
+    <Compile Include="Abstractions\Application\IPatientWorkspaceService.cs" />
+    <Compile Include="Abstractions\Application\IReportsPortalService.cs" />
+    <Compile Include="Abstractions\Infrastructure\IDbConnectionFactory.cs" />
+    <Compile Include="Abstractions\Infrastructure\IDbContextFactory.cs" />
+    <Compile Include="Abstractions\Security\ICurrentUserContext.cs" />
+    <Compile Include="Application\Common\OperationResult.cs" />
+    <Compile Include="Application\DTOs\PrescriptionVisitDto.cs" />
+    <Compile Include="Application\DTOs\ReportInvestigationDto.cs" />
+    <Compile Include="Application\Services\BillingService.cs" />
+    <Compile Include="Application\Services\ErFormService.cs" />
+    <Compile Include="Application\Services\PatientWorkspaceService.cs" />
+    <Compile Include="Application\Services\PharmacyService.cs" />
+    <Compile Include="Application\Services\ReportsPortalService.cs" />
+    <Compile Include="Infrastructure\Infrastructure\DbConnectionFactory.cs" />
+    <Compile Include="Infrastructure\Infrastructure\DbContextFactory.cs" />
+    <Compile Include="Infrastructure\Security\CurrentUserContext.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Services\BedRepository.cs" />
+    <Compile Include="Services\Data.cs" />
+    <Compile Include="Services\DBHelper.cs" />
+    <Compile Include="Services\DBManager.cs" />
+    <Compile Include="Services\ERPackageDetailRepository.cs" />
+    <Compile Include="Services\DrugRouteRepository.cs" />
+    <Compile Include="Services\ERItemRepository.cs" />
+    <Compile Include="Services\ERItemPackageRepository.cs" />
+    <Compile Include="Services\ERLovRepository.cs" />
+    <Compile Include="Services\Errorlogging.cs" />
+    <Compile Include="Services\ERServiceGroupRepository.cs" />
+    <Compile Include="Services\EROutcomeFormRepository.cs" />
+    <Compile Include="Services\ERReviewFormRepository.cs" />
+    <Compile Include="Services\ERQueueRepository.cs" />
+    <Compile Include="Services\ERPatientRepository.cs" />
+    <Compile Include="Services\ReportManager.cs" />
+    <Compile Include="Services\UserRepository.cs" />
+    <Compile Include="Services\VitalRepository.cs" />
+    <Compile Include="Services\ReportsRepository.cs" />
+    <Compile Include="SqlServerTypes\Loader.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Assets\Images\bed.png" />
+    <Content Include="Assets\Images\chair.png" />
+    <Content Include="Assets\Images\mainamc.jpg" />
+    <Content Include="Assets\Images\smlogo.png" />
+    <Content Include="Content\bootstrap-grid.css" />
+    <Content Include="Content\bootstrap-grid.min.css" />
+    <Content Include="Content\bootstrap-grid.rtl.css" />
+    <Content Include="Content\bootstrap-grid.rtl.min.css" />
+    <Content Include="Content\bootstrap-reboot.css" />
+    <Content Include="Content\bootstrap-reboot.min.css" />
+    <Content Include="Content\bootstrap-reboot.rtl.css" />
+    <Content Include="Content\bootstrap-reboot.rtl.min.css" />
+    <Content Include="Content\bootstrap-utilities.css" />
+    <Content Include="Content\bootstrap-utilities.min.css" />
+    <Content Include="Content\bootstrap-utilities.rtl.css" />
+    <Content Include="Content\bootstrap-utilities.rtl.min.css" />
+    <Content Include="Content\bootstrap.css" />
+    <Content Include="Content\bootstrap.min.css" />
+    <Content Include="Content\bootstrap.rtl.css" />
+    <Content Include="Content\bootstrap.rtl.min.css" />
+    <Content Include="favicon.ico" />
+    <Content Include="Global.asax" />
+    <Content Include="Content\login.css" />
+    <Content Include="Content\Site.css" />
+    <Content Include="Models\dbERPatient.Context.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>dbERPatient.Context.cs</LastGenOutput>
+      <DependentUpon>dbERPatient.edmx</DependentUpon>
+    </Content>
+    <Content Include="Models\dbERPatient.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <DependentUpon>dbERPatient.edmx</DependentUpon>
+      <LastGenOutput>dbERPatient.cs</LastGenOutput>
+    </Content>
+    <Content Include="Scripts\er-autocomplete.js" />
+    <Content Include="Scripts\bootstrap.bundle.js" />
+    <Content Include="Scripts\bootstrap.bundle.min.js" />
+    <Content Include="Scripts\bootstrap.esm.js" />
+    <Content Include="Scripts\bootstrap.esm.min.js" />
+    <Content Include="Scripts\bootstrap.js" />
+    <Content Include="Scripts\bootstrap.min.js" />
+    <EntityDeploy Include="Models\dbERPatient.edmx">
+      <Generator>EntityModelCodeGenerator</Generator>
+      <LastGenOutput>dbERPatient.Designer.cs</LastGenOutput>
+    </EntityDeploy>
+    <Content Include="Models\dbERPatient.edmx.diagram">
+      <DependentUpon>dbERPatient.edmx</DependentUpon>
+    </Content>
+    <None Include="Scripts\jquery-3.7.0.intellisense.js" />
+    <Content Include="Scripts\jquery-3.7.0.js" />
+    <Content Include="Scripts\jquery-3.7.0.min.js" />
+    <Content Include="Scripts\jquery-3.7.0.slim.js" />
+    <Content Include="Scripts\jquery-3.7.0.slim.min.js" />
+    <None Include="Scripts\jquery.validate-vsdoc.js" />
+    <Content Include="Scripts\jquery.validate.js" />
+    <Content Include="Scripts\jquery.validate.min.js" />
+    <Content Include="Scripts\jquery.validate.unobtrusive.js" />
+    <Content Include="Scripts\jquery.validate.unobtrusive.min.js" />
+    <Content Include="Scripts\modernizr-2.8.3.js" />
+    <Content Include="SqlServerTypes\readme.htm" />
+    <Content Include="SqlServerTypes\x64\msvcr120.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="SqlServerTypes\x64\SqlServerSpatial140.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="SqlServerTypes\x86\msvcr120.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="SqlServerTypes\x86\SqlServerSpatial140.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Web.config" />
+    <Content Include="Web.Debug.config">
+      <DependentUpon>Web.config</DependentUpon>
+    </Content>
+    <Content Include="Web.Release.config">
+      <DependentUpon>Web.config</DependentUpon>
+    </Content>
+    <Content Include="Views\Web.config" />
+    <Content Include="Views\_ViewStart.cshtml" />
+    <Content Include="Views\Shared\Error.cshtml" />
+    <Content Include="Views\Shared\_KpiCard.cshtml" />
+    <Content Include="Views\Shared\_Layout.cshtml" />
+    <Content Include="Views\Shared\_LocationCard.cshtml" />
+    <Content Include="Views\Shared\_QueueTable.cshtml" />
+    <Content Include="Views\Shared\_QueueTableBody.cshtml" />
+    <Content Include="Views\Shared\_LovAutocomplete.cshtml" />
+    <Content Include="Views\Shared\_LovSelect.cshtml" />
+    <Content Include="Views\Shared\_LovRadioList.cshtml" />
+    <Content Include="Views\Shared\_LovDropdown.cshtml" />
+    <Content Include="Views\Home\About.cshtml" />
+    <Content Include="Views\Home\Contact.cshtml" />
+    <Content Include="Views\Home\ErForm.cshtml" />
+    <Content Include="Views\Home\_ErPatientHeader.cshtml" />
+    <Content Include="Views\Home\_ErVitals.cshtml" />
+    <Content Include="Views\Home\_ErChiefComplaints.cshtml" />
+    <Content Include="Views\Home\_ErPastHistory.cshtml" />
+    <Content Include="Views\Home\_ErAllergies.cshtml" />
+    <Content Include="Views\Home\_ErFindings.cshtml" />
+    <Content Include="Views\Home\_ErOutcomeModals.cshtml" />
+    <Content Include="Views\Home\_ErAssessment.cshtml" />
+    <Content Include="Views\Home\_ErInvestigations.cshtml" />
+    <Content Include="Views\Home\_ErPlanTreatment.cshtml" />
+    <Content Include="Views\Home\_ErNursingNotes.cshtml" />
+    <Content Include="Views\Home\_ErDocuments.cshtml" />
+    <Content Include="Views\Home\Index.cshtml" />
+    <Content Include="Views\Home\Patients.cshtml" />
+    <Content Include="Views\Billing\Index.cshtml" />
+    <Content Include="Views\Billing\PatientForm.cshtml" />
+    <Content Include="Views\Billing\_BillingInvestigations.cshtml" />
+    <Content Include="Views\Billing\_BillingInvestigationsBody.cshtml" />
+    <Content Include="Views\Pharmacy\_PharmacyPackageOrdersGrid.cshtml" />
+    <Content Include="Views\Pharmacy\_PharmacyIndexGrids.cshtml" />
+    <Content Include="Views\Pharmacy\Index.cshtml" />
+    <Content Include="Views\Pharmacy\PatientForm.cshtml" />
+    <Content Include="Views\Reports\Index.cshtml" />
+    <Content Include="Views\Reports\_InvestigationsTable.cshtml" />
+    <Content Include="Views\Reports\_PrescriptionTable.cshtml" />
+    <Content Include="Views\Reports\Prescription.cshtml" />
+    <Content Include="Views\Shared\_PatientFormNav.cshtml" />
+    <Content Include="Views\Shared\_PharmacyBillingNav.cshtml" />
+    <Content Include="Views\Shared\_WorkQueueStatusFilters.cshtml" />
+    <Content Include="Views\Account\Login.cshtml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="App_Data\" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Content\bootstrap.rtl.min.css.map" />
+    <Content Include="Content\bootstrap.rtl.css.map" />
+    <Content Include="Content\bootstrap.min.css.map" />
+    <Content Include="Content\bootstrap.css.map" />
+    <Content Include="Content\bootstrap-utilities.rtl.min.css.map" />
+    <Content Include="Content\bootstrap-utilities.rtl.css.map" />
+    <Content Include="Content\bootstrap-utilities.min.css.map" />
+    <Content Include="Content\bootstrap-utilities.css.map" />
+    <Content Include="Content\bootstrap-reboot.rtl.min.css.map" />
+    <Content Include="Content\bootstrap-reboot.rtl.css.map" />
+    <Content Include="Content\bootstrap-reboot.min.css.map" />
+    <Content Include="Content\bootstrap-reboot.css.map" />
+    <Content Include="Content\bootstrap-grid.rtl.min.css.map" />
+    <Content Include="Content\bootstrap-grid.rtl.css.map" />
+    <Content Include="Content\bootstrap-grid.min.css.map" />
+    <Content Include="Content\bootstrap-grid.css.map" />
+    <None Include="packages.config" />
+    <None Include="SQL\DB_Setup.sql" />
+    <None Include="SQL\procCmbERLovList.sql" />
+    <None Include="SQL\procCmbDocumentTypeForERPortal.sql" />
+    <None Include="SQL\procCmbConsultant.sql" />
+    <None Include="SQL\procCmbEmployeeForERPortal.sql" />
+    <None Include="SQL\procCmbItemInterListForERPortal.sql" />
+    <None Include="SQL\procCmbReferralReason.sql" />
+    <None Include="SQL\procCmbRelation.sql" />
+    <None Include="SQL\procGrdERPackageDetails.sql" />
+    <None Include="SQL\procGetPatientInvestigationsForERPortal.sql" />
+    <None Include="SQL\procGetPatientPrescriptionForERPortal.sql" />
+    <Content Include="Scripts\bootstrap.min.js.map" />
+    <Content Include="Scripts\bootstrap.js.map" />
+    <Content Include="Scripts\bootstrap.esm.min.js.map" />
+    <Content Include="Scripts\bootstrap.esm.js.map" />
+    <Content Include="Scripts\bootstrap.bundle.min.js.map" />
+    <Content Include="Scripts\bootstrap.bundle.js.map" />
+    <Content Include="Scripts\jquery-3.7.0.slim.min.map" />
+    <Content Include="Scripts\jquery-3.7.0.min.map" />
+  </ItemGroup>
+  <ItemGroup>
+    <Service Include="{508349B6-6B84-4DF5-91F0-309BEEBAD82D}" />
+  </ItemGroup>
+  <PropertyGroup>
+    <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">10.0</VisualStudioVersion>
+    <VSToolsPath Condition="'$(VSToolsPath)' == ''">$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)</VSToolsPath>
+  </PropertyGroup>
+  <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
+  <Import Project="$(VSToolsPath)\WebApplications\Microsoft.WebApplication.targets" Condition="'$(VSToolsPath)' != ''" />
+  <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v10.0\WebApplications\Microsoft.WebApplication.targets" Condition="false" />
+  <Target Name="MvcBuildViews" AfterTargets="AfterBuild" Condition="'$(MvcBuildViews)'=='true'">
+    <AspNetCompiler VirtualPath="temp" PhysicalPath="$(WebProjectOutputDir)" />
+  </Target>
+  <ProjectExtensions>
+    <VisualStudio>
+      <FlavorProperties GUID="{349c5851-65df-11da-9384-00065b846f21}">
+        <WebProjectProperties>
+          <UseIIS>True</UseIIS>
+          <AutoAssignPort>True</AutoAssignPort>
+          <DevelopmentServerPort>50476</DevelopmentServerPort>
+          <DevelopmentServerVPath>/</DevelopmentServerVPath>
+          <IISUrl>https://localhost:44314/</IISUrl>
+          <NTLMAuthentication>False</NTLMAuthentication>
+          <UseCustomServer>False</UseCustomServer>
+          <CustomServerUrl>
+          </CustomServerUrl>
+          <SaveServerSettingsInUserFile>False</SaveServerSettingsInUserFile>
+        </WebProjectProperties>
+      </FlavorProperties>
+    </VisualStudio>
+  </ProjectExtensions>
+  <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
+    <PropertyGroup>
+      <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
+    </PropertyGroup>
+    <Error Condition="!Exists('packages\Microsoft.CodeDom.Providers.DotNetCompilerPlatform.2.0.1\build\net46\Microsoft.CodeDom.Providers.DotNetCompilerPlatform.props')" Text="$([System.String]::Format('$(ErrorText)', 'packages\Microsoft.CodeDom.Providers.DotNetCompilerPlatform.2.0.1\build\net46\Microsoft.CodeDom.Providers.DotNetCompilerPlatform.props'))" />
+    <Error Condition="!Exists('packages\EntityFramework.6.5.2\build\EntityFramework.props')" Text="$([System.String]::Format('$(ErrorText)', 'packages\EntityFramework.6.5.2\build\EntityFramework.props'))" />
+    <Error Condition="!Exists('packages\EntityFramework.6.5.2\build\EntityFramework.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\EntityFramework.6.5.2\build\EntityFramework.targets'))" />
+  </Target>
+  <Import Project="packages\EntityFramework.6.5.2\build\EntityFramework.targets" Condition="Exists('packages\EntityFramework.6.5.2\build\EntityFramework.targets')" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it.
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target> -->
+</Project>

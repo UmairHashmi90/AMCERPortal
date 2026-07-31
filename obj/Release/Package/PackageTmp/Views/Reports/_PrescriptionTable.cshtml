@@ -1,0 +1,59 @@
+@model IEnumerable<ERPaperless.Models.PrescriptionVisitRowViewModel>
+@{
+    var rows = (Model ?? Enumerable.Empty<ERPaperless.Models.PrescriptionVisitRowViewModel>())
+        .OrderByDescending(x => x.VisitDate ?? System.DateTime.MinValue)
+        .ThenByDescending(x => x.Code)
+        .ToList();
+}
+
+<div class="table-wrap grid-max-7 reports-table-wrap">
+    <table class="app-table reports-table" id="reportsPrescriptionTable">
+        <thead>
+            <tr>
+                <th style="width:5%">#</th>
+                <th style="width:24%">Visit Date</th>
+                <th style="width:31%">Consultant</th>
+                <th style="width:24%">Speciality</th>
+                <th style="width:16%">Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (!rows.Any())
+            {
+                <tr class="prescription-empty-row">
+                    <td colspan="5" class="text-center text-muted py-3">No prescriptions found.</td>
+                </tr>
+            }
+            else
+            {
+                var n = 0;
+                foreach (var row in rows)
+                {
+                    n++;
+                    var encryptedEncounterCode = ERPaperless.Services.Data.Encrypt(row.Code.ToString());
+                    var consultantName = (row.Consultant ?? string.Empty).ToLowerInvariant();
+                    var visitDateKey = row.VisitDate.HasValue
+                        ? row.VisitDate.Value.ToString("yyyy-MM-dd")
+                        : string.Empty;
+                    <tr class="prescription-data-row"
+                        data-consultant="@consultantName"
+                        data-visit-date="@visitDateKey">
+                        <td>@n</td>
+                        <td>@(row.VisitDate.HasValue ? row.VisitDate.Value.ToString("dd-MMM-yyyy HH:mm") : "-")</td>
+                        <td>@(string.IsNullOrWhiteSpace(row.Consultant) ? "-" : row.Consultant)</td>
+                        <td>@(string.IsNullOrWhiteSpace(row.Speciality) ? "-" : row.Speciality)</td>
+                        <td>
+                            <button type="button"
+                                    class="btn btn-sm btn-outline-primary open-prescription-modal-btn"
+                                    data-prescription-url="@Url.Content("~/api/GetPrescriptionReport?q=" + encryptedEncounterCode)"
+                                    data-prescription-code="@row.Code"
+                                    data-prescription-consultant="@(string.IsNullOrWhiteSpace(row.Consultant) ? "Prescription" : row.Consultant)">
+                                Show
+                            </button>
+                        </td>
+                    </tr>
+                }
+            }
+        </tbody>
+    </table>
+</div>

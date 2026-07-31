@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>@ViewBag.Title - ER Paperless</title>
+    @Styles.Render("~/Content/css")
+    @Scripts.Render("~/bundles/modernizr")
+</head>
+<body class="app-body">
+    @{
+        var controller = (ViewContext.RouteData.Values["controller"]?.ToString() ?? string.Empty).ToLowerInvariant();
+        var action = (ViewContext.RouteData.Values["action"]?.ToString() ?? string.Empty).ToLowerInvariant();
+        var hideSidebar = ViewBag.HideSidebar == true;
+    }
+
+    @if (!Request.IsAuthenticated)
+    {
+        @RenderBody()
+    }
+    else
+    {
+        <div class="app-shell @(hideSidebar ? "app-shell-no-sidebar" : "")" id="appShell">
+            @if (!hideSidebar)
+            {
+            <aside class="app-sidebar">
+                <div class="brand-block">
+                    <div class="brand-mark">ER</div>
+                    <div>
+                        <div class="brand-title">ER Paperless</div>
+                        <small class="brand-sub">Nursing & MO Workflow</small>
+                    </div>
+                </div>
+
+                <nav class="menu-links" aria-label="Main menu">
+                    @{
+                        var isPharmacyOnly = ViewBag.IsPharmacyOnly == true;
+                        var isBillingOnly = ViewBag.IsBillingOnly == true;
+                        var hasMultipleRoles = ViewBag.HasMultipleWorkRoles == true;
+                        var showPharmacyMenu = ViewBag.IsPharmacy == true;
+                        var showBillingMenu = ViewBag.IsBilling == true;
+                        var showClinicalMenu = ViewBag.IsClinicalUser == true || hasMultipleRoles;
+                    }
+
+                    @* Pharmacy / Billing first — all-patient queues *@
+                    @if (showPharmacyMenu)
+                    {
+                        @Html.ActionLink("Pharmacy (All)", "PatientForm", "Pharmacy", null,
+                            new { @class = controller == "pharmacy" ? "menu-link active menu-link-primary" : "menu-link menu-link-primary" })
+                    }
+                    @if (showBillingMenu)
+                    {
+                        @Html.ActionLink("Billing (All)", "PatientForm", "Billing", null,
+                            new { @class = controller == "billing" ? "menu-link active menu-link-primary" : "menu-link menu-link-primary" })
+                    }
+
+                    @if (!isPharmacyOnly && !isBillingOnly)
+                    {
+                        @Html.ActionLink("Dashboard", "Index", "Home", null, new { @class = controller == "home" && action == "index" ? "menu-link active" : "menu-link" })
+                    }
+                    @Html.ActionLink("Patients", "Patients", "Home", null, new { @class = controller == "home" && action == "patients" ? "menu-link active" : "menu-link" })
+                    @if (showClinicalMenu)
+                    {
+                        @Html.ActionLink("Main ER Form", "ErForm", "EmergencyForm", null, new { @class = controller == "emergencyform" && action == "erform" ? "menu-link active" : "menu-link" })
+                    }
+                    @if (!isPharmacyOnly && !isBillingOnly)
+                    {
+                        @Html.ActionLink("System Flow", "About", "Home", null, new { @class = action == "about" ? "menu-link active" : "menu-link" })
+                        @Html.ActionLink("Support", "Contact", "Home", null, new { @class = action == "contact" ? "menu-link active" : "menu-link" })
+                    }
+                </nav>
+            </aside>
+            }
+
+            <div class="app-main">
+                <header class="topbar">
+                    <div class="topbar-start">
+                        @if (!hideSidebar)
+                        {
+                        <button type="button" class="menu-toggle" id="appMenuToggle" aria-controls="appShell" aria-expanded="false" aria-label="Toggle menu">
+                            &#9776;
+                        </button>
+                        }
+                        <div>
+                            <h1 class="topbar-title">@ViewBag.Title</h1>
+                            <p class="topbar-meta">@DateTime.Now.ToString("dddd, dd MMM yyyy")</p>
+                        </div>
+                    </div>
+                    <div class="topbar-actions">
+                        <span class="user-pill">@(ViewBag.UserFullName ?? User.Identity.Name)</span>
+                        @if (ViewBag.RoleLabel != null)
+                        {
+                            <span class="role-badge @ViewBag.RoleBadge">@ViewBag.RoleLabel</span>
+                        }
+                        @using (Html.BeginForm("Logout", "Account", FormMethod.Post, new { @class = "d-inline" }))
+                        {
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="btn btn-outline-danger btn-sm">Logout</button>
+                        }
+                    </div>
+                </header>
+
+                <main class="page-content">
+                    @RenderBody()
+                </main>
+            </div>
+            <div class="app-overlay" id="appOverlay" aria-hidden="true"></div>
+        </div>
+    }
+
+    @Scripts.Render("~/bundles/jquery")
+    @Scripts.Render("~/bundles/bootstrap")
+    @Scripts.Render("~/bundles/er")
+    <script>
+        (function () {
+            var shell = document.getElementById("appShell");
+            var menuToggle = document.getElementById("appMenuToggle");
+            var overlay = document.getElementById("appOverlay");
+            if (!shell || !menuToggle || !overlay) {
+                return;
+            }
+
+            function closeMenu() {
+                shell.classList.remove("menu-open");
+                menuToggle.setAttribute("aria-expanded", "false");
+            }
+
+            function toggleMenu() {
+                var isOpen = shell.classList.toggle("menu-open");
+                menuToggle.setAttribute("aria-expanded", isOpen ? "true" : "false");
+            }
+
+            menuToggle.addEventListener("click", toggleMenu);
+            overlay.addEventListener("click", closeMenu);
+
+            shell.querySelectorAll(".menu-link").forEach(function (link) {
+                link.addEventListener("click", closeMenu);
+            });
+
+            window.addEventListener("resize", function () {
+                if (window.innerWidth > 1100) {
+                    closeMenu();
+                }
+            });
+        })();
+    </script>
+    @RenderSection("scripts", required: false)
+</body>
+</html>

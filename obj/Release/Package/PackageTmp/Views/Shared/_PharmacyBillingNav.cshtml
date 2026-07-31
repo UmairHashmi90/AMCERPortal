@@ -1,0 +1,51 @@
+@{
+    var patient = ViewBag.PharmacyBillingNavPatient as ERPaperless.Models.PatientFormContextViewModel;
+    var isAllPatients = ViewBag.PharmacyBillingNavAllPatients == true;
+    var active = (ViewBag.ActivePatientForm as string ?? string.Empty).ToLowerInvariant();
+    var canWork = ViewBag.CanWorkOnPage == true;
+    var pageLabel = ViewBag.PageModeLabel as string ?? "View Only";
+
+    object pharmacyRoute = isAllPatients
+        ? (object)new { }
+        : new { patientId = patient.PatientId };
+
+    object billingRoute = isAllPatients
+        ? (object)new { }
+        : new { patientId = patient.PatientId };
+}
+
+<div class="patient-form-nav-wrap">
+    <div class="patient-form-nav-head">
+        <div>
+            @if (isAllPatients)
+            {
+                <strong>@(active == "billing" ? "Billing — All Patients" : "Pharmacy — All Patients")</strong>
+            }
+            else
+            {
+                <strong>@patient.PatientName</strong>
+                <span class="text-muted small ms-1">@patient.BedNo · @patient.MrNo</span>
+            }
+        </div>
+        @Html.ActionLink("All Patients", "Patients", "Home", null,
+            new { @class = "btn btn-sm btn-outline-secondary" })
+    </div>
+    <div class="patient-form-nav patient-form-nav-buttons">
+        @Html.ActionLink("Pharmacy", "PatientForm", "Pharmacy", pharmacyRoute,
+            new { @class = "btn btn-sm patient-form-nav-btn" + (active == "pharmacy" ? " btn-danger" : " btn-outline-danger") })
+        @Html.ActionLink("Billing", "PatientForm", "Billing", billingRoute,
+            new { @class = "btn btn-sm patient-form-nav-btn" + (active == "billing" ? " btn-danger" : " btn-outline-danger") })
+
+        @if (canWork)
+        {
+            @*<div class="toolbar-row mb-2">*@
+                <button type="button" class="btn btn-sm patient-form-nav-btn btn-outline-danger"
+                        data-bs-toggle="modal" data-bs-target="#changeBedModal">
+                    Change Bed
+                </button>
+            @*</div>*@
+        }
+
+        <span class="badge @(canWork ? "bg-success" : "bg-secondary") patient-form-mode-badge">@pageLabel</span>
+    </div>
+</div>

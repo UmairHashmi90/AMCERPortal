@@ -1,0 +1,209 @@
+@model ERPaperless.Models.ReportsPatientFormViewModel
+@{
+    ViewBag.Title = "Prescriptions – " + Model.Patient.PatientName;
+}
+
+<section class="page-section">
+    @Html.Partial("~/Views/Shared/_PatientFormNav.cshtml", Model.Patient)
+
+    <div class="section-head">
+        <h2>Prescriptions</h2>
+       
+    </div>
+
+    <article class="panel-card">
+        <div class="row g-2 align-items-end mb-3">
+            <div class="col-md-6">
+                <label class="form-label mb-1" for="prescriptionDateInput">Filter by Date</label>
+                <input type="date"
+                       id="prescriptionDateInput"
+                       class="form-control form-control-sm" />
+            </div>
+            <div class="col-md-6">
+                <label class="form-label mb-1" for="prescriptionConsultantInput">Filter by Consultant</label>
+                <input type="search"
+                       id="prescriptionConsultantInput"
+                       class="form-control form-control-sm"
+                       placeholder="Search consultant name..." />
+            </div>
+        </div>
+        @Html.Partial("~/Views/Reports/_PrescriptionTable.cshtml", Model.Prescriptions)
+        <p id="prescriptionFilterEmpty" class="text-muted small mb-0 mt-2 d-none">No prescriptions match the filter.</p>
+    </article>
+</section>
+
+<div class="modal fade" id="prescriptionPreviewModal" tabindex="-1" aria-labelledby="prescriptionPreviewModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="prescriptionPreviewModalLabel">Prescription Preview</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted mb-2" id="prescriptionPreviewInfo">Prescription PDF preview will be shown here.</p>
+                <div id="prescriptionPreviewCanvasHost"
+                     style="width:100%;height:70vh;overflow:auto;border:1px solid #dee2e6;border-radius:8px;padding:8px;background:#f8f9fa;">
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+(function () {
+    "use strict";
+
+    if (window.pdfjsLib) {
+        window.pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+    }
+
+    var currentRenderToken = 0;
+    var dateInput = document.getElementById("prescriptionDateInput");
+    var consultantInput = document.getElementById("prescriptionConsultantInput");
+    var table = document.getElementById("reportsPrescriptionTable");
+    var emptyEl = document.getElementById("prescriptionFilterEmpty");
+    var rows = table ? table.querySelectorAll("tbody .prescription-data-row") : [];
+    var modalEl = document.getElementById("prescriptionPreviewModal");
+    var infoEl = document.getElementById("prescriptionPreviewInfo");
+    var canvasHostEl = document.getElementById("prescriptionPreviewCanvasHost");
+
+    function clearPdfCanvas() {
+        if (canvasHostEl) canvasHostEl.innerHTML = "";
+    }
+
+    function isPdfBuffer(buffer) {
+        if (!buffer || buffer.byteLength < 4) return false;
+        var bytes = new Uint8Array(buffer);
+        return bytes[0] === 0x25 && bytes[1] === 0x50 && bytes[2] === 0x44 && bytes[3] === 0x46; // %PDF
+    }
+
+    function renderPdfBuffer(buffer) {
+        if (!window.pdfjsLib) {
+            return Promise.reject(new Error("PDF engine is not loaded."));
+        }
+        if (!canvasHostEl) {
+            return Promise.reject(new Error("PDF preview host not found."));
+        }
+        if (!isPdfBuffer(buffer)) {
+            return Promise.reject(new Error("Invalid PDF data received."));
+        }
+
+        clearPdfCanvas();
+        var renderToken = ++currentRenderToken;
+        var loadingTask = window.pdfjsLib.getDocument({ data: new Uint8Array(buffer) });
+
+        return loadingTask.promise.then(function (pdf) {
+            var renderSequentially = Promise.resolve();
+            for (var pageNo = 1; pageNo <= pdf.numPages; pageNo++) {
+                (function (pageNumber) {
+                    renderSequentially = renderSequentially.then(function () {
+                        if (renderToken !== currentRenderToken) return;
+                        return pdf.getPage(pageNumber).then(function (page) {
+                            if (renderToken !== currentRenderToken) return;
+
+                            var containerWidth = Math.max((canvasHostEl.clientWidth || 900) - 16, 320);
+                            var initialViewport = page.getViewport({ scale: 1 });
+                            var baseScale = containerWidth / initialViewport.width;
+                            var qualityBoost = 1.35;
+                            var viewport = page.getViewport({ scale: baseScale * qualityBoost });
+                            var outputScale = Math.min(window.devicePixelRatio || 1, 2.5);
+
+                            var wrapper = document.createElement("div");
+                            wrapper.style.marginBottom = "10px";
+                            wrapper.style.background = "#fff";
+                            wrapper.style.border = "1px solid #dee2e6";
+                            wrapper.style.borderRadius = "6px";
+                            wrapper.style.padding = "6px";
+
+                            var canvas = document.createElement("canvas");
+                            canvas.style.width = Math.floor(viewport.width) + "px";
+                            canvas.style.height = Math.floor(viewport.height) + "px";
+                            canvas.width = Math.floor(viewport.width * outputScale);
+                            canvas.height = Math.floor(viewport.height * outputScale);
+                            wrapper.appendChild(canvas);
+                            canvasHostEl.appendChild(wrapper);
+
+                            return page.render({
+                                canvasContext: canvas.getContext("2d"),
+                                viewport: viewport,
+                                transform: outputScale === 1 ? null : [outputScale, 0, 0, outputScale, 0, 0]
+                            }).promise;
+                        });
+                    });
+                })(pageNo);
+            }
+            return renderSequentially;
+        });
+    }
+
+    function applyPrescriptionFilter() {
+        if (!table || !dateInput || !consultantInput || !emptyEl || !rows.length) return;
+        var selectedDate = (dateInput.value || "").trim();
+        var consultantTerm = (consultantInput.value || "").trim().toLowerCase();
+        var visibleCount = 0;
+
+        rows.forEach(function (row) {
+            var rowDate = row.getAttribute("data-visit-date") || "";
+            var rowConsultant = row.getAttribute("data-consultant") || "";
+            var passDate = !selectedDate || rowDate === selectedDate;
+            var passConsultant = !consultantTerm || rowConsultant.indexOf(consultantTerm) >= 0;
+            var show = passDate && passConsultant;
+            row.classList.toggle("d-none", !show);
+            if (show) visibleCount++;
+        });
+
+        emptyEl.classList.toggle("d-none", visibleCount > 0);
+    }
+
+    if (dateInput) dateInput.addEventListener("change", applyPrescriptionFilter);
+    if (consultantInput) consultantInput.addEventListener("input", applyPrescriptionFilter);
+
+    document.addEventListener("click", function (e) {
+        var btn = e.target.closest(".open-prescription-modal-btn");
+        if (!btn) return;
+
+        if (!modalEl || !infoEl || !canvasHostEl || !window.bootstrap || !window.bootstrap.Modal) return;
+
+        var consultantName = btn.getAttribute("data-prescription-consultant") || "Prescription";
+        var prescriptionCode = btn.getAttribute("data-prescription-code") || "";
+        var prescriptionUrl = btn.getAttribute("data-prescription-url") || "";
+        infoEl.textContent = "Code = " + prescriptionCode + " (" + consultantName + ") loading...";
+
+        var modal = window.bootstrap.Modal.getOrCreateInstance(modalEl);
+        modal.show();
+
+        clearPdfCanvas();
+
+        if (!prescriptionUrl) {
+            infoEl.textContent = consultantName + " not available.";
+            return;
+        }
+
+        fetch(prescriptionUrl, {
+            credentials: "same-origin",
+            headers: { "Accept": "application/pdf" }
+        })
+            .then(function (response) {
+                if (!response.ok) throw new Error("Could not load prescription.");
+                return response.arrayBuffer();
+            })
+            .then(function (buffer) {
+                return renderPdfBuffer(buffer);
+            })
+            .then(function () {
+                infoEl.textContent = "Code = " + prescriptionCode + " (" + consultantName + ")";
+            })
+            .catch(function () {
+                infoEl.textContent = "Could not display PDF preview in this device/browser.";
+            });
+    });
+
+    if (modalEl) {
+        modalEl.addEventListener("hidden.bs.modal", function () {
+            currentRenderToken++;
+            clearPdfCanvas();
+        });
+    }
+})();
+</script>

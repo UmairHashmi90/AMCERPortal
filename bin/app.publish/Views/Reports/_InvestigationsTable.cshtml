@@ -1,0 +1,73 @@
+@model IEnumerable<ERPaperless.Models.ReportInvestigationRowViewModel>
+@{
+    var admissionCode = 0;
+    if (ViewBag.AdmissionCode != null)
+    {
+        int.TryParse(ViewBag.AdmissionCode.ToString(), out admissionCode);
+    }
+    var rows = (Model ?? Enumerable.Empty<ERPaperless.Models.ReportInvestigationRowViewModel>())
+        .OrderByDescending(x => x.OrderDate ?? System.DateTime.MinValue)
+        .ThenByDescending(x => x.PatientOrderDetailCode)
+        .ToList();
+}
+
+<div class="table-wrap grid-max-7 reports-table-wrap">
+    <table class="app-table reports-table" id="reportsInvestigationsTable">
+        <thead>
+            <tr>
+                <th style="width:5%">#</th>
+                <th style="width:18%">Order Date</th>
+                <th style="width:34%">Test</th>
+                <th style="width:8%">Status</th>
+                <th style="width:35%">Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (!rows.Any())
+            {
+                <tr class="report-empty-row">
+                    <td colspan="5" class="text-center text-muted py-3">No investigation reports found.</td>
+                </tr>
+            }
+            else
+            {
+                var n = 0;
+                foreach (var row in rows)
+                {
+                    n++;
+                    var reportName = (row.Test ?? string.Empty).ToLowerInvariant();
+                    var rawStatus = row.Status ?? string.Empty;
+                    var displayStatus = string.Equals(rawStatus, "ReportReady", StringComparison.OrdinalIgnoreCase)
+                        ? "Ready"
+                        : (string.IsNullOrWhiteSpace(rawStatus) ? "-" : rawStatus);
+                    var encryptedOrderCode = ERPaperless.Services.Data.Encrypt(row.PatientOrderDetailCode.ToString());
+                    <tr class="report-data-row"
+                        data-name="@reportName"
+                        data-status="@((row.Status ?? string.Empty).ToLowerInvariant())">
+                        <td>@n</td>
+                        <td>@(row.OrderDate.HasValue ? row.OrderDate.Value.ToString("dd-MMM-yyyy HH:mm") : "-")</td>
+                        <td>@(string.IsNullOrWhiteSpace(row.Test) ? "-" : row.Test)</td>
+                        <td>@displayStatus</td>
+                        <td>
+                            <button type="button"
+                                    class="btn btn-sm btn-outline-primary open-report-modal-btn"
+                                    data-report-url="@Url.Content("~/api/GetReport?q=" + encryptedOrderCode)"
+                                    data-report-name="@(string.IsNullOrWhiteSpace(row.Test) ? "Report" : row.Test)">
+                                View Reports
+                            </button>
+                            @if (row.ReportTypeCode == 3)
+                            {
+                                @Html.ActionLink(
+                                    "Dicom",
+                                    "Open",
+                                    "Dicom",
+                                    new { patientOrderDetailCode = row.PatientOrderDetailCode },
+                                    new { @class = "btn btn-sm btn-outline-primary ms-1", target = "_blank", rel = "noopener" })
+                            }
+                        </td>
+                    </tr>
+                }
+            }
+        </tbody>
+    </table>
+</div>

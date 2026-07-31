@@ -1,0 +1,28 @@
+@{
+    bool canEditObservations = ViewBag.CanEditNursingNotes == true;
+    bool canEditCarePlan = ViewBag.CanEditNursingCarePlan == true;
+    var rf = ViewBag.ReviewForm as ERPaperless.Models.ErReviewFormStateViewModel
+             ?? new ERPaperless.Models.ErReviewFormStateViewModel();
+}
+
+<section class="panel-card">
+    <h3>
+        Nursing Assessment &amp; Notes
+        <small class="text-muted fw-normal">(Observations: Nursing only | Care Plan / Instructions: MO only)</small>
+    </h3>
+
+    <div class="row g-3">
+        <div class="col-md-6">
+            <label class="form-label">Nursing Observations</label>
+            <textarea id="NursingObservations" class="form-control" rows="5"
+                      placeholder="@(canEditObservations ? "Enter nursing observations and assessments..." : "Nursing only.")"
+                      @(canEditObservations ? "" : "disabled=\"disabled\"")>@(rf.NursingObservations ?? "")</textarea>
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">Care Plan / Instructions</label>
+            <textarea id="NursingCarePlan" class="form-control" rows="5"
+                      placeholder="@(canEditCarePlan ? "Enter care plan and instructions..." : "MO only.")"
+                      @(canEditCarePlan ? "" : "disabled=\"disabled\"")>@(rf.NursingCarePlan ?? "")</textarea>
+        </div>
+    </div>
+</section>

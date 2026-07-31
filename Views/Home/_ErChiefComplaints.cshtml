@@ -1,0 +1,58 @@
+@model IEnumerable<ERPaperless.Models.ChiefComplaintItemViewModel>
+@*
+    Chief Complaints checklist with per-complaint remarks field.
+    Checkboxes and remark inputs are editable for MO only.
+    Complaint-toggle JS lives in ErForm.cshtml @section scripts.
+*@
+@{
+    bool canEdit = ViewBag.CanEditClinical == true;
+    var complaints = (Model ?? Enumerable.Empty<ERPaperless.Models.ChiefComplaintItemViewModel>()).ToList();
+    const int initialVisibleCount = 7;
+}
+
+<section class="panel-card h-100">
+    <div class="lov-section-head">
+        <h3>Chief Complaints</h3>
+        <input type="search"
+               id="chiefComplaintSearch"
+               class="form-control form-control-sm lov-section-search"
+               data-lov-filter="chief-complaints"
+               placeholder="Search..."
+               autocomplete="off" />
+    </div>
+
+    <div class="complaints-grid">
+        @for (var i = 0; i < complaints.Count; i++)
+        {
+            var c = complaints[i];
+            var isInitialVisible = i < initialVisibleCount;
+            <div class="complaint-row chief-complaint-row lov-filter-row @(isInitialVisible ? "" : "d-none")"
+                 data-lov-group="chief-complaints"
+                 data-complaint-name="@((c.Name ?? string.Empty).ToLowerInvariant())"
+                 data-lov-name="@((c.Name ?? string.Empty).ToLowerInvariant())"
+                 data-initial-visible="@(isInitialVisible ? "true" : "false")">
+                <label class="complaint-check">
+                    <input type="checkbox"
+                           class="complaint-toggle"
+                           id="cc-chk-@c.Id"
+                           value="@c.Id"
+                           data-complaint-code="@c.Id"
+                           data-target-id="cc-rmk-@c.Id"
+                           @(c.IsSelected ? "checked=\"checked\"" : "")
+                           @(canEdit ? "" : "disabled=\"disabled\"") />
+                    <span>@c.Name</span>
+                </label>
+                <input type="text"
+                       id="cc-rmk-@c.Id"
+                       class="form-control complaint-remark"
+                       value="@c.Remark"
+                       placeholder="Remarks..."
+                       @(!c.IsSelected || !canEdit ? "disabled=\"disabled\"" : "") />
+            </div>
+        }
+
+        <p id="chiefComplaintNoResult" class="text-muted small mb-0 d-none" data-lov-empty="chief-complaints">
+            No chief complaints found.
+        </p>
+    </div>
+</section>

@@ -1,0 +1,438 @@
+.login-body {
+    min-height: 100vh;
+    margin: 0;
+    font-family: "Poppins", "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    background: #f7f7f7;
+    color: #1f1f1f;
+}
+
+.login-shell {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem 1.2rem;
+}
+
+.login-card {
+    width: 100%;
+    max-width: 920px;
+    background: #ffffff;
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 16px 42px rgba(0, 0, 0, 0.19);
+    display: grid;
+    grid-template-columns: 46% 54%;
+}
+
+.brand-panel {
+    background: #ef1c25;
+    color: #ffffff;
+    position: relative;
+    padding: 1.7rem 1.25rem 1.2rem;
+    border-radius: 0 20px 0 20px;
+    overflow: hidden;
+}
+
+.brand-panel::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 108px;
+    height: 34px;
+    border-bottom-left-radius: 16px;
+    background: #d00f18;
+    z-index: 1;
+}
+
+.brand-panel-inner {
+    position: relative;
+    z-index: 2;
+    height: 100%;
+    min-height: 356px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: center;
+    text-align: center;
+}
+
+.brand-top {
+    margin-top: 0.6rem;
+}
+
+.brand-middle {
+    margin-top: -1.2rem;
+}
+
+.hello-text {
+    margin: 0;
+    font-size: 0.78rem;
+    opacity: 0.92;
+    line-height: 1;
+}
+
+.brand-panel h1 {
+    margin: 0.22rem 0 0;
+    font-size: 2.08rem;
+    line-height: 1.02;
+    font-weight: 700;
+    text-transform: lowercase;
+}
+
+.logo-circle {
+    width: 150px;
+    height: 150px;
+    border-radius: 50%;
+    margin: 0 auto 0.72rem;
+    background: #ffffff;
+    color: #e1111c;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.22);
+}
+
+.brand-name { 
+    width:125px;
+    margin: 0.05rem 0 0;
+    font-size: 1.16rem;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+}
+
+.brand-bottom {
+    font-size: 0.52rem;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    opacity: 0.85;
+    margin-bottom: 0.35rem;
+}
+
+.panel-corner-cut {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    width: 0;
+    height: 0;
+    border-top: 84px solid transparent;
+    border-left: 84px solid #ffffff;
+}
+
+.panel-corner-cut::before {
+    content: "";
+    position: absolute;
+    right: -84px;
+    bottom: 0;
+    width: 84px;
+    height: 84px;
+    background: rgba(114, 0, 7, 0.28);
+    clip-path: polygon(0 100%, 100% 0, 100% 100%);
+}
+
+.form-panel {
+    padding: 2.15rem 2.5rem 2rem;
+}
+
+.form-panel h2 {
+    margin: 0;
+    color: #ed1b24;
+    font-size: 2.15rem;
+    font-weight: 700;
+}
+
+.subtitle {
+    margin: 0.15rem 0 1.4rem;
+    color: #727272;
+    font-size: 0.72rem;
+    font-weight: 400;
+}
+
+.login-form .alert {
+    margin-bottom: 1rem;
+    border-radius: 8px;
+    font-size: 0.9rem;
+}
+
+.input-block {
+    margin-bottom: 0.85rem;
+}
+
+.form-label {
+    display: none;
+}
+
+.input-with-icon {
+    position: relative;
+}
+
+.field-icon {
+    position: absolute;
+    left: 9px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 0.88rem;
+    color: #7a7a7a;
+    width: 16px;
+    text-align: center;
+    line-height: 1;
+}
+
+.login-form .form-control {
+    width: 100%;
+    max-width: none;
+    min-height: 36px;
+    border-radius: 0;
+    border: 1px solid #c8c8c8;
+    color: #202020;
+    background-color: #ffffff;
+    box-shadow: none;
+    font-size: 0.76rem;
+    padding: 0.4rem 0.7rem 0.4rem 1.9rem;
+    line-height: 1.2;
+}
+
+.login-form .form-control:focus {
+    border-color: #ef1a23;
+    box-shadow: 0 0 0 0.1rem rgba(239, 26, 35, 0.12);
+}
+
+.remember-check {
+    margin: 0.25rem 0 0.95rem;
+    color: #555;
+    font-size: 0.76rem;
+}
+
+.remember-check .form-check-input:checked {
+    background-color: #ef1a23;
+    border-color: #ef1a23;
+}
+
+.remember-check .form-check-input {
+    border-radius: 0;
+    margin-top: 0.17rem;
+    width: 0.82rem;
+    height: 0.82rem;
+}
+
+.login-button {
+    width: 100%;
+    border: none;
+    border-radius: 0;
+    min-height: 35px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    background: #ef1a23;
+    color: #ffffff;
+    font-size: 0.76rem;
+    text-transform: none;
+}
+
+.login-button:hover,
+.login-button:focus {
+    color: #ffffff;
+    background: #c90c16;
+}
+
+.field-validation-error {
+    margin-top: 0.15rem;
+    display: inline-block;
+    color: #c30d16;
+    font-size: 0.72rem;
+}
+
+.forgot-link {
+    margin: 0.15rem 0 0.4rem;
+    color: #7c7c7c;
+    font-size: 0.66rem;
+}
+
+.signup-hint {
+    margin-top: 0.7rem;
+    margin-bottom: 0;
+    font-size: 0.72rem;
+    color: #4f4f4f;
+}
+
+.signup-hint span {
+    color: #ef1a23;
+    font-weight: 600;
+}
+
+.security-note,
+.demo-hint {
+    margin-top: 0.55rem;
+    margin-bottom: 0;
+    font-size: 0.63rem;
+    color: #7a7a7a;
+}
+
+.demo-hint strong {
+    color: #333b49;
+}
+
+@media (max-width: 900px) {
+    .login-card {
+        max-width: 720px;
+        grid-template-columns: 44% 56%;
+    }
+
+    .brand-panel h1 {
+        font-size: 1.8rem;
+    }
+
+    .brand-panel-inner {
+        min-height: 330px;
+    }
+
+    .form-panel {
+        padding: 1.75rem 1.6rem;
+    }
+}
+
+/* 11-inch tablets (portrait and landscape) */
+@media (min-width: 760px) and (max-width: 1250px) {
+    .login-shell {
+        padding: 1.2rem;
+    }
+
+    .login-card {
+        max-width: 100%;
+        width: min(96vw, 1080px);
+        min-height: min(76vh, 760px);
+        grid-template-columns: 44% 56%;
+        border-radius: 18px;
+    }
+
+    .brand-panel {
+        padding: 1.35rem 1rem 0.95rem;
+        border-radius: 0 18px 0 18px;
+    }
+
+    .brand-panel::before {
+        width: 96px;
+        height: 31px;
+        border-bottom-left-radius: 14px;
+    }
+
+    .brand-panel-inner {
+        min-height: 100%;
+        height: auto;
+    }
+
+    .brand-top {
+        margin-top: 0.35rem;
+    }
+
+    .brand-panel h1 {
+        font-size: clamp(1.8rem, 2.6vw, 2.2rem);
+    }
+
+    .brand-middle {
+        margin-top: -0.5rem;
+    }
+
+    .logo-circle {
+        width: clamp(66px, 7.5vw, 80px);
+        height: clamp(66px, 7.5vw, 80px);
+        font-size: clamp(1.05rem, 1.7vw, 1.3rem);
+    }
+
+    .brand-name {
+        font-size: clamp(1rem, 1.35vw, 1.2rem);
+    }
+
+    .brand-bottom {
+        font-size: clamp(0.46rem, 0.72vw, 0.58rem);
+    }
+
+    .panel-corner-cut {
+        border-top-width: 72px;
+        border-left-width: 72px;
+    }
+
+    .panel-corner-cut::before {
+        right: -72px;
+        width: 72px;
+        height: 72px;
+    }
+
+    .form-panel {
+        padding: clamp(1.2rem, 2.4vw, 2rem) clamp(1.1rem, 2.6vw, 2.3rem) 1.2rem;
+    }
+
+    .form-panel h2 {
+        font-size: clamp(1.7rem, 3vw, 2.2rem);
+    }
+
+    .subtitle {
+        font-size: clamp(0.66rem, 0.95vw, 0.75rem);
+        margin-bottom: 1.05rem;
+    }
+
+    .login-form .form-control {
+        min-height: clamp(34px, 4.2vh, 40px);
+        font-size: clamp(0.73rem, 1vw, 0.8rem);
+    }
+
+    .login-button {
+        min-height: clamp(34px, 4.2vh, 40px);
+    }
+}
+
+@media (max-width: 700px) {
+    .login-shell {
+        padding: 1.2rem 0.8rem;
+    }
+
+    .login-card {
+        grid-template-columns: 1fr;
+        border-radius: 16px;
+    }
+
+    .brand-panel {
+        min-height: 300px;
+        padding: 1.5rem 1.1rem;
+        border-radius: 0;
+    }
+
+    .brand-panel::before {
+        width: 80px;
+        right: 0;
+        height: 26px;
+    }
+
+    .panel-corner-cut {
+        border-top-width: 65px;
+        border-left-width: 65px;
+    }
+
+    .panel-corner-cut::before {
+        right: -65px;
+        width: 65px;
+        height: 65px;
+    }
+
+    .brand-panel-inner {
+        min-height: 270px;
+    }
+
+    .brand-middle {
+        margin-top: -0.4rem;
+    }
+
+    .form-panel {
+        padding: 1.25rem 1.05rem 1.45rem;
+    }
+
+    .form-panel h2 {
+        font-size: 1.8rem;
+    }
+
+    .subtitle {
+        font-size: 0.7rem;
+    }
+}

@@ -1,0 +1,29 @@
+﻿@{
+    ViewBag.Title = "System Flow";
+}
+
+<section class="page-section">
+    <div class="section-head">
+        <h2>ER Paperless End-to-End Flow</h2>
+        <p>Mapped from the provided flow document for Login, Rights, Patient tracking, Billing, and Pharmacy.</p>
+    </div>
+
+    <div class="flow-grid">
+        <article class="panel-card">
+            <h3>1. Login + Rights</h3>
+            <p>Users authenticate through secure login. Rights determine visible modules (MO, Nursing, Billing, Pharmacy).</p>
+        </article>
+        <article class="panel-card">
+            <h3>2. Patients Board</h3>
+            <p>Beds, chairs, and OT slots show occupancy with color states and quick assignment actions.</p>
+        </article>
+        <article class="panel-card">
+            <h3>3. Main ER Form</h3>
+            <p>Nursing and MO capture vitals, complaints, diagnosis, investigations, and treatment plan digitally.</p>
+        </article>
+        <article class="panel-card">
+            <h3>4. Billing + Pharmacy</h3>
+            <p>Task queues track status from pending to done/issued with remarks, requester, and timestamp.</p>
+        </article>
+    </div>
+</section>

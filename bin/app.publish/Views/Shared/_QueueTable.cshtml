@@ -1,0 +1,175 @@
+@model IEnumerable<ERPaperless.Models.QueueItemViewModel>
+@{
+    var title = ViewData["Title"] as string ?? "Queue";
+    var refreshUrl = ViewBag.QueueRefreshUrl as string ?? string.Empty;
+    var autoRefresh = !string.IsNullOrWhiteSpace(refreshUrl);
+}
+
+<section class="panel-card queue-panel" id="queuePanel">
+    <div class="panel-head @(autoRefresh ? "queue-panel-head" : "")">
+        <h3>@title</h3>
+        @if (autoRefresh)
+        {
+            <div class="queue-refresh-bar">
+                <button type="button" class="btn btn-outline-secondary btn-sm" id="btnRefreshQueue">
+                    Refresh
+                </button>
+                <span class="queue-refresh-timer text-muted small">
+                    Next refresh in <strong id="queueRefreshCountdown">10</strong>s
+                </span>
+                <span class="queue-refresh-status text-muted small" id="queueRefreshStatus"></span>
+            </div>
+        }
+    </div>
+
+    @if (autoRefresh)
+    {
+        <div class="queue-search-row mb-2">
+            <input type="search"
+                   id="queueSearchInput"
+                   class="form-control form-control-sm queue-search-input"
+                   placeholder="Search by bed / name / MR no / detail..."
+                   autocomplete="off" />
+        </div>
+    }
+
+    <div class="table-wrap">
+        <table class="app-table queue-table">
+            <thead>
+                <tr>
+                    <th>SR</th>
+                    <th>Bed</th>
+                    <th>MR No</th>
+                    <th>Name</th>
+                    <th>Date/Time</th>
+                    <th>Request By</th>
+                    <th>Detail</th>
+                    <th>Status</th>
+                    <th style="width:8%">Form</th>
+                </tr>
+            </thead>
+            <tbody id="queueTableBody">
+                @Html.Partial("~/Views/Shared/_QueueTableBody.cshtml", Model)
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<input type="hidden" id="queueRefreshUrl" value="@refreshUrl" />
+
+@if (autoRefresh)
+{
+<script>
+(function () {
+    "use strict";
+
+    var refreshUrlEl = document.getElementById("queueRefreshUrl");
+    var bodyEl = document.getElementById("queueTableBody");
+    var btnEl = document.getElementById("btnRefreshQueue");
+    var countdownEl = document.getElementById("queueRefreshCountdown");
+    var statusEl = document.getElementById("queueRefreshStatus");
+    var searchEl = document.getElementById("queueSearchInput");
+    if (!refreshUrlEl || !bodyEl || !refreshUrlEl.value) return;
+
+    var secondsLeft = 10;
+    var timerId = null;
+    var refreshing = false;
+
+    function applyQueueSearch() {
+        if (!searchEl || !bodyEl) return;
+        var term = (searchEl.value || "").trim().toLowerCase();
+        var rows = bodyEl.querySelectorAll("tr.queue-data-row");
+        var visibleCount = 0;
+
+        rows.forEach(function (row) {
+            var haystack = row.getAttribute("data-search") || row.textContent.toLowerCase();
+            var show = !term || haystack.indexOf(term) >= 0;
+            row.style.display = show ? "" : "none";
+            if (show) visibleCount++;
+        });
+
+        var emptyRow = bodyEl.querySelector("tr.queue-filter-empty");
+        if (emptyRow) emptyRow.remove();
+
+        if (rows.length > 0 && visibleCount === 0) {
+            var tr = document.createElement("tr");
+            tr.className = "queue-filter-empty";
+            tr.innerHTML = '<td colspan="9" class="text-center text-muted py-3">No rows match your search.</td>';
+            bodyEl.appendChild(tr);
+        }
+    }
+
+    function setStatus(message, isError) {
+        if (!statusEl) return;
+        statusEl.textContent = message || "";
+        statusEl.classList.toggle("text-danger", !!isError);
+        statusEl.classList.toggle("text-muted", !isError);
+    }
+
+    function renderCountdown() {
+        if (countdownEl) countdownEl.textContent = String(secondsLeft);
+    }
+
+    function resetCountdown() {
+        secondsLeft = 10;
+        renderCountdown();
+    }
+
+    function refreshQueue() {
+        if (refreshing) return;
+        refreshing = true;
+        if (btnEl) btnEl.disabled = true;
+        setStatus("Refreshing...", false);
+
+        fetch(refreshUrlEl.value, {
+            method: "GET",
+            credentials: "same-origin",
+            headers: { "X-Requested-With": "XMLHttpRequest" }
+        })
+        .then(function (r) {
+            if (!r.ok) throw new Error("Could not refresh queue.");
+            return r.text();
+        })
+        .then(function (html) {
+            bodyEl.innerHTML = html;
+            resetCountdown();
+            applyQueueSearch();
+            setStatus("Updated " + new Date().toLocaleTimeString(), false);
+        })
+        .catch(function (err) {
+            setStatus(err.message || "Refresh failed.", true);
+        })
+        .finally(function () {
+            refreshing = false;
+            if (btnEl) btnEl.disabled = false;
+        });
+    }
+
+    function tick() {
+        secondsLeft -= 1;
+        if (secondsLeft <= 0) {
+            refreshQueue();
+            return;
+        }
+        renderCountdown();
+    }
+
+    if (btnEl) {
+        btnEl.addEventListener("click", function () {
+            refreshQueue();
+        });
+    }
+
+    if (searchEl) {
+        searchEl.addEventListener("input", applyQueueSearch);
+    }
+
+    renderCountdown();
+    timerId = window.setInterval(tick, 1000);
+
+    window.addEventListener("beforeunload", function () {
+        if (timerId) window.clearInterval(timerId);
+    });
+})();
+</script>
+}

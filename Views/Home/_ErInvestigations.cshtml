@@ -1,0 +1,168 @@
+@model ERPaperless.Models.ErFormViewModel
+@{
+    bool isMO = ViewBag.IsMO == true;
+    var serviceGroups = (Model.ServiceGroups ?? Enumerable.Empty<ERPaperless.Models.ERServiceGroupViewModel>()).ToList();
+    var investigations = (Model.ReviewForm?.Investigations ?? Enumerable.Empty<ERPaperless.Models.InvestigationRowViewModel>())
+        .OrderByDescending(x => x.RequestedOn)
+        .ToList();
+}
+
+<section class="panel-card inv-panel">
+    <h3 class="inv-panel-head d-flex align-items-center flex-wrap gap-2">
+       
+        <span>
+            Investigations
+            @if (!isMO) { <small class="text-muted fw-normal">(MO only)</small> }
+        </span>
+    </h3>
+
+    <div class="package-section-head er-section-toolbar inv-section-toolbar mb-2">
+        <span class="er-section-toolbar-title">Lab / Investigation Group</span>
+
+        <div class="er-section-toolbar-search">
+            <input type="search"
+                   id="labGroupSearch"
+                   class="form-select lab-group-autocomplete er-touch-input er-section-search-input"
+                   list="labGroupOptions"
+                   data-lov-hidden="labGroupCode"
+                   autocomplete="off"
+                   placeholder="Search lab group..."
+                   @(isMO ? "" : "disabled=\"disabled\"") />
+            <input type="hidden" id="labGroupCode" value="" />
+        </div>
+        @if (isMO)
+        {
+            <button type="button" class="btn er-section-add-custom-btn btn-sm" id="btnAddCustomInvestigation">+ Add</button>
+            <button type="button" class="btn er-section-save-btn" id="btnSaveInvestigations">Save Investigation</button>
+        }
+    </div>
+    <datalist id="labGroupOptions">
+        @foreach (var group in serviceGroups)
+        {
+            <option value="@group.GroupName"
+                    data-value="@group.ServiceGroupCode"
+                    data-services="@group.GroupServices"></option>
+        }
+    </datalist>
+
+    <datalist id="invCustomTestOptions">
+        @foreach (var testName in Model.InvestigationTestOptions ?? Enumerable.Empty<string>())
+        {
+            if (!string.IsNullOrWhiteSpace(testName))
+            {
+                <option value="@testName"></option>
+            }
+        }
+    </datalist>
+
+    <div class="table-wrap grid-max-7">
+        <table class="app-table" id="investigationsTable">
+            <thead>
+                <tr>
+                    <th style="width:48%;">Test / Investigation</th>
+                    <th style="width:30%">Remarks / Result</th>
+                    <th style="width:10%">Cancel</th>
+                    <th style="width:14%">Billing</th>
+                    <th style="width:12%">Status</th>
+                    @if (isMO) { <th style="width:10%"></th> }
+                </tr>
+            </thead>
+            <tbody id="investigationsBody">
+                @if (!investigations.Any())
+                {
+                    <tr id="invPlaceholder">
+                        <td colspan="@(isMO ? 6 : 5)" class="text-center text-muted py-3">
+                            No investigations added yet.
+                        </td>
+                    </tr>
+                }
+                else
+                {
+                    foreach (var inv in investigations)
+                    {
+                        var locked = inv.IsLockedForClinicalEdit;
+                        var rowClass = inv.IsCancelled
+                            ? "inv-row-cancelled"
+                            : inv.IsBillingAcknowledged
+                                ? "inv-row-billing-ack"
+                                : "";
+                        if (locked) { rowClass += " inv-row-locked"; }
+
+                        <tr class="inv-data-row @rowClass"
+                            data-id="@inv.Id"
+                            data-service-group="@(inv.ServiceGroupCode ?? 0)"
+                            data-billing-ack="@(inv.IsBillingAcknowledged ? "1" : "0")"
+                            data-cancelled="@(inv.IsCancelled ? "1" : "0")">
+                            <td>
+                                <input type="text" class="form-control form-control-sm inv-test"
+                                       value="@inv.TestName" @(locked ? "readonly=\"readonly\"" : "") />
+                            </td>
+                            <td>
+                                <input type="text" class="form-control form-control-sm inv-remarks"
+                                       value="@(inv.Remarks ?? "")" placeholder="Remarks / result"
+                                       @(locked ? "readonly=\"readonly\"" : "") />
+                            </td>
+                            <td class="text-center">
+                                @if (locked)
+                                {
+                                    <span class="small @(inv.IsCancelled ? "text-danger fw-semibold" : "text-muted")">
+                                        @(inv.IsCancelled ? "Yes" : "-")
+                                    </span>
+                                }
+                                else if (isMO)
+                                {
+                                    <input type="checkbox" class="form-check-input mt-1 inv-cancel-checkbox"
+                                           @(inv.IsCancelled ? "checked=\"checked\"" : "") title="Cancel test" />
+                                }
+                                else
+                                {
+                                    <span class="text-muted">-</span>
+                                }
+                            </td>
+                            <td class="small inv-billing-status">
+                                @if (inv.IsBillingAcknowledged)
+                                {
+                                    <span class="text-success">Ack'd</span>
+                                    if (!string.IsNullOrWhiteSpace(inv.AckByName))
+                                    {
+                                        <div class="text-muted">@inv.AckByName</div>
+                                    }
+                                }
+                                else if (inv.IsCancelled)
+                                {
+                                    <span class="text-danger">Cancelled</span>
+                                }
+                                else
+                                {
+                                    <span class="text-warning">Pending</span>
+                                }
+                            </td>
+                            <td class="small inv-clinical-status">
+                                @if (inv.IsCancelled)
+                                {
+                                    <span class="text-danger fw-semibold">Cancelled</span>
+                                }
+                                else if (inv.IsBillingAcknowledged)
+                                {
+                                    <span class="text-success fw-semibold">Billing Ack'd</span>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">Open</span>
+                                }
+                            </td>
+                            @if (isMO)
+                            {
+                                <td class="text-center">
+                                    <button type="button"
+                                            class="btn btn-link btn-sm text-danger p-0 inv-remove-btn @(locked ? "d-none" : "")"
+                                            title="Remove">&#x2715;</button>
+                                </td>
+                            }
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+</section>

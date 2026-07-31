@@ -1,0 +1,28 @@
+@model ERPaperless.Models.LovRadioListViewModel
+@{
+    var options = Model.Options ?? Enumerable.Empty<ERPaperless.Models.ERLovOptionViewModel>();
+    var labelCss = string.IsNullOrWhiteSpace(Model.LabelCss) ? "lov-radio-title" : Model.LabelCss;
+    var groupId = string.IsNullOrWhiteSpace(Model.GroupId) ? Model.GroupName : Model.GroupId;
+}
+
+@if (!string.IsNullOrWhiteSpace(Model.Label))
+{
+    <div class="@labelCss">@Model.Label</div>
+}
+
+<div class="lov-radio-list" role="radiogroup" aria-label="@Model.Label">
+    @foreach (var item in options)
+    {
+        var inputId = groupId + "-" + item.Id;
+        <div class="form-check lov-radio-item">
+            <input class="form-check-input"
+                   type="radio"
+                   name="@Model.GroupName"
+                   id="@inputId"
+                   value="@item.Id"
+                   @(Model.SelectedValue.HasValue && Model.SelectedValue.Value == item.Id ? "checked=\"checked\"" : "")
+                   @(Model.Disabled ? "disabled=\"disabled\"" : "") />
+            <label class="form-check-label" for="@inputId">@item.Name</label>
+        </div>
+    }
+</div>

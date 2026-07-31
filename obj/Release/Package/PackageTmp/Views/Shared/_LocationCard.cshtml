@@ -1,0 +1,69 @@
+@model ERPaperless.Models.LocationCardViewModel
+@{
+    var iconSrc = Url.Content(Model.IsChair ? "~/Assets/Images/chair.png" : "~/Assets/Images/bed.png");
+    var iconAlt = Model.IsChair ? "Chair" : "Bed";
+    var isMo = ViewBag.IsMO == true;
+    var isNursing = ViewBag.IsNursing == true;
+    var isNursingOnly = isNursing && !isMo && ViewBag.IsPharmacy != true && ViewBag.IsBilling != true;
+    var hideReportsAndPrescriptions = ViewBag.IsPharmacyOnly == true || ViewBag.IsBillingOnly == true || isNursingOnly;
+}
+
+<article class="location-card @Model.StateClass">
+    <header class="location-head">
+        <img src="@iconSrc" alt="@iconAlt" class="slot-type-icon" />
+        <h4>@Model.SlotName</h4>
+        <span class="status-chip @Model.StateClass">@Model.StateLabel</span>
+    </header>
+
+    <div class="location-body">
+        <p><strong>Patient Name: @Model.PatientName</strong></p>
+        <p><strong>PMR#: @Model.MrNo</strong></p>
+        <p><strong>Admission#:</strong> @Model.AdmissionNo</p>
+        <p><strong>Age/Gender:</strong> @Model.AgeGender</p>
+
+
+        <p>
+            <strong>Admission On:</strong> @(Model.AdmissionDate.HasValue
+            ? Model.AdmissionDate.Value.ToString("dd/MM/yyyy HH:mm")
+            : "-")
+        </p>
+    </div>
+
+    <div class="location-actions">
+
+        @if (Model.StateClass == "status-green")
+        {
+            @* Available bed — only MO / Nursing may open *@
+            if (ViewBag.CanAssignBed == true)
+            {
+                <button type="button"
+                        class="btn btn-sm btn-outline-danger open-bed-btn"
+                        data-bedid="@Model.BedId"
+                        data-branchcode="@Model.BranchCode"
+                        data-admcode="@Model.AdmissionCode"
+                        data-bedname="@Model.SlotName"
+                        data-status="@Model.StateLabel">
+                    Get Patient
+                </button>
+            }
+        }
+        else if (Model.ShowViewFormAction)
+        {
+            <div class="location-form-actions">
+                @Html.ActionLink("View Form", "ErForm", "EmergencyForm",
+                    new { patientId = Model.PatientId },
+                    new { @class = "btn btn-sm btn-danger" })
+                @if (Model.HasAdmission && !hideReportsAndPrescriptions)
+                {
+                    @Html.ActionLink("Reports", "Index", "Reports",
+                        new { admissionCode = Model.AdmissionCode },
+                        new { @class = "btn btn-sm btn-outline-primary" })
+                    @Html.ActionLink("Prescriptions", "Prescription", "Reports",
+                        new { admissionCode = Model.AdmissionCode },
+                        new { @class = "btn btn-sm btn-outline-primary" })
+                }
+            </div>
+        }
+
+    </div>
+</article>

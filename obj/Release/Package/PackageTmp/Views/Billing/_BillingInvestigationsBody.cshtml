@@ -1,0 +1,130 @@
+@model System.Collections.Generic.IEnumerable<ERPaperless.Models.InvestigationRowViewModel>
+@{
+    bool canWork = ViewBag.CanWorkOnPage == true;
+    var investigations = (Model ?? Enumerable.Empty<ERPaperless.Models.InvestigationRowViewModel>())
+        .OrderByDescending(x => x.RequestedOn)
+        .ToList();
+    var showPatient = ViewBag.ShowPatientColumns == true;
+    var colCount = showPatient ? 11 : 8;
+}
+
+@if (!investigations.Any())
+{
+    <tr class="billing-inv-empty-row">
+        <td colspan="@colCount" class="text-center text-muted py-3">
+            No investigations@(showPatient ? "" : " ordered for this patient") yet.
+        </td>
+    </tr>
+}
+else
+{
+    var n = 0;
+    foreach (var inv in investigations)
+    {
+        n++;
+        var isDeleted = inv.IsDeleted;
+        var rowClass = isDeleted || inv.IsCancelled
+            ? "billing-inv-row-cancelled"
+            : inv.IsBillingAcknowledged
+                ? "billing-inv-row-ack"
+                : "billing-inv-row-pending";
+        var searchText = string.Join(" ",
+            inv.BedNo ?? "",
+            inv.MrNo ?? "",
+            inv.PatientName ?? "",
+            inv.TestName ?? "",
+            inv.Remarks ?? "").ToLowerInvariant();
+
+        <tr class="billing-inv-row billing-inv-data-row @rowClass"
+            data-id="@inv.Id"
+            data-patient-id="@inv.PatientId"
+            data-cancelled="@(inv.IsCancelled ? "1" : "0")"
+            data-billing-ack="@(inv.IsBillingAcknowledged ? "1" : "0")"
+            data-deleted="@(isDeleted ? "1" : "0")"
+            data-filter-status="@inv.WorkQueueFilterStatus"
+            data-search="@searchText">
+            <td>@n</td>
+            @if (showPatient)
+            {
+                <td class="small">@(inv.BedNo ?? "-")</td>
+                <td class="small">
+                    <strong>@(inv.PatientName ?? "-")</strong>
+                    @if (!string.IsNullOrWhiteSpace(inv.MrNo))
+                    {
+                        <div class="text-muted">@inv.MrNo</div>
+                    }
+                </td>
+            }
+            <td>@inv.TestName</td>
+            <td>@(string.IsNullOrWhiteSpace(inv.Remarks) ? "-" : inv.Remarks)</td>
+            <td class="small">@inv.RequestedOn.ToString("dd-MMM-yyyy HH:mm")</td>
+            <td class="small">@(inv.RequestedByName ?? "-")</td>
+            <td class="billing-inv-status small fw-semibold">
+                @if (isDeleted || inv.IsCancelled)
+                {
+                    <span class="text-danger">Cancelled</span>
+                }
+                else if (inv.IsBillingAcknowledged)
+                {
+                    <span class="text-success">Completed</span>
+                }
+                else
+                {
+                    <span class="text-warning">Pending</span>
+                }
+            </td>
+            <td class="text-center billing-inv-ack-cell">
+                @if (isDeleted || inv.IsCancelled)
+                {
+                    <span class="text-danger small">N/A</span>
+                }
+                else if (inv.IsBillingAcknowledged)
+                {
+                    <span class="text-success small">&#10003;</span>
+                }
+                else if (canWork)
+                {
+                    <input type="checkbox"
+                           class="form-check-input billing-inv-ack-checkbox mt-1"
+                           title="Acknowledge for billing" />
+                }
+                else
+                {
+                    <span class="text-muted">-</span>
+                }
+            </td>
+            <td class="billing-inv-ack-by small">
+                @if (inv.IsAcknowledged)
+                {
+                    @(inv.AckByName ?? "-")
+                    if (inv.AckDate.HasValue)
+                    {
+                        <div class="text-muted">@inv.AckDate.Value.ToString("dd-MMM-yyyy")</div>
+                    }
+                }
+                else
+                {
+                    <span>-</span>
+                }
+            </td>
+            @if (showPatient)
+            {
+                <td class="text-center">
+                    @if (!string.IsNullOrWhiteSpace(inv.PatientId))
+                    {
+                        @Html.ActionLink(
+                            "View Form",
+                            "ErForm",
+                            "EmergencyForm",
+                            new { patientId = inv.PatientId, returnTo = "billing" },
+                            new { @class = "btn btn-sm btn-outline-danger" })
+                    }
+                    else
+                    {
+                        <span class="text-muted">-</span>
+                    }
+                </td>
+            }
+        </tr>
+    }
+}

@@ -1,0 +1,448 @@
+@model ERPaperless.Models.BillingPatientFormViewModel
+@{
+    var isAllPatients = Model.ShowAllPatients;
+    ViewBag.Title = isAllPatients ? "Billing" : ("Billing – " + Model.Patient.PatientName);
+    if (!isAllPatients)
+    {
+        ViewBag.ErPatientId = Model.Patient.PatientId;
+    }
+    bool canWork = ViewBag.CanWorkOnPage == true;
+    var fromBeds = ViewBag.ChangeBedFrom as System.Collections.Generic.IEnumerable<ERPaperless.Models.LocationCardViewModel>
+                   ?? new System.Collections.Generic.List<ERPaperless.Models.LocationCardViewModel>();
+    var toBeds = ViewBag.ChangeBedTo as System.Collections.Generic.IEnumerable<ERPaperless.Models.LocationCardViewModel>
+                 ?? new System.Collections.Generic.List<ERPaperless.Models.LocationCardViewModel>();
+}
+
+<section class="page-section">
+    @if (!isAllPatients)
+    {
+        ViewBag.PharmacyBillingNavPatient = Model.Patient;
+        ViewBag.PharmacyBillingNavAllPatients = false;
+        @Html.Partial("~/Views/Shared/_PharmacyBillingNav.cshtml")
+    }
+    else
+    {
+        ViewBag.PharmacyBillingNavPatient = null;
+        ViewBag.PharmacyBillingNavAllPatients = true;
+        @Html.Partial("~/Views/Shared/_PharmacyBillingNav.cshtml")
+    }
+   
+    @if (TempData["BillingSuccess"] != null)
+    {
+        <div class="alert alert-success py-2">@TempData["BillingSuccess"]</div>
+    }
+    @if (TempData["BillingError"] != null)
+    {
+        <div class="alert alert-danger py-2">@TempData["BillingError"]</div>
+    }
+
+    @*@if (isAllPatients)
+        {
+            <div class="section-head mb-2">
+                <p class="mb-0 text-muted small">
+                    All pending lab investigations. Grid refreshes every 10 seconds.
+                    Tick <strong>Ack</strong> to acknowledge for billing.
+                </p>
+            </div>
+        }*@
+
+
+
+    @Html.Partial("~/Views/Shared/_WorkQueueStatusFilters.cshtml")
+
+    @if (isAllPatients)
+    {
+        <div class="queue-search-row mb-3">
+            <input type="search"
+                   id="billingGridSearch"
+                   class="form-control form-control-sm queue-search-input"
+                   placeholder="Search by bed / patient name / MR / test..."
+                   autocomplete="off" />
+            <button type="button" class="btn btn-outline-success btn-sm" id="btnRefreshBillingGrid">
+                Refresh
+            </button>
+            <span class="queue-refresh-timer text-muted small">
+                Next refresh in <strong id="billingRefreshCountdown">10</strong>s
+            </span>
+            <span class="queue-refresh-status text-muted small" id="billingRefreshStatus"></span>
+        </div>
+    }
+
+    <div id="@(isAllPatients ? "billingGridHost" : null)">
+        @Html.Partial("~/Views/Billing/_BillingInvestigations.cshtml", Model.Investigations)
+    </div>
+
+    @if (isAllPatients)
+    {
+        <input type="hidden" id="billingRefreshUrl" value="@Url.Action("RefreshInvestigations", "Billing")" />
+    }
+</section>
+
+@if (canWork)
+{
+    <div class="modal fade" id="changeBedModal" tabindex="-1"
+         aria-labelledby="changeBedModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                @using (Html.BeginForm("ChangeBed", "Billing", FormMethod.Post))
+                {
+                    @Html.AntiForgeryToken()
+                    if (!isAllPatients)
+                    {
+                        <input type="hidden" name="returnPatientId" value="@Model.Patient.PatientId" />
+                        <input type="hidden" name="erPatientCode" value="@Model.Patient.PatientId" />
+                    }
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="changeBedModalLabel">Change Bed</h5>
+                        <button type="button" class="btn-close"
+                                data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        @if (!isAllPatients)
+                        {
+                            <p class="small text-muted mb-3">
+                                Current patient: <strong>@Model.Patient.PatientName</strong> (@Model.Patient.BedNo)
+                            </p>
+                            <div class="row g-3">
+                                <div class="col-md-12">
+                                    <label class="form-label">New Unoccupied Bed</label>
+                                    <input type="search"
+                                           id="newBedSearch"
+                                           class="form-select searchable-dropdown"
+                                           list="newBedOptions"
+                                           autocomplete="off"
+                                           placeholder="Search unoccupied bed..."
+                                           required />
+                                    <input type="hidden" id="newBedCode" name="newBedCode" value="" />
+                                    <input type="hidden" id="newBranchCode" name="newBranchCode" value="0" />
+                                    <datalist id="newBedOptions">
+                                        @foreach (var bed in toBeds)
+                                        {
+                                            <option value="@bed.SlotName"
+                                                    data-value="@bed.BedId"
+                                                    data-branch="@bed.BranchCode"></option>
+                                        }
+                                    </datalist>
+                                </div>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Current Patient / Bed</label>
+                                    <input type="search"
+                                           id="erPatientSearch"
+                                           class="form-select searchable-dropdown"
+                                           list="erPatientOptions"
+                                           autocomplete="off"
+                                           placeholder="Search occupied or pending bed..."
+                                           required />
+                                    <input type="hidden" id="erPatientCode" name="erPatientCode" value="" />
+                                    <datalist id="erPatientOptions">
+                                        @foreach (var bed in fromBeds)
+                                        {
+                                            var patientName = string.IsNullOrWhiteSpace(bed.PatientName) || bed.PatientName == "-"
+                                                ? "BED#" + bed.BedId
+                                                : bed.PatientName;
+                                            var label = bed.SlotName + " - " + patientName + " (" + bed.StateLabel + ")";
+                                            <option value="@label" data-value="@bed.PatientId"></option>
+                                        }
+                                    </datalist>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">New Unoccupied Bed</label>
+                                    <input type="search"
+                                           id="newBedSearch"
+                                           class="form-select searchable-dropdown"
+                                           list="newBedOptions"
+                                           autocomplete="off"
+                                           placeholder="Search unoccupied bed..."
+                                           required />
+                                    <input type="hidden" id="newBedCode" name="newBedCode" value="" />
+                                    <input type="hidden" id="newBranchCode" name="newBranchCode" value="0" />
+                                    <datalist id="newBedOptions">
+                                        @foreach (var bed in toBeds)
+                                        {
+                                            <option value="@bed.SlotName"
+                                                    data-value="@bed.BedId"
+                                                    data-branch="@bed.BranchCode"></option>
+                                        }
+                                    </datalist>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary btn-sm"
+                                data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-danger btn-sm">Shift</button>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+}
+
+@section scripts {
+    <script>
+        (function () {
+            "use strict";
+
+            var isAllPatients = @(isAllPatients ? "true" : "false");
+
+            function bindAutocomplete(inputId, listId, hiddenId, branchHiddenId) {
+                var input = document.getElementById(inputId);
+                var list = document.getElementById(listId);
+                var hidden = document.getElementById(hiddenId);
+                var branchHidden = branchHiddenId ? document.getElementById(branchHiddenId) : null;
+                if (!input || !list || !hidden) return;
+
+                function syncValue() {
+                    hidden.value = "";
+                    if (branchHidden) branchHidden.value = "0";
+                    var selected = Array.prototype.find.call(list.options, function (opt) {
+                        return opt.value === input.value;
+                    });
+                    if (selected) {
+                        hidden.value = selected.getAttribute("data-value") || "";
+                        if (branchHidden) branchHidden.value = selected.getAttribute("data-branch") || "0";
+                    }
+                }
+
+                input.addEventListener("input", syncValue);
+                input.addEventListener("change", syncValue);
+
+                var form = input.closest("form");
+                if (form) {
+                    form.addEventListener("submit", function (event) {
+                        syncValue();
+                        if (!hidden.value || (branchHidden && branchHidden.value === "0")) {
+                            input.setCustomValidity("Please select a valid option from the list.");
+                            input.reportValidity();
+                            event.preventDefault();
+                            return;
+                        }
+                        input.setCustomValidity("");
+                    });
+                }
+            }
+
+            if (isAllPatients) {
+                bindAutocomplete("erPatientSearch", "erPatientOptions", "erPatientCode");
+            }
+            bindAutocomplete("newBedSearch", "newBedOptions", "newBedCode", "newBranchCode");
+
+            var refreshUrlEl = document.getElementById("billingRefreshUrl");
+            var bodyEl = document.getElementById("billingInvestigationsBody");
+            var btnEl = document.getElementById("btnRefreshBillingGrid");
+            var countdownEl = document.getElementById("billingRefreshCountdown");
+            var statusEl = document.getElementById("billingRefreshStatus");
+            var searchEl = document.getElementById("billingGridSearch");
+            var ackUrlEl = document.getElementById("billingAckInvestigationUrl");
+            var alertBox = document.getElementById("billingInvAlert");
+            var patientIdEl = document.getElementById("billingErPatientId");
+            var filterBar = document.querySelector(".work-queue-status-filters");
+            var activeFilter = (filterBar && filterBar.getAttribute("data-default-filter")) || "pending";
+
+            var secondsLeft = 10;
+            var timerId = null;
+            var refreshing = false;
+
+            function showBillingAlert(message, isError) {
+                if (!alertBox) return;
+                alertBox.textContent = message || "";
+                alertBox.classList.remove("d-none", "alert-success", "alert-danger");
+                alertBox.classList.add(isError ? "alert-danger" : "alert-success");
+            }
+
+            function applyGridFilters() {
+                if (!bodyEl) return;
+                var term = searchEl ? (searchEl.value || "").trim().toLowerCase() : "";
+                var rows = bodyEl.querySelectorAll("tr.billing-inv-data-row");
+                var visibleCount = 0;
+
+                rows.forEach(function (row) {
+                    var haystack = row.getAttribute("data-search") || row.textContent.toLowerCase();
+                    var status = row.getAttribute("data-filter-status") || "pending";
+                    var matchesFilter = activeFilter === "all" || status === activeFilter;
+                    var show = matchesFilter && (!term || haystack.indexOf(term) >= 0);
+                    row.style.display = show ? "" : "none";
+                    if (show) visibleCount++;
+                });
+
+                var emptyRow = bodyEl.querySelector("tr.billing-inv-filter-empty");
+                if (emptyRow) emptyRow.remove();
+                if (rows.length > 0 && visibleCount === 0) {
+                    var tr = document.createElement("tr");
+                    tr.className = "billing-inv-filter-empty";
+                    tr.innerHTML = '<td colspan="11" class="text-center text-muted py-3">No rows match your filter.</td>';
+                    bodyEl.appendChild(tr);
+                }
+            }
+
+            function setActiveFilterChip(filter) {
+                activeFilter = filter || "pending";
+                if (!filterBar) return;
+                filterBar.querySelectorAll(".status-chip-filter").forEach(function (chip) {
+                    chip.classList.toggle("active", chip.getAttribute("data-filter") === activeFilter);
+                });
+            }
+
+            if (filterBar) {
+                filterBar.querySelectorAll(".status-chip-filter").forEach(function (chip) {
+                    chip.addEventListener("click", function () {
+                        setActiveFilterChip(chip.getAttribute("data-filter"));
+                        applyGridFilters();
+                    });
+                });
+            }
+
+            function lockBillingRow(tr, item) {
+                if (!tr) return;
+                tr.classList.remove("billing-inv-row-pending", "billing-inv-row-cancelled");
+                tr.classList.add("billing-inv-row-ack");
+                tr.setAttribute("data-billing-ack", "1");
+                tr.setAttribute("data-filter-status", "completed");
+
+                var statusCell = tr.querySelector(".billing-inv-status");
+                if (statusCell) {
+                    statusCell.innerHTML = '<span class="text-success">Completed</span>';
+                }
+
+                var ackCell = tr.querySelector(".billing-inv-ack-cell");
+                if (ackCell) ackCell.innerHTML = '<span class="text-success small">&#10003;</span>';
+
+                var ackByCell = tr.querySelector(".billing-inv-ack-by");
+                if (ackByCell) {
+                    ackByCell.innerHTML =
+                        (item.ackByName || "-") +
+                        (item.ackDate ? '<div class="text-muted">' + item.ackDate + '</div>' : "");
+                }
+            }
+
+            function setStatus(message, isError) {
+                if (!statusEl) return;
+                statusEl.textContent = message || "";
+                statusEl.classList.toggle("text-danger", !!isError);
+                statusEl.classList.toggle("text-muted", !isError);
+            }
+
+            function renderCountdown() {
+                if (countdownEl) countdownEl.textContent = String(secondsLeft);
+            }
+
+            function resetCountdown() {
+                secondsLeft = 10;
+                renderCountdown();
+            }
+
+            function refreshGrid() {
+                if (!isAllPatients || refreshing || !refreshUrlEl || !bodyEl || !refreshUrlEl.value) return;
+                refreshing = true;
+                if (btnEl) btnEl.disabled = true;
+                setStatus("Refreshing...", false);
+
+                fetch(refreshUrlEl.value, {
+                    method: "GET",
+                    credentials: "same-origin",
+                    headers: { "X-Requested-With": "XMLHttpRequest" }
+                })
+                .then(function (r) {
+                    if (!r.ok) throw new Error("Could not refresh billing grid.");
+                    return r.text();
+                })
+                .then(function (html) {
+                    bodyEl.innerHTML = html;
+                    applyGridFilters();
+                    resetCountdown();
+                    setStatus("Updated " + new Date().toLocaleTimeString(), false);
+                })
+                .catch(function (err) {
+                    setStatus(err.message || "Refresh failed.", true);
+                })
+                .finally(function () {
+                    refreshing = false;
+                    if (btnEl) btnEl.disabled = false;
+                });
+            }
+
+            function tick() {
+                secondsLeft -= 1;
+                if (secondsLeft <= 0) {
+                    refreshGrid();
+                    return;
+                }
+                renderCountdown();
+            }
+
+            if (isAllPatients) {
+                if (btnEl) btnEl.addEventListener("click", refreshGrid);
+                if (searchEl) searchEl.addEventListener("input", applyGridFilters);
+                renderCountdown();
+                timerId = window.setInterval(tick, 1000);
+                window.addEventListener("beforeunload", function () {
+                    if (timerId) window.clearInterval(timerId);
+                });
+            } else if (searchEl) {
+                searchEl.addEventListener("input", applyGridFilters);
+            }
+
+            setActiveFilterChip(activeFilter);
+            applyGridFilters();
+
+            document.addEventListener("change", function (e) {
+                var checkbox = e.target;
+                if (!checkbox.classList || !checkbox.classList.contains("billing-inv-ack-checkbox")) return;
+
+                var tr = checkbox.closest("tr.billing-inv-row");
+                if (!tr) return;
+
+                if (tr.getAttribute("data-cancelled") === "1" || tr.getAttribute("data-deleted") === "1") {
+                    checkbox.checked = false;
+                    showBillingAlert("Cancelled tests cannot be acknowledged.", true);
+                    return;
+                }
+
+                if (tr.getAttribute("data-billing-ack") === "1") {
+                    checkbox.checked = true;
+                    checkbox.disabled = true;
+                    return;
+                }
+
+                if (!checkbox.checked) return;
+
+                checkbox.disabled = true;
+                var patientId = tr.getAttribute("data-patient-id")
+                    || (patientIdEl ? patientIdEl.value : "");
+
+                fetch(ackUrlEl ? ackUrlEl.value : "", {
+                    method: "POST",
+                    credentials: "same-origin",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-Requested-With": "XMLHttpRequest"
+                    },
+                    body: JSON.stringify({
+                        PatientId: patientId,
+                        InvestigationId: parseInt(tr.getAttribute("data-id") || "0", 10)
+                    })
+                })
+                .then(function (r) { return r.json(); })
+                .then(function (result) {
+                    if (!result.ok) {
+                        checkbox.checked = false;
+                        checkbox.disabled = false;
+                        throw new Error(result.message || "Could not acknowledge test.");
+                    }
+                    showBillingAlert(result.message || "Test acknowledged.", false);
+                    lockBillingRow(tr, result.investigation || {});
+                    applyGridFilters();
+                })
+                .catch(function (err) {
+                    showBillingAlert(err.message || "Could not acknowledge test.", true);
+                });
+            });
+        })();
+    </script>
+}

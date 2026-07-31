@@ -1,0 +1,97 @@
+@model ERPaperless.Models.LoginViewModel
+@{
+    Layout = null;
+    ViewBag.Title = "Emergency Portal Login";
+}
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewBag.Title</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="~/Content/bootstrap.min.css" rel="stylesheet" />
+    <link href="~/Content/Site.css" rel="stylesheet" />
+    <link href="~/Content/login.css" rel="stylesheet" />
+</head>
+<body class="login-body">
+    <main class="login-shell">
+        <section class="login-card" aria-label="Sign in form">
+            <aside class="brand-panel">
+                <div class="brand-panel-inner">
+                    <div class="brand-top">
+                        <p class="hello-text">Hello,</p>
+                        <h1>welcome to!</h1>
+                    </div>
+                    <div class="brand-middle">
+                        <div class="logo-circle">ER</div>
+                        <p class="brand-name">ER Paperless</p>
+                    </div>
+                    <div class="brand-bottom">CREATE NEW &nbsp; | &nbsp; CONTACT HERE</div>
+                </div>
+                <div class="panel-corner-cut" aria-hidden="true"></div>
+            </aside>
+
+            <section class="form-panel">
+                <h2>Sign In</h2>
+                <p class="subtitle">Enter your credentials to access your account.</p>
+
+                @using (Html.BeginForm("Login", "Account", new { returnUrl = ViewBag.ReturnUrl }, FormMethod.Post, new { autocomplete = "off", @class = "login-form", novalidate = "novalidate" }))
+                {
+                    @Html.AntiForgeryToken()
+                    @Html.ValidationSummary(excludePropertyErrors: true, message: "", htmlAttributes: new { @class = "alert alert-danger" })
+
+                    <div class="input-block">
+                        <label class="form-label" for="Username">Username / Email</label>
+                        <div class="input-with-icon">
+                            <span class="field-icon" aria-hidden="true">&#128100;</span>
+                            @Html.TextBoxFor(m => m.Username, new
+                            {
+                                @class = "form-control",
+                                autocomplete = "username",
+                                spellcheck = "false",
+                                autocapitalize = "none",
+                                maxlength = "50",
+                                placeholder = "Enter your username"
+                            })
+                        </div>
+                        @Html.ValidationMessageFor(m => m.Username, "", new { @class = "field-validation-error" })
+                    </div>
+
+                    <div class="input-block">
+                        <label class="form-label" for="Password">Password</label>
+                        <div class="input-with-icon">
+                            <span class="field-icon" aria-hidden="true">&#128274;</span>
+                            @Html.TextBoxFor(m => m.Password, new
+                            {
+                                type = "password",
+                                @class = "form-control",
+                                autocomplete = "current-password",
+                                maxlength = "15",
+                                placeholder = "Enter your password"
+                            })
+                        </div>
+                        @Html.ValidationMessageFor(m => m.Password, "", new { @class = "field-validation-error" })
+                    </div>
+
+                    
+
+                    <div class="form-check remember-check">
+                        @Html.CheckBoxFor(m => m.RememberMe, new { @class = "form-check-input", id = "rememberMe" })
+                        @Html.LabelFor(m => m.RememberMe, new { @class = "form-check-label", @for = "rememberMe" })
+                    </div>
+
+                    <button type="submit" class="btn btn-danger login-button">Log In</button>
+                }
+
+            </section>
+        </section>
+    </main>
+
+    <script src="~/Scripts/jquery-3.7.0.min.js"></script>
+    <script src="~/Scripts/jquery.validate.min.js"></script>
+    <script src="~/Scripts/jquery.validate.unobtrusive.min.js"></script>
+</body>
+</html>

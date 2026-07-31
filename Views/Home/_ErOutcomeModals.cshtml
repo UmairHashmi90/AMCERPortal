@@ -1,0 +1,514 @@
+@model ERPaperless.Models.ErFormViewModel
+@{
+    var employeeOptions = Model?.EmployeeOptions ?? Enumerable.Empty<ERPaperless.Models.ERLovOptionViewModel>();
+    var consultantOptions = Model?.ConsultantOptions ?? Enumerable.Empty<ERPaperless.Models.ERLovOptionViewModel>();
+    var relationOptions = Model?.RelationOptions ?? Enumerable.Empty<ERPaperless.Models.ERLovOptionViewModel>();
+    var referralReasonOptions = Model?.ReferralReasonOptions ?? Enumerable.Empty<ERPaperless.Models.ERLovOptionViewModel>();
+    var dischargeMedicineOptions = Model?.DischargeMedicineOptions ?? Enumerable.Empty<ERPaperless.Models.ERLovOptionViewModel>();
+    var drugFrequencyOptions = Model?.DrugFrequencyOptions ?? Enumerable.Empty<ERPaperless.Models.ERLovOptionViewModel>();
+    var conditionUponReleaseOptions = Model?.ConditionUponReleaseOptions ?? Enumerable.Empty<ERPaperless.Models.ERLovOptionViewModel>();
+    var reviewForm = Model?.ReviewForm ?? new ERPaperless.Models.ErReviewFormStateViewModel();
+    var selectedChiefComplaints = (Model?.ChiefComplaints ?? Enumerable.Empty<ERPaperless.Models.ChiefComplaintItemViewModel>())
+        .Where(x => x != null && x.IsSelected)
+        .ToList();
+    var chiefComplaintRemarks = selectedChiefComplaints
+        .Where(x => !string.IsNullOrWhiteSpace(x.Remark))
+        .Select(x => x.Remark.Trim())
+        .ToList();
+    var chiefComplaintText = selectedChiefComplaints
+        .Select(x =>
+        {
+            var name = (x.Name ?? string.Empty).Trim();
+            var remark = (x.Remark ?? string.Empty).Trim();
+            if (string.IsNullOrWhiteSpace(name) && string.IsNullOrWhiteSpace(remark))
+                return string.Empty;
+            if (string.IsNullOrWhiteSpace(remark))
+                return name;
+            if (string.IsNullOrWhiteSpace(name))
+                return remark;
+            return name + ": " + remark;
+        })
+        .Where(x => !string.IsNullOrWhiteSpace(x))
+        .Distinct(StringComparer.OrdinalIgnoreCase)
+        .ToList();
+    var referralMedicineFromBill = (reviewForm.MedicineOrders ?? new List<ERPaperless.Models.PackageOrderRowViewModel>())
+        .Where(x => x != null && !x.IsDeleted && !x.Discontinue && !string.IsNullOrWhiteSpace(x.ItemName))
+        .Select(x =>
+        {
+            var parts = new List<string>();
+            if (!string.IsNullOrWhiteSpace(x.ItemName))
+                parts.Add(x.ItemName.Trim());
+            if (!string.IsNullOrWhiteSpace(x.Dose))
+                parts.Add("Dose: " + x.Dose.Trim());
+            if (!string.IsNullOrWhiteSpace(x.DrugRouteName))
+                parts.Add("Route: " + x.DrugRouteName.Trim());
+            return string.Join(", ", parts);
+        })
+        .Where(x => !string.IsNullOrWhiteSpace(x))
+        .Distinct(StringComparer.OrdinalIgnoreCase)
+        .ToList();
+    var referralInvestigationsFromBill = (reviewForm.Investigations ?? new List<ERPaperless.Models.InvestigationRowViewModel>())
+        .Where(x => x != null && !x.IsDeleted && !x.IsCancelled && !string.IsNullOrWhiteSpace(x.TestName))
+        .Select(x => x.TestName.Trim())
+        .Where(x => !string.IsNullOrWhiteSpace(x))
+        .Distinct(StringComparer.OrdinalIgnoreCase)
+        .ToList();
+    var conditionUponReleaseName = conditionUponReleaseOptions
+        .FirstOrDefault(x => reviewForm.ConditionUponReleaseCode.HasValue && x.Id == reviewForm.ConditionUponReleaseCode.Value)
+        ?.Name ?? string.Empty;
+    Func<IEnumerable<ERPaperless.Models.ERLovOptionViewModel>, int?, string> optionNameById =
+        (options, id) =>
+            !id.HasValue
+                ? string.Empty
+                : (options.FirstOrDefault(x => x.Id == id.Value)?.Name ?? string.Empty);
+    var outcome = Model?.OutcomeForms ?? new ERPaperless.Models.OutcomeFormStateViewModel();
+    var referralState = outcome.Referral ?? new ERPaperless.Models.ReferralFormStateViewModel();
+    var dischargeState = outcome.Discharge ?? new ERPaperless.Models.DischargeFormStateViewModel();
+    var deathState = outcome.Death ?? new ERPaperless.Models.DeathFormStateViewModel();
+    var lamaState = outcome.Lama ?? new ERPaperless.Models.LamaFormStateViewModel();
+    var dischargeRows = (dischargeState.Medicines ?? new List<ERPaperless.Models.DischargeMedicineStateViewModel>()).ToList();
+    if (!dischargeRows.Any())
+    {
+        dischargeRows.Add(new ERPaperless.Models.DischargeMedicineStateViewModel());
+    }
+    var hasReferralData = referralState.IsFinal
+        || referralState.ReferralReasonCode.HasValue
+        || referralState.ReferralDateTime.HasValue
+        || referralState.MoOnDutyCode.HasValue
+        || !string.IsNullOrWhiteSpace(referralState.PatientComplaint)
+        || !string.IsNullOrWhiteSpace(referralState.ClinicalSummary)
+        || !string.IsNullOrWhiteSpace(referralState.Treatment)
+        || !string.IsNullOrWhiteSpace(referralState.PertinentInvestigation)
+        || !string.IsNullOrWhiteSpace(referralState.ClinicalDiagnosis);
+    var hasDischargeData = dischargeState.IsFinal
+        || !string.IsNullOrWhiteSpace(dischargeState.FinalDiagnosis)
+        || !string.IsNullOrWhiteSpace(dischargeState.BriefHistory)
+        || !string.IsNullOrWhiteSpace(dischargeState.SurgeryProcedures)
+        || !string.IsNullOrWhiteSpace(dischargeState.DietInstructions)
+        || !string.IsNullOrWhiteSpace(dischargeState.ClinicalAssessment)
+        || !string.IsNullOrWhiteSpace(dischargeState.FollowUpInstructions)
+        || (dischargeState.Medicines != null && dischargeState.Medicines.Any(m => !string.IsNullOrWhiteSpace(m.DrugName)));
+    // Auto-populate from ER Form when the discharge field is still empty.
+    // Diagnosis → Final Diagnosis
+    // Treatment → Treatment
+    // Selected Chief Complaints (LOV + remarks) → Brief History
+    // Condition Upon Release → Clinical Assessment
+    var defaultDischargeFinalDiagnosis = !string.IsNullOrWhiteSpace(dischargeState.FinalDiagnosis)
+        ? (dischargeState.FinalDiagnosis ?? string.Empty)
+        : (reviewForm.AssessmentDiagnosis ?? string.Empty);
+    var defaultDischargeBriefHistory = !string.IsNullOrWhiteSpace(dischargeState.BriefHistory)
+        ? (dischargeState.BriefHistory ?? string.Empty)
+        : string.Join(Environment.NewLine, chiefComplaintText);
+    var defaultDischargeTreatment = !string.IsNullOrWhiteSpace(dischargeState.SurgeryProcedures)
+        ? (dischargeState.SurgeryProcedures ?? string.Empty)
+        : (reviewForm.TreatmentNotes ?? string.Empty);
+    var defaultDischargeClinicalAssessment = !string.IsNullOrWhiteSpace(dischargeState.ClinicalAssessment)
+        ? (dischargeState.ClinicalAssessment ?? string.Empty)
+        : conditionUponReleaseName;
+    // Auto-populate from ER Form when the referral field is still empty.
+    // Patient Complaint / Brief History → Patient Complaint
+    // Diagnosis → Diagnosis
+    // Treatment + Medicines (Billing) → Treatment
+    // Investigations (Lab/Radiology) → Investigations
+    // Clinical Assessment / Condition Upon Release → Condition
+    var defaultReferralPatientComplaint = !string.IsNullOrWhiteSpace(referralState.PatientComplaint)
+        ? (referralState.PatientComplaint ?? string.Empty)
+        : string.Join(Environment.NewLine, chiefComplaintText);
+    var defaultReferralTreatment = !string.IsNullOrWhiteSpace(referralState.Treatment)
+        ? (referralState.Treatment ?? string.Empty)
+        : string.Join(" | ", new[] { reviewForm.TreatmentNotes ?? string.Empty, string.Join(" | ", referralMedicineFromBill) }
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .Select(x => x.Trim()));
+    var defaultReferralPertinentInvestigation = !string.IsNullOrWhiteSpace(referralState.PertinentInvestigation)
+        ? (referralState.PertinentInvestigation ?? string.Empty)
+        : string.Join(" | ", referralInvestigationsFromBill);
+    var defaultReferralClinicalDiagnosis = !string.IsNullOrWhiteSpace(referralState.ClinicalDiagnosis)
+        ? (referralState.ClinicalDiagnosis ?? string.Empty)
+        : (reviewForm.AssessmentDiagnosis ?? string.Empty);
+    var defaultReferralCondition = !string.IsNullOrWhiteSpace(referralState.ClinicalSummary)
+        ? (referralState.ClinicalSummary ?? string.Empty)
+        : conditionUponReleaseName;
+    var hasDeathData = deathState.IsFinal
+        || deathState.PrimaryConsultantCode.HasValue
+        || deathState.DeathDateTime.HasValue
+        || !string.IsNullOrWhiteSpace(deathState.PrimaryCause)
+        || !string.IsNullOrWhiteSpace(deathState.SecondaryCause)
+        || deathState.IsBroughtInDead
+        || !string.IsNullOrWhiteSpace(deathState.MedicalCondition)
+        || !string.IsNullOrWhiteSpace(deathState.HandOverTo);
+    var hasLamaData = lamaState.IsFinal
+        || !string.IsNullOrWhiteSpace(lamaState.RequesterName)
+        || lamaState.DutyNurseCode.HasValue
+        || lamaState.DutyMoCode.HasValue
+        || lamaState.RelationCode.HasValue
+        || lamaState.RequestedOn.HasValue
+        || !string.IsNullOrWhiteSpace(lamaState.Reason)
+        || !string.IsNullOrWhiteSpace(lamaState.DoctorRemarks)
+        || !string.IsNullOrWhiteSpace(lamaState.NurseComments);
+}
+
+<div class="modal fade" id="outcomeReferralModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false" aria-labelledby="outcomeReferralTitle" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content outcome-modal-content">
+            <div class="outcome-modal-banner outcome-modal-banner-referral">
+                <h5 class="modal-title" id="outcomeReferralTitle">Referral Certificate</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="form-check outcome-finalize-check mb-2">
+                    <input class="form-check-input" type="checkbox" id="referralFinalize" @(referralState.IsFinal ? "checked=\"checked\"" : "") />
+                    <label class="form-check-label" for="referralFinalize">Finalize Referral Certificate</label>
+                </div>
+                <div class="outcome-modal-grid outcome-modal-grid-2">
+                    <div class="outcome-field outcome-field-span-2">
+                        <label class="form-label">Referral Reason</label>
+                        <input type="search"
+                               id="referralReasonSearch"
+                               class="form-control searchable-dropdown lov-autocomplete"
+                               data-lov-hidden="referralReasonCode"
+                               list="referralReasonOptionsList"
+                               autocomplete="off"
+                               placeholder="Select referral reason..."
+                               value="@optionNameById(referralReasonOptions, referralState.ReferralReasonCode)" />
+                        <input type="hidden" id="referralReasonCode" value="@(referralState.ReferralReasonCode.HasValue ? referralState.ReferralReasonCode.Value.ToString() : "")" />
+                    </div>
+                    <div class="outcome-field">
+                        <label class="form-label">Referral Date Time</label>
+                        <input type="datetime-local" class="form-control" id="referralDateTime" value="@(referralState.ReferralDateTime.HasValue ? referralState.ReferralDateTime.Value.ToString("yyyy-MM-ddTHH:mm") : "")" />
+                    </div>
+                    <div class="outcome-field">
+                        <label class="form-label">M.O.</label>
+                        <input type="search"
+                               id="referralMoSearch"
+                               class="form-control searchable-dropdown lov-autocomplete"
+                               data-lov-hidden="referralMoCode"
+                               list="consultantOptionsList"
+                               autocomplete="off"
+                               placeholder="MO on duty..."
+                               value="@optionNameById(consultantOptions, referralState.MoOnDutyCode)" />
+                        <input type="hidden" id="referralMoCode" value="@(referralState.MoOnDutyCode.HasValue ? referralState.MoOnDutyCode.Value.ToString() : "")" />
+                    </div>
+                </div>
+
+                <div class="outcome-modal-grid outcome-modal-grid-2 mt-2">
+                    <div class="outcome-field"><label class="form-label">Patient Complaint</label><textarea class="form-control" rows="2" id="referralPatientComplaint">@defaultReferralPatientComplaint</textarea></div>
+                    <div class="outcome-field"><label class="form-label">Condition</label><textarea class="form-control" rows="2" id="referralClinicalSummary">@defaultReferralCondition</textarea></div>
+                    <div class="outcome-field"><label class="form-label">Treatment</label><textarea class="form-control" rows="2" id="referralTreatment">@defaultReferralTreatment</textarea></div>
+                    <div class="outcome-field"><label class="form-label">Investigations</label><textarea class="form-control" rows="2" id="referralPertinentInvestigation">@defaultReferralPertinentInvestigation</textarea></div>
+                    <div class="outcome-field"><label class="form-label">Diagnosis</label><textarea class="form-control" rows="2" id="referralClinicalDiagnosis">@defaultReferralClinicalDiagnosis</textarea></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-danger outcome-form-save-btn" data-form-type="referral" @(referralState.IsFinal ? "disabled=\"disabled\"" : "")>Save</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="outcomeDischargeModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false" aria-labelledby="outcomeDischargeTitle" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content outcome-modal-content">
+            <div class="outcome-modal-banner outcome-modal-banner-discharge">
+                <h5 class="modal-title" id="outcomeDischargeTitle">Discharge Certificate</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="form-check outcome-finalize-check mb-2">
+                    <input class="form-check-input" type="checkbox" id="dischargeFinalize" @(dischargeState.IsFinal ? "checked=\"checked\"" : "") @(dischargeState.IsFinal ? "disabled=\"disabled\"" : "") />
+                    <label class="form-check-label" for="dischargeFinalize">Finalize Discharge Certificate</label>
+                </div>
+                <div class="outcome-modal-grid outcome-modal-grid-2">
+                    <div class="outcome-field outcome-field-span-2">
+                        <div class="d-flex justify-content-between align-items-center gap-2">
+                            <label class="form-label mb-0">Discharge Medicine</label>
+                            <button type="button" class="btn btn-sm btn-outline-primary" id="btnAddDischargeMedicineRow" @(dischargeState.IsFinal ? "disabled=\"disabled\"" : "")>Add Medicine</button>
+                        </div>
+                        <div class="table-wrap">
+                            <table class="app-table outcome-medicine-table" id="dischargeMedicineTable">
+                                <thead>
+                                    <tr>
+                                        <th style="width:33%">Medicine</th>
+                                        <th style="width:6%">Dose</th>
+                                        <th style="width:20%">Frequency</th>
+                                        <th style="width:6%">Days</th>
+                                        <th style="width:25%">Instruction</th>
+                                        <th style="width:8%">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var med in dischargeRows)
+                                    {
+                                    <tr>
+                                        <td>
+                                            <input type="search"
+                                                   class="form-control form-control-sm discharge-med-item-name searchable-dropdown"
+                                                   list="dischargeMedicineOptionsList"
+                                                   autocomplete="off"
+                                                   placeholder="Select medicine..."
+                                                   value="@(med.DrugName ?? string.Empty)" />
+                                            <input type="hidden"
+                                                   class="discharge-med-item-code"
+                                                   value="@(med.ItemCode.HasValue ? med.ItemCode.Value.ToString() : "")" />
+                                        </td>
+                                        <td><input type="text" class="form-control form-control-sm discharge-med-dose" value="@(med.Dose ?? "")" /></td>
+                                        <td>
+                                            <input type="search"
+                                                   class="form-control form-control-sm discharge-med-frequency searchable-dropdown"
+                                                   list="drugFrequencyOptionsList"
+                                                   autocomplete="off"
+                                                   placeholder="Select frequency..."
+                                                   value="@(med.Frequency ?? "")" />
+                                        </td>
+                                        <td><input type="text" class="form-control form-control-sm discharge-med-days" value="@(med.Days.HasValue ? med.Days.Value.ToString() : "")" /></td>
+                                        <td><input type="text" class="form-control form-control-sm discharge-med-instruction" value="@(med.Instruction ?? "")" /></td>
+                                        <td class="text-center">
+                                            <button type="button" class="btn btn-link btn-sm text-danger p-0 discharge-med-remove-btn" title="Remove">&#x2715;</button>
+                                        </td>
+                                    </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="outcome-field">
+                        <label class="form-label">Final Diagnosis</label>
+                        <textarea class="form-control" rows="2" id="dischargeFinalDiagnosis">@defaultDischargeFinalDiagnosis</textarea>
+                    </div>
+                    <div class="outcome-field">
+                        <label class="form-label">Brief History and Hospital Stay</label>
+                        <textarea class="form-control" rows="2" id="dischargeBriefHistory">@defaultDischargeBriefHistory</textarea>
+                    </div>
+                    <div class="outcome-field">
+                        <label class="form-label">Treatment</label>
+                        <textarea class="form-control" rows="2" id="dischargeSurgeryProcedures">@defaultDischargeTreatment</textarea>
+                    </div>
+                    <div class="outcome-field">
+                        <label class="form-label">Diet and Other Instructions</label>
+                        <textarea class="form-control" rows="2" id="dischargeDietInstructions">@(dischargeState.DietInstructions ?? "")</textarea>
+                    </div>
+                    <div class="outcome-field">
+                        <label class="form-label">Clinical Assessment at Discharge</label>
+                        <textarea class="form-control" rows="2" id="dischargeClinicalAssessment">@defaultDischargeClinicalAssessment</textarea>
+                    </div>
+                    <div class="outcome-field">
+                        <label class="form-label">Follow Up</label>
+                        <textarea class="form-control" rows="2" id="dischargeFollowUpInstructions">@(dischargeState.FollowUpInstructions ?? "")</textarea>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-success outcome-form-save-btn" data-form-type="discharge" @(dischargeState.IsFinal ? "disabled=\"disabled\"" : "")>Save</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="outcomeDeathModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false" aria-labelledby="outcomeDeathTitle" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content outcome-modal-content">
+            <div class="outcome-modal-banner outcome-modal-banner-death">
+                <h5 class="modal-title" id="outcomeDeathTitle">Death Certificate</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="form-check outcome-finalize-check mb-2">
+                    <input class="form-check-input" type="checkbox" id="deathFinalize" @(deathState.IsFinal ? "checked=\"checked\"" : "") />
+                    <label class="form-check-label" for="deathFinalize">Finalize Death Certificate</label>
+                </div>
+                <div class="outcome-modal-grid outcome-modal-grid-2">
+                    <div class="outcome-field">
+                        <label class="form-label">Primary Consultant</label>
+                        <input type="search"
+                               id="deathPrimaryConsultantSearch"
+                               class="form-control searchable-dropdown lov-autocomplete"
+                               data-lov-hidden="deathPrimaryConsultantCode"
+                               list="consultantOptionsList"
+                               autocomplete="off"
+                               placeholder="Consultant..."
+                               value="@optionNameById(consultantOptions, deathState.PrimaryConsultantCode)" />
+                        <input type="hidden" id="deathPrimaryConsultantCode" value="@(deathState.PrimaryConsultantCode.HasValue ? deathState.PrimaryConsultantCode.Value.ToString() : "")" />
+                    </div>
+                    <div class="outcome-field">
+                        <label class="form-label">Death Date Time</label>
+                        <input type="datetime-local" class="form-control" id="deathDateTime" value="@(deathState.DeathDateTime.HasValue ? deathState.DeathDateTime.Value.ToString("yyyy-MM-ddTHH:mm") : "")" />
+                    </div>
+                </div>
+
+                <div class="outcome-modal-grid outcome-modal-grid-2 mt-2">
+                    <div class="outcome-field"><label class="form-label">Primary Cause</label><textarea class="form-control" rows="2" id="deathPrimaryCause">@(deathState.PrimaryCause ?? "")</textarea></div>
+                    <div class="outcome-field"><label class="form-label">Secondary Cause</label><textarea class="form-control" rows="2" id="deathSecondaryCause">@(deathState.SecondaryCause ?? "")</textarea></div>
+                    <div class="outcome-field"><label class="form-label">Medical Condition</label><textarea class="form-control" rows="2" id="deathMedicalCondition">@(deathState.MedicalCondition ?? "")</textarea></div>
+                </div>
+
+                <div class="form-check outcome-finalize-check mb-2">
+                    <input class="form-check-input" type="checkbox" id="deathBroughtInDead" @(deathState.IsBroughtInDead ? "checked=\"checked\"" : "") />
+                    <label class="form-check-label" for="deathBroughtInDead">Brought In Dead</label>
+                </div>
+
+                <div class="outcome-modal-grid outcome-modal-grid-2 mt-2">
+                    <div class="outcome-field">
+                        <label class="form-label">Hand Over To</label>
+                        <input type="text" class="form-control" placeholder="Name" id="deathHandOverTo" value="@(deathState.HandOverTo ?? "")" />
+                    </div>
+                    <div class="outcome-field">
+                        <label class="form-label">Duty Staff Nurse</label>
+                        <input type="search"
+                               id="deathDutyNurseSearch"
+                               class="form-control searchable-dropdown lov-autocomplete"
+                               data-lov-hidden="deathDutyNurseCode"
+                               list="employeeOptionsList"
+                               autocomplete="off"
+                               placeholder="Nurse on duty..."
+                               value="@optionNameById(employeeOptions, deathState.DutyNurseCode)" />
+                        <input type="hidden" id="deathDutyNurseCode" value="@(deathState.DutyNurseCode.HasValue ? deathState.DutyNurseCode.Value.ToString() : "")" />
+                    </div>
+                    <div class="outcome-field">
+                        <label class="form-label">CNIC / Passport</label>
+                        <input type="text" class="form-control" id="deathRelativeCnicPassport" value="@(deathState.RelativeCnicPassport ?? "")" />
+                    </div>
+                    <div class="outcome-field">
+                        <label class="form-label">Duty Staff M.O.</label>
+                        <input type="search"
+                               id="deathDutyMoSearch"
+                               class="form-control searchable-dropdown lov-autocomplete"
+                               data-lov-hidden="deathDutyMoCode"
+                               list="consultantOptionsList"
+                               autocomplete="off"
+                               placeholder="MO on duty..."
+                               value="@optionNameById(consultantOptions, deathState.DutyMoCode)" />
+                        <input type="hidden" id="deathDutyMoCode" value="@(deathState.DutyMoCode.HasValue ? deathState.DutyMoCode.Value.ToString() : "")" />
+                    </div>
+                    <div class="outcome-field">
+                        <label class="form-label">Relation</label>
+                        <input type="search"
+                               id="deathRelationSearch"
+                               class="form-control searchable-dropdown lov-autocomplete"
+                               data-lov-hidden="deathRelationCode"
+                               list="relationOptionsList"
+                               autocomplete="off"
+                               placeholder="Select relation..."
+                               value="@optionNameById(relationOptions, deathState.RelationCode)" />
+                        <input type="hidden" id="deathRelationCode" value="@(deathState.RelationCode.HasValue ? deathState.RelationCode.Value.ToString() : "")" />
+                    </div>
+                    <div class="outcome-field">
+                        <label class="form-label">Hand Over At</label>
+                        <input type="datetime-local" class="form-control" id="deathHandOverAt" value="@(deathState.HandOverAt.HasValue ? deathState.HandOverAt.Value.ToString("yyyy-MM-ddTHH:mm") : "")" />
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-danger outcome-form-save-btn" data-form-type="death" @(deathState.IsFinal ? "disabled=\"disabled\"" : "")>Save</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="outcomeLamaModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false" aria-labelledby="outcomeLamaTitle" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content outcome-modal-content">
+            <div class="outcome-modal-banner outcome-modal-banner-lama">
+                <h5 class="modal-title" id="outcomeLamaTitle">LAMA</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="form-check outcome-finalize-check mb-2">
+                    <input class="form-check-input" type="checkbox" id="lamaFinalize" @(lamaState.IsFinal ? "checked=\"checked\"" : "") />
+                    <label class="form-check-label" for="lamaFinalize">Finalize LAMA</label>
+                </div>
+                <div class="outcome-modal-grid outcome-modal-grid-2">
+                    <div class="outcome-field">
+                        <label class="form-label">Requester Name</label>
+                        <input type="text" class="form-control" id="lamaRequesterName" value="@(lamaState.RequesterName ?? "")" />
+                    </div>
+                    <div class="outcome-field">
+                        <label class="form-label">Duty Staff Nurse</label>
+                        <input type="search"
+                               id="lamaDutyNurseSearch"
+                               class="form-control searchable-dropdown lov-autocomplete"
+                               data-lov-hidden="lamaDutyNurseCode"
+                               list="employeeOptionsList"
+                               autocomplete="off"
+                               placeholder="Nurse on duty..."
+                               value="@optionNameById(employeeOptions, lamaState.DutyNurseCode)" />
+                        <input type="hidden" id="lamaDutyNurseCode" value="@(lamaState.DutyNurseCode.HasValue ? lamaState.DutyNurseCode.Value.ToString() : "")" />
+                    </div>
+                    <div class="outcome-field">
+                        <label class="form-label">Relation</label>
+                        <input type="search"
+                               id="lamaRelationSearch"
+                               class="form-control searchable-dropdown lov-autocomplete"
+                               data-lov-hidden="lamaRelationCode"
+                               list="relationOptionsList"
+                               autocomplete="off"
+                               placeholder="Select relation..."
+                               value="@optionNameById(relationOptions, lamaState.RelationCode)" />
+                        <input type="hidden" id="lamaRelationCode" value="@(lamaState.RelationCode.HasValue ? lamaState.RelationCode.Value.ToString() : "")" />
+                    </div>
+                    <div class="outcome-field">
+                        <label class="form-label">Duty Staff M.O.</label>
+                        <input type="search"
+                               id="lamaDutyMoSearch"
+                               class="form-control searchable-dropdown lov-autocomplete"
+                               data-lov-hidden="lamaDutyMoCode"
+                               list="consultantOptionsList"
+                               autocomplete="off"
+                               placeholder="MO on duty..."
+                               value="@optionNameById(consultantOptions, lamaState.DutyMoCode)" />
+                        <input type="hidden" id="lamaDutyMoCode" value="@(lamaState.DutyMoCode.HasValue ? lamaState.DutyMoCode.Value.ToString() : "")" />
+                    </div>
+                    <div class="outcome-field">
+                        <label class="form-label">Requested On</label>
+                        <input type="datetime-local" class="form-control" id="lamaRequestedOn" value="@(lamaState.RequestedOn.HasValue ? lamaState.RequestedOn.Value.ToString("yyyy-MM-ddTHH:mm") : "")" />
+                    </div>
+                    <div class="outcome-field"></div>
+                </div>
+
+                <div class="outcome-modal-grid outcome-modal-grid-2 mt-2">
+                    <div class="outcome-field"><label class="form-label">Reason</label><textarea class="form-control" rows="2" id="lamaReason">@(lamaState.Reason ?? "")</textarea></div>
+                    <div class="outcome-field"><label class="form-label">Doctor Remarks</label><textarea class="form-control" rows="2" id="lamaDoctorRemarks">@(lamaState.DoctorRemarks ?? "")</textarea></div>
+                    <div class="outcome-field"><label class="form-label">Nurse Comments</label><textarea class="form-control" rows="2" id="lamaNurseComments">@(lamaState.NurseComments ?? "")</textarea></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-warning outcome-form-save-btn" data-form-type="lama" @(lamaState.IsFinal ? "disabled=\"disabled\"" : "")>Save</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<datalist id="referralReasonOptionsList">
+    @foreach (var option in referralReasonOptions)
+    {
+        <option value="@option.Name" data-value="@option.Id"></option>
+    }
+</datalist>
+<datalist id="consultantOptionsList">
+    @foreach (var option in consultantOptions)
+    {
+        <option value="@option.Name" data-value="@option.Id"></option>
+    }
+</datalist>
+<datalist id="employeeOptionsList">
+    @foreach (var option in employeeOptions)
+    {
+        <option value="@option.Name" data-value="@option.Id"></option>
+    }
+</datalist>
+<datalist id="relationOptionsList">
+    @foreach (var option in relationOptions)
+    {
+        <option value="@option.Name" data-value="@option.Id"></option>
+    }
+</datalist>
+<datalist id="dischargeMedicineOptionsList">
+    @foreach (var option in dischargeMedicineOptions)
+    {
+        <option value="@option.Name" data-value="@option.Id"></option>
+    }
+</datalist>
+<datalist id="drugFrequencyOptionsList">
+    @foreach (var option in drugFrequencyOptions)
+    {
+        <option value="@option.Name" data-value="@option.Id"></option>
+    }
+</datalist>

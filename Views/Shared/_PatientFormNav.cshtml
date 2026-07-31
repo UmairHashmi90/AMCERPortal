@@ -1,0 +1,104 @@
+@model ERPaperless.Models.PatientFormContextViewModel
+@{
+    var active = (ViewBag.ActivePatientForm as string ?? string.Empty).ToLowerInvariant();
+    var canWork = ViewBag.CanWorkOnPage == true;
+    var pageLabel = ViewBag.PageModeLabel as string ?? "View Only";
+    var returnTo = ViewBag.ReturnTo as string ?? Request.QueryString["returnTo"];
+    if (!string.IsNullOrWhiteSpace(returnTo))
+    {
+        returnTo = returnTo.Trim().ToLowerInvariant();
+    }
+    else
+    {
+        returnTo = string.Empty;
+    }
+
+    var showPharmacyTab = ViewBag.IsPharmacy == true;
+    var showBillingTab = ViewBag.IsBilling == true;
+    var isMo = ViewBag.IsMO == true;
+    var isMOUser = ViewBag.IsMOUser == true;
+    var isNursing = ViewBag.IsNursing == true;
+    var isPharmacyOnly = ViewBag.IsPharmacyOnly == true;
+    var isBillingOnly = ViewBag.IsBillingOnly == true;
+    var isNursingOnly = isNursing && !isMo && ViewBag.IsPharmacy != true && ViewBag.IsBilling != true;
+    var hideReportsAndPrescriptions = isPharmacyOnly || isBillingOnly || isNursingOnly;
+    var isAdmissionDischarged = ViewBag.IsAdmissionDischarged == true;
+    var showDischargeFinalize = isMOUser && active == "er";
+
+    object patientRoute = string.IsNullOrWhiteSpace(returnTo)
+        ? (object)new { patientId = Model.PatientId }
+        : new { patientId = Model.PatientId, returnTo = returnTo };
+
+    string backText;
+    string backAction;
+    string backController;
+    object backRouteValues = null;
+    if (returnTo == "pharmacy")
+    {
+        backText = "Back to Pharmacy";
+        backAction = "PatientForm";
+        backController = "Pharmacy";
+    }
+    else if (returnTo == "billing")
+    {
+        backText = "Back to Billing";
+        backAction = "PatientForm";
+        backController = "Billing";
+    }
+    else
+    {
+        backText = "Back to Patients";
+        backAction = "Patients";
+        backController = "Home";
+    }
+}
+
+<div class="patient-form-nav-wrap">
+    <div class="patient-form-nav-head">
+        <div>
+            <strong>@Model.PatientName</strong>
+            <span class="text-muted small ms-1">@Model.BedNo · @Model.MrNo</span>
+        </div>
+        <div class="patient-form-mode-wrap">
+            <span class="badge @(canWork ? "bg-success" : "bg-secondary") patient-form-mode-badge">@pageLabel</span>
+            @if (showDischargeFinalize)
+            {
+                <div class="form-check patient-form-discharge-finalize mb-0">
+                    <input class="form-check-input" type="checkbox" id="chkDischargeFinalize"
+                           @(isAdmissionDischarged ? "checked=\"checked\"" : "")
+                           @(isAdmissionDischarged ? "disabled=\"disabled\"" : "") />
+                    <label class="form-check-label fw-semibold" for="chkDischargeFinalize">Discharged Finalize</label>
+                    @if (isAdmissionDischarged)
+                    {
+                        <small class="text-success ms-1">Already finalized. ER form is now read-only.</small>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+    <div class="patient-form-nav patient-form-nav-buttons">
+        @Html.ActionLink(backText, backAction, backController, backRouteValues,
+            new { @class = "btn btn-sm btn-outline-secondary patient-form-nav-btn" })
+        @Html.ActionLink("View Form", "ErForm", "EmergencyForm", patientRoute,
+            new { @class = "btn btn-sm patient-form-nav-btn" + (active == "er" ? " btn-danger" : " btn-outline-danger") })
+        @if (showPharmacyTab)
+        {
+            @Html.ActionLink("Pharmacy", "PatientForm", "Pharmacy", patientRoute,
+                new { @class = "btn btn-sm patient-form-nav-btn" + (active == "pharmacy" ? " btn-danger" : " btn-outline-danger") })
+        }
+        @if (showBillingTab)
+        {
+            @Html.ActionLink("Billing", "PatientForm", "Billing", patientRoute,
+                new { @class = "btn btn-sm patient-form-nav-btn" + (active == "billing" ? " btn-danger" : " btn-outline-danger") })
+        }
+        @if (Model.HasAdmission && !hideReportsAndPrescriptions)
+        {
+            @Html.ActionLink("Reports", "Index", "Reports",
+                new { admissionCode = Model.AdmissionCode },
+                new { @class = "btn btn-sm patient-form-nav-btn" + (active == "reports" ? " btn-primary" : " btn-outline-primary") })
+            @Html.ActionLink("Prescriptions", "Prescription", "Reports",
+                new { admissionCode = Model.AdmissionCode },
+                new { @class = "btn btn-sm patient-form-nav-btn" + (active == "prescription" ? " btn-primary" : " btn-outline-primary") })
+        }
+    </div>
+</div>

@@ -1,0 +1,12 @@
+﻿@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    ViewBag.Title = "Error";
+}
+
+<section class="page-section">
+    <article class="panel-card error-card">
+        <h2>Something went wrong</h2>
+        <p>An error occurred while processing your request. Please retry, or contact support if the issue persists.</p>
+        @Html.ActionLink("Return to Dashboard", "Index", "Home", null, new { @class = "btn btn-danger btn-sm" })
+    </article>
+</section>

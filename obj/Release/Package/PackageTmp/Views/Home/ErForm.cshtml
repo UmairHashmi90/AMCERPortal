@@ -1,0 +1,2303 @@
+@model ERPaperless.Models.ErFormViewModel
+@{
+    ViewBag.Title = "ER Form – " + Model.PatientName;
+    ViewBag.ReviewForm = Model.ReviewForm;
+    ViewBag.ReviewFormDocuments = Model.ReviewForm?.Documents;
+    ViewBag.DocumentTypeOptions = Model.DocumentTypeOptions;
+    ViewBag.ErPatientId = Model.PatientId;
+
+    // Role flags — MO edits clinical form; Nursing may add/delete vitals only.
+    bool isMO             = ViewBag.IsMO == true;
+    bool isNursing        = ViewBag.IsNursing == true;
+    bool isMOUser         = ViewBag.IsMOUser == true;
+    bool canEditClinical  = ViewBag.CanEditClinical == true;
+    bool canSaveReviewForm = canEditClinical || isNursing;
+    bool canEditVitals    = ViewBag.CanEditVitals == true;
+    bool isAdmissionDischarged = ViewBag.IsAdmissionDischarged == true;
+    bool canPrintDischargeSummary = ViewBag.CanPrintDischargeSummary == true;
+    bool canPrintDeathCertificate = ViewBag.CanPrintDeathCertificate == true;
+    bool canPrintPatientReferral = ViewBag.CanPrintPatientReferral == true;
+    bool canPrintLama = ViewBag.CanPrintLama == true;
+    bool canPrintOutcome = canPrintDischargeSummary || canPrintDeathCertificate || canPrintPatientReferral || canPrintLama;
+}
+
+<section class="page-section er-form">
+
+    @* ── Toast alerts ──────────────────────────────────────────────── *@
+    @if (TempData["VitalSaved"] != null)
+    {<div class="alert alert-success py-2">@TempData["VitalSaved"]</div>}
+    @if (TempData["VitalSaveError"] != null)
+    {<div class="alert alert-danger  py-2">@TempData["VitalSaveError"]</div>}
+    @if (TempData["FormSaved"] != null)
+    {<div class="alert alert-success py-2">@TempData["FormSaved"]</div>}
+    @if (TempData["FormSaveError"] != null)
+    {<div class="alert alert-danger  py-2">@TempData["FormSaveError"]</div>}
+    <div id="erFormToastHost" class="er-form-toast-host" aria-live="polite" aria-atomic="true"></div>
+
+    <script>
+        (function () {
+            "use strict";
+            var toastTimer = null;
+
+            window.showErFormToast = function (message, isError) {
+                var host = document.getElementById("erFormToastHost");
+                if (!host) return;
+
+                if (toastTimer) {
+                    window.clearTimeout(toastTimer);
+                    toastTimer = null;
+                }
+
+                host.innerHTML =
+                    '<div class="er-form-toast ' + (isError ? "er-form-toast-error" : "er-form-toast-success") + '">' +
+                    '<strong>' + (isError ? "Error" : "Success") + '</strong>' +
+                    '<span>' + String(message || "").replace(/</g, "&lt;").replace(/>/g, "&gt;") + '</span>' +
+                    '<button type="button" class="er-form-toast-close" aria-label="Close">&times;</button>' +
+                    '</div>';
+
+                var closeBtn = host.querySelector(".er-form-toast-close");
+                if (closeBtn) {
+                    closeBtn.addEventListener("click", function () {
+                        host.innerHTML = "";
+                    });
+                }
+
+                toastTimer = window.setTimeout(function () {
+                    host.innerHTML = "";
+                    toastTimer = null;
+                }, 6000);
+            };
+        })();
+    </script>
+
+    <input type="hidden" id="erPatientId" value="@Model.PatientId" />
+    <input type="hidden" id="saveReviewFormUrl" value="@Url.Action("SaveReviewForm", "EmergencyForm")" />
+    <input type="hidden" id="savePackageOrdersUrl" value="@Url.Action("SavePackageOrders", "EmergencyForm")" />
+    <input type="hidden" id="saveOutcomeFormUrl" value="@Url.Action("SaveOutcomeForm", "EmergencyForm")" />
+    <input type="hidden" id="getOutcomeAutoPopulateUrl" value="@Url.Action("GetOutcomeAutoPopulate", "EmergencyForm")" />
+    <input type="hidden" id="getDischargeEligibilityUrl" value="@Url.Action("GetDischargeEligibility", "EmergencyForm")" />
+    <input type="hidden" id="printOutcomeUrl" value="@Url.Action("PrintOutcome", "EmergencyForm")" />
+    <input type="hidden" id="printDischargeSummaryUrl" value="@Url.Action("PrintDischargeSummary", "EmergencyForm")" />
+    <input type="hidden" id="printDeathCertificateUrl" value="@Url.Action("PrintDeathCertificate", "EmergencyForm")" />
+    <input type="hidden" id="printPatientReferralUrl" value="@Url.Action("PrintPatientReferral", "EmergencyForm")" />
+    <input type="hidden" id="printLamaUrl" value="@Url.Action("PrintLama", "EmergencyForm")" />
+    <input type="hidden" id="uploadDocumentUrl" value="@Url.Action("UploadDocument", "EmergencyForm")" />
+    <input type="hidden" id="deleteDocumentUrl" value="@Url.Action("DeleteDocument", "EmergencyForm")" />
+    <input type="hidden" id="erFormIsMO" value="@(isMO ? "1" : "0")" />
+    <input type="hidden" id="erFormIsNursing" value="@(isNursing ? "1" : "0")" />
+    <input type="hidden" id="currentUserDisplayName" value="@(ViewBag.UserFullName ?? User.Identity.Name ?? "")" />
+
+    @{
+        var patientContext = ViewBag.PatientFormContext as ERPaperless.Models.PatientFormContextViewModel;
+        var patientNav = new ERPaperless.Models.PatientFormContextViewModel
+        {
+            PatientId = Model.PatientId,
+            PatientName = Model.PatientName,
+            MrNo = Model.MrNo,
+            AdmissionNo = Model.AdmissionNo,
+            BedNo = Model.BedNo,
+            AgeGender = Model.AgeGender,
+            AdmissionDate = Model.AdmissionDate,
+            AdmissionCode = patientContext?.AdmissionCode
+        };
+    }
+    <input type="hidden" id="erAdmissionCode" value="@(patientContext?.AdmissionCode.HasValue == true ? patientContext.AdmissionCode.Value.ToString() : "")" />
+    @Html.Partial("~/Views/Shared/_PatientFormNav.cshtml", patientNav)
+
+    @* ── 1. Patient Header + Vital Cards ───────────────────────────── *@
+    @Html.Partial("~/Views/Home/_ErPatientHeader.cshtml", Model)
+
+    @* ── 2. Vitals History Table + Add Vital Modal ─────────────────── *@
+    @Html.Partial("~/Views/Home/_ErVitals.cshtml", Model)
+
+    @* ── 3. Chief Complaints  |  Past History  | Allergies ────────── *@
+    <div class="row g-3 mb-3">
+        <div class="col-lg-4">
+            @Html.Partial("~/Views/Home/_ErChiefComplaints.cshtml", Model.ChiefComplaints)
+        </div>
+        <div class="col-lg-4">
+            @Html.Partial("~/Views/Home/_ErPastHistory.cshtml", Model)
+        </div>
+        <div class="col-lg-4">
+            @Html.Partial("~/Views/Home/_ErAllergies.cshtml", Model)
+        </div>
+    </div>
+
+    @* ── 4. Clinical Findings ───────────────────────────────────────── *@
+    @Html.Partial("~/Views/Home/_ErFindings.cshtml", Model)
+    @Html.Partial("~/Views/Home/_ErOutcomeModals.cshtml", Model)
+
+    @* ── 5. Diagnosis | Investigations   ───────────────────────────────────── *@
+    <div class="row g-3 mb-3">
+        <div class="col-lg-4">
+            @Html.Partial("~/Views/Home/_ErAssessment.cshtml")
+        </div>
+        <div class="col-lg-8">
+            @Html.Partial("~/Views/Home/_ErInvestigations.cshtml", Model)
+        </div>
+    </div>
+
+
+
+    @* ── 7. Plan / Treatment + Consultant Plan ─────────────────────── *@
+    @Html.Partial("~/Views/Home/_ErPlanTreatment.cshtml", Model)
+
+    @* ── 8. Nursing Assessment & Notes ─────────────────────────────── *@
+    @Html.Partial("~/Views/Home/_ErNursingNotes.cshtml")
+
+    @* ── 9. Documents ──────────────────────────────────────────────── *@
+    @Html.Partial("~/Views/Home/_ErDocuments.cshtml")
+
+    @* ── Action bar (Save / Discharge) ─────────────── *@
+    @if (canSaveReviewForm || canPrintOutcome)
+    {
+        var returnTo = (ViewBag.ReturnTo as string ?? string.Empty).Trim().ToLowerInvariant();
+        <div class="er-form-actions d-flex justify-content-between align-items-center gap-2">
+            @if (returnTo == "pharmacy")
+            {
+                @Html.ActionLink("Back to Pharmacy", "PatientForm", "Pharmacy", null,
+                              new { @class = "btn btn-outline-secondary btn-lg" })
+            }
+            else if (returnTo == "billing")
+            {
+                @Html.ActionLink("Back to Billing", "PatientForm", "Billing", null,
+                              new { @class = "btn btn-outline-secondary btn-lg" })
+            }
+            else
+            {
+                @Html.ActionLink("Back to Patients", "Patients", "Home", null,
+                              new { @class = "btn btn-outline-secondary btn-lg" })
+            }
+
+            <div class="d-flex gap-2 flex-wrap justify-content-end">
+                @if (canPrintLama)
+                {
+                    <button type="button" class="btn btn-warning btn-lg outcome-print-btn" data-print-type="lama">LAMA</button>
+                }
+                @if (canPrintPatientReferral)
+                {
+                    <button type="button" class="btn btn-info btn-lg outcome-print-btn" data-print-type="referral">Patient Referral</button>
+                }
+                @if (canPrintDischargeSummary)
+                {
+                    <button type="button" class="btn btn-success btn-lg outcome-print-btn" data-print-type="discharge">Discharge Summary</button>
+                }
+                @if (canPrintDeathCertificate)
+                {
+                    <button type="button" class="btn btn-dark btn-lg outcome-print-btn" data-print-type="death">Death Certificate</button>
+                }
+                @if (canSaveReviewForm)
+                {
+                    <button type="button" class="btn btn-danger btn-lg" id="btnSaveReviewForm">Save Form</button>
+                }
+            </div>
+        </div>
+    }
+
+</section>
+
+@section scripts {
+
+@* ── 1. LOV search filters + complaint toggles ─────────────────────────── *@
+<script>
+(function () {
+    "use strict";
+
+    document.querySelectorAll("[data-lov-filter]").forEach(function (search) {
+        search.addEventListener("input", function () {
+            var group = search.getAttribute("data-lov-filter");
+            var term = (search.value || "").trim().toLowerCase();
+            var rows = document.querySelectorAll('[data-lov-group="' + group + '"]');
+            var noResult = document.querySelector('[data-lov-empty="' + group + '"]');
+            var visibleCount = 0;
+
+            rows.forEach(function (row) {
+                var name = row.getAttribute("data-lov-name") || "";
+                var show = term.length > 0
+                    ? name.indexOf(term) >= 0
+                    : row.getAttribute("data-initial-visible") === "true";
+
+                row.classList.toggle("d-none", !show);
+                if (show) visibleCount++;
+            });
+
+            if (noResult) {
+                noResult.classList.toggle("d-none", visibleCount > 0);
+            }
+        });
+    });
+
+    document.querySelectorAll(".lov-autocomplete").forEach(function (input) {
+        var hiddenId = input.getAttribute("data-lov-hidden");
+        var hidden = hiddenId ? document.getElementById(hiddenId) : null;
+        var listId = input.getAttribute("data-er-list") || input.getAttribute("list");
+        var list = listId ? document.getElementById(listId) : null;
+
+        if (!hidden || !list) return;
+
+        function syncLovCode() {
+            hidden.value = "";
+
+            var current = (input.value || "").trim();
+            var selected = Array.prototype.find.call(list.options, function (opt) {
+                return (opt.value || "").trim() === current;
+            });
+
+            if (selected) {
+                hidden.value = selected.getAttribute("data-value") || "";
+            }
+        }
+
+        input.addEventListener("input", function () {
+            setTimeout(syncLovCode, 0);
+        });
+        input.addEventListener("change", syncLovCode);
+    });
+})();
+</script>
+
+@* ── 2. Complaint toggles (MO only) ──────────────────────────── *@
+@if (canSaveReviewForm)
+{
+<script>
+(function () {
+    "use strict";
+    document.querySelectorAll(".complaint-toggle").forEach(function (chk) {
+        chk.addEventListener("change", function () {
+            var inp = document.getElementById(chk.getAttribute("data-target-id"));
+            if (!inp) return;
+            inp.disabled = !chk.checked;
+            if (chk.checked) { inp.focus(); } else { inp.value = ""; }
+        });
+    });
+})();
+</script>
+}
+
+@* ── 3. Investigations: add row on lab group autocomplete (MO only) ─── *@
+@if (isMO || isNursing)
+{
+<script>
+(function () {
+    "use strict";
+    var invBody     = document.getElementById("investigationsBody");
+    var labSearch   = document.getElementById("labGroupSearch");
+    var labList     = document.getElementById("labGroupOptions");
+    var labHidden   = document.getElementById("labGroupCode");
+    var placeholder = document.getElementById("invPlaceholder");
+
+    function applyInvRowVisualState(tr) {
+        if (!tr) return;
+        var isBillingAck = tr.getAttribute("data-billing-ack") === "1";
+        var isCancelled = tr.querySelector(".inv-cancel-checkbox") &&
+            tr.querySelector(".inv-cancel-checkbox").checked;
+
+        tr.classList.remove("inv-row-cancelled", "inv-row-billing-ack", "inv-row-locked");
+        if (isBillingAck) {
+            tr.classList.add("inv-row-billing-ack", "inv-row-locked");
+        } else if (isCancelled) {
+            tr.classList.add("inv-row-cancelled");
+        }
+
+        var testInput = tr.querySelector(".inv-test");
+        var remarksInput = tr.querySelector(".inv-remarks");
+        var cancelCheckbox = tr.querySelector(".inv-cancel-checkbox");
+        var removeBtn = tr.querySelector(".inv-remove-btn");
+        var locked = isBillingAck;
+
+        if (testInput) testInput.readOnly = locked;
+        if (remarksInput) remarksInput.readOnly = locked;
+        if (cancelCheckbox) cancelCheckbox.disabled = locked;
+        if (removeBtn) removeBtn.classList.toggle("d-none", locked);
+
+        var billingCell = tr.querySelector(".inv-billing-status");
+        var statusCell = tr.querySelector(".inv-clinical-status");
+        if (billingCell) {
+            billingCell.innerHTML = isBillingAck
+                ? '<span class="text-success">Ack\'d</span>'
+                : isCancelled
+                    ? '<span class="text-danger">Cancelled</span>'
+                    : '<span class="text-warning">Pending</span>';
+        }
+        if (statusCell) {
+            statusCell.innerHTML = isCancelled
+                ? '<span class="text-danger fw-semibold">Cancelled</span>'
+                : isBillingAck
+                    ? '<span class="text-success fw-semibold">Billing Ack\'d</span>'
+                    : '<span class="text-muted">Open</span>';
+        }
+    }
+
+    if (invBody) {
+        invBody.querySelectorAll("tr.inv-data-row").forEach(applyInvRowVisualState);
+
+        invBody.addEventListener("change", function (e) {
+            var checkbox = e.target;
+            if (!checkbox.classList || !checkbox.classList.contains("inv-cancel-checkbox")) return;
+            var tr = checkbox.closest("tr");
+            if (tr && tr.getAttribute("data-billing-ack") === "1") {
+                checkbox.checked = false;
+                return;
+            }
+            tr.setAttribute("data-cancelled", checkbox.checked ? "1" : "0");
+            applyInvRowVisualState(tr);
+        });
+
+        invBody.addEventListener("click", function (e) {
+            var removeBtn = e.target.closest(".inv-remove-btn");
+            if (!removeBtn) return;
+            var tr = removeBtn.closest("tr");
+            if (tr && tr.classList.contains("inv-row-locked")) {
+                e.preventDefault();
+                return;
+            }
+            tr.remove();
+        });
+    }
+
+    if (labSearch && invBody && labList) {
+        function addInvestigationRow(testName, isCustom) {
+            if (placeholder && placeholder.parentNode) {
+                placeholder.parentNode.removeChild(placeholder);
+                placeholder = null;
+            }
+
+            var tr = document.createElement("tr");
+            tr.className = "inv-data-row";
+            tr.setAttribute("data-id", "0");
+            tr.setAttribute("data-service-group", labHidden ? (labHidden.value || "0") : "0");
+            tr.setAttribute("data-billing-ack", "0");
+            tr.setAttribute("data-cancelled", "0");
+            if (isCustom) {
+                tr.setAttribute("data-custom", "1");
+            }
+            var safeName = (testName || "").replace(/"/g, "&quot;");
+            var testInputAttrs = isCustom
+                ? ' list="invCustomTestOptions" autocomplete="off" placeholder="Search test or enter custom"'
+                : "";
+            tr.innerHTML =
+                '<td><input type="search" class="form-control form-control-sm inv-test" value="' +
+                    safeName + '"' + testInputAttrs + ' /></td>' +
+                '<td><input type="text" class="form-control form-control-sm inv-remarks" placeholder="Remarks / result" /></td>' +
+                '<td class="text-center"><input type="checkbox" class="form-check-input mt-1 inv-cancel-checkbox" title="Cancel test" /></td>' +
+                '<td class="small inv-billing-status"><span class="text-warning">Pending</span></td>' +
+                '<td class="small inv-clinical-status"><span class="text-muted">Open</span></td>' +
+                '<td class="text-center">' +
+                    '<button type="button" class="btn btn-link btn-sm text-danger p-0 inv-remove-btn" title="Remove">&#x2715;</button>' +
+                '</td>';
+            invBody.appendChild(tr);
+            var testInput = tr.querySelector(".inv-test");
+            if (testInput && isCustom) {
+                testInput.focus();
+            }
+        }
+
+        var addCustomInvBtn = document.getElementById("btnAddCustomInvestigation");
+        if (addCustomInvBtn) {
+            addCustomInvBtn.addEventListener("click", function () {
+                addInvestigationRow("", true);
+            });
+        }
+
+        function findLabOption() {
+            var current = (labSearch.value || "").trim();
+            if (!current) return null;
+
+            return Array.prototype.find.call(labList.options, function (opt) {
+                return (opt.value || "").trim() === current;
+            }) || null;
+        }
+
+        var lastAddedLabValue = "";
+
+        function onLabGroupSelected() {
+            var selected = findLabOption();
+            if (!selected) {
+                if (labHidden) labHidden.value = "";
+                lastAddedLabValue = "";
+                return;
+            }
+
+            if (labHidden) {
+                labHidden.value = selected.getAttribute("data-value") || "";
+            }
+
+            var current = (labSearch.value || "").trim();
+            if (!current || current === lastAddedLabValue) return;
+
+            var servicesRaw = (selected.getAttribute("data-services") || "").trim();
+            var testName = servicesRaw || current;
+
+            lastAddedLabValue = current;
+            addInvestigationRow(testName, false);
+
+            labSearch.value = "";
+            lastAddedLabValue = "";
+            if (labHidden) labHidden.value = "";
+        }
+
+        labSearch.addEventListener("input", function () {
+            setTimeout(onLabGroupSelected, 0);
+        });
+        labSearch.addEventListener("change", onLabGroupSelected);
+    }
+})();
+</script>
+}
+
+@* ── 4. Medicine / Surgical package grids (role-based) ───────────────── *@
+@if (isMO || isNursing)
+{
+<script>
+(function () {
+    "use strict";
+
+    var packageDetailsUrlEl = document.getElementById("packageDetailsUrl");
+    if (!packageDetailsUrlEl) return;
+
+    var packageDetailsUrl = packageDetailsUrlEl.value;
+    var routeList = document.getElementById("drugRouteOptions");
+
+    function escapeAttr(value) {
+        return String(value || "").replace(/"/g, "&quot;");
+    }
+
+    function escapeHtml(value) {
+        return String(value || "")
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;");
+    }
+
+    function setPackageRowRemarksState(tr) {
+        if (!tr) return;
+
+        var discontinue = tr.querySelector(".pkg-discontinue");
+        var remarks = tr.querySelector(".pkg-remarks");
+        if (!remarks) return;
+
+        var enabled = discontinue && discontinue.checked;
+        remarks.readOnly = !enabled;
+        if (!enabled) {
+            remarks.value = "";
+        }
+    }
+
+    function syncRouteCode(row) {
+        var input = row.querySelector(".pkg-route");
+        var hidden = row.querySelector(".pkg-route-code");
+        if (!input || !hidden || !routeList) return;
+
+        hidden.value = "";
+        var current = (input.value || "").trim();
+        var selected = Array.prototype.find.call(routeList.options, function (opt) {
+            return (opt.value || "").trim() === current;
+        });
+
+        if (selected) {
+            hidden.value = selected.getAttribute("data-value") || "";
+        }
+    }
+
+    function buildPackageRow(item, packageCode, packageType) {
+        var isSurgical = packageType === "2";
+        var tr = document.createElement("tr");
+        tr.className = "pkg-data-row";
+        tr.setAttribute("data-order-id", "0");
+        tr.setAttribute("data-item-code", item.code);
+        tr.setAttribute("data-package-code", packageCode || "");
+        tr.setAttribute("data-pharmacy-charged", "0");
+        tr.setAttribute("data-discontinued", "0");
+
+        var doseValue = isSurgical ? escapeAttr(item.qty || "") : "";
+        var doseCell = isSurgical
+            ? '<td><input type="text" class="form-control form-control-sm pkg-dose pkg-qty pkg-grid-input" readonly="readonly" value="' + doseValue + '" /></td>'
+            : '<td><input type="text" class="form-control form-control-sm pkg-dose pkg-grid-input" /></td>';
+
+        tr.innerHTML =
+            '<td class="text-center pkg-status text-muted"></td>' +
+            '<td><span class="pkg-item-name">' + escapeHtml(item.name) + '</span></td>' +
+            doseCell +
+            '<td>' +
+                '<input type="search" class="form-control form-control-sm pkg-route pkg-grid-input searchable-dropdown" ' +
+                    'list="drugRouteOptions" autocomplete="off" placeholder="Route" />' +
+                '<input type="hidden" class="pkg-route-code" value="" />' +
+            '</td>' +
+            '<td class="text-center"><input type="checkbox" class="form-check-input pkg-discontinue pkg-grid-check" /></td>' +
+            '<td><input type="text" class="form-control form-control-sm pkg-remarks pkg-grid-input" placeholder="Remarks" readonly="readonly" /></td>' +
+            '<td class="text-center"><span class="pkg-pharmacy-status small fw-semibold text-muted">Pending</span></td>' +
+            '<td class="pkg-pharmacy-by text-muted small"><span>-</span></td>' +
+            '<td class="text-center">' +
+                '<button type="button" class="btn btn-link btn-sm text-danger p-0 pkg-remove-btn" title="Remove">&#x2715;</button>' +
+            '</td>';
+
+        var routeInput = tr.querySelector(".pkg-route");
+        if (routeInput) {
+            routeInput.addEventListener("input", function () {
+                setTimeout(function () { syncRouteCode(tr); }, 0);
+            });
+            routeInput.addEventListener("change", function () {
+                syncRouteCode(tr);
+            });
+        }
+
+        setPackageRowRemarksState(tr);
+        return tr;
+    }
+
+    function syncCustomItemCode(row) {
+        var input = row.querySelector(".pkg-item-name-input");
+        var hidden = row.querySelector(".pkg-item-code");
+        var listId = row.getAttribute("data-item-list-id") || "erMedicineItemOptions";
+        var list = document.getElementById(listId);
+        if (!input || !hidden) return;
+
+        hidden.value = "0";
+        row.setAttribute("data-item-code", "0");
+
+        if (!list) return;
+        var current = (input.value || "").trim();
+        var selected = Array.prototype.find.call(list.options, function (opt) {
+            return (opt.value || "").trim() === current;
+        });
+
+        if (selected) {
+            var code = selected.getAttribute("data-value") || "0";
+            hidden.value = code;
+            row.setAttribute("data-item-code", code);
+        }
+    }
+
+    function buildCustomPackageRow(packageType) {
+        var isSurgical = packageType === "2";
+        var itemListId = isSurgical ? "erSurgicalItemOptions" : "erMedicineItemOptions";
+        var tr = document.createElement("tr");
+        tr.className = "pkg-data-row pkg-custom-row";
+        tr.setAttribute("data-order-id", "0");
+        tr.setAttribute("data-item-code", "0");
+        tr.setAttribute("data-package-code", "0");
+        tr.setAttribute("data-pharmacy-charged", "0");
+        tr.setAttribute("data-discontinued", "0");
+        tr.setAttribute("data-custom", "1");
+        tr.setAttribute("data-item-list-id", itemListId);
+
+        var namePlaceholder = isSurgical ? "Search surgical item or enter custom" : "Search drug or enter custom";
+        var dosePlaceholder = isSurgical ? "QTY" : "Dose";
+
+        tr.innerHTML =
+            '<td class="text-center pkg-status text-muted"></td>' +
+            '<td>' +
+                '<input type="search" class="form-control form-control-sm pkg-item-name-input pkg-grid-input searchable-dropdown" ' +
+                    'list="' + itemListId + '" autocomplete="off" placeholder="' + namePlaceholder + '" />' +
+                '<input type="hidden" class="pkg-item-code" value="0" />' +
+            '</td>' +
+            '<td><input type="text" class="form-control form-control-sm pkg-dose pkg-grid-input" placeholder="' + dosePlaceholder + '" required /></td>' +
+            '<td>' +
+                '<input type="search" class="form-control form-control-sm pkg-route pkg-grid-input searchable-dropdown" ' +
+                    'list="drugRouteOptions" autocomplete="off" placeholder="Route" />' +
+                '<input type="hidden" class="pkg-route-code" value="" />' +
+            '</td>' +
+            '<td class="text-center"><input type="checkbox" class="form-check-input pkg-discontinue pkg-grid-check" /></td>' +
+            '<td><input type="text" class="form-control form-control-sm pkg-remarks pkg-grid-input" placeholder="Remarks" readonly="readonly" /></td>' +
+            '<td class="text-center"><span class="pkg-pharmacy-status small fw-semibold text-muted">Pending</span></td>' +
+            '<td class="pkg-pharmacy-by text-muted small"><span>-</span></td>' +
+            '<td class="text-center">' +
+                '<button type="button" class="btn btn-link btn-sm text-danger p-0 pkg-remove-btn" title="Remove">&#x2715;</button>' +
+            '</td>';
+
+        var routeInput = tr.querySelector(".pkg-route");
+        if (routeInput) {
+            routeInput.addEventListener("input", function () {
+                setTimeout(function () { syncRouteCode(tr); }, 0);
+            });
+            routeInput.addEventListener("change", function () {
+                syncRouteCode(tr);
+            });
+        }
+
+        var nameInput = tr.querySelector(".pkg-item-name-input");
+        if (nameInput) {
+            nameInput.addEventListener("input", function () {
+                setTimeout(function () { syncCustomItemCode(tr); }, 0);
+            });
+            nameInput.addEventListener("change", function () {
+                syncCustomItemCode(tr);
+            });
+            nameInput.focus();
+        }
+
+        setPackageRowRemarksState(tr);
+        return tr;
+    }
+
+    function appendCustomPackageRow(bodyId, placeholderId, packageType) {
+        var body = document.getElementById(bodyId);
+        var placeholder = document.getElementById(placeholderId);
+        if (!body) return;
+
+        if (placeholder && placeholder.parentNode) {
+            placeholder.parentNode.removeChild(placeholder);
+        }
+
+        body.appendChild(buildCustomPackageRow(packageType));
+    }
+
+    var addCustomMedicineBtn = document.getElementById("btnAddCustomMedicine");
+    if (addCustomMedicineBtn) {
+        addCustomMedicineBtn.addEventListener("click", function () {
+            appendCustomPackageRow("medicinePackageBody", "medicinePackagePlaceholder", "1");
+        });
+    }
+
+    var addCustomSurgicalBtn = document.getElementById("btnAddCustomSurgical");
+    if (addCustomSurgicalBtn) {
+        addCustomSurgicalBtn.addEventListener("click", function () {
+            appendCustomPackageRow("surgicalPackageBody", "surgicalPackagePlaceholder", "2");
+        });
+    }
+
+    function initPackageGrid(config) {
+        var search = document.getElementById(config.searchId);
+        var hidden = document.getElementById(config.hiddenId);
+        var list = document.getElementById(config.listId);
+        var body = document.getElementById(config.bodyId);
+        var placeholder = document.getElementById(config.placeholderId);
+        var table = document.getElementById(config.tableId);
+        var lastLoadedPackageCode = "";
+        var packageType = table ? (table.getAttribute("data-package-type") || "1") : "1";
+
+        if (!search || !hidden || !list || !body) return;
+
+        function clearPlaceholder() {
+            if (placeholder && placeholder.parentNode) {
+                placeholder.parentNode.removeChild(placeholder);
+                placeholder = null;
+            }
+        }
+
+        function findPackageOption() {
+            var current = (search.value || "").trim();
+            if (!current) return null;
+
+            return Array.prototype.find.call(list.options, function (opt) {
+                return (opt.value || "").trim() === current;
+            }) || null;
+        }
+
+        function tryLoadPackage() {
+            var selected = findPackageOption();
+            if (!selected) {
+                hidden.value = "";
+                return;
+            }
+
+            var packageCode = selected.getAttribute("data-value") || "";
+            hidden.value = packageCode;
+
+            if (!packageCode || packageCode === lastLoadedPackageCode) return;
+
+            var selectedName = (search.value || "").trim();
+            var url = packageDetailsUrl + "?packageCode=" + encodeURIComponent(packageCode);
+
+            fetch(url, {
+                credentials: "same-origin",
+                headers: { "X-Requested-With": "XMLHttpRequest" }
+            })
+            .then(function (response) {
+                var contentType = response.headers.get("content-type") || "";
+                if (contentType.toLowerCase().indexOf("application/json") === -1) {
+                    throw new Error("Could not load package items. Please refresh and try again.");
+                }
+                return response.json();
+            })
+            .then(function (result) {
+                if (!result.ok) {
+                    throw new Error(result.message || "Could not load package items.");
+                }
+
+                var items = result.items || [];
+                if (!items.length) {
+                    throw new Error("No items found for this package.");
+                }
+
+                clearPlaceholder();
+                items.forEach(function (item) {
+                    body.appendChild(buildPackageRow(item, packageCode, packageType));
+                });
+
+                hidden.value = packageCode;
+                if (selectedName) {
+                    search.value = selectedName;
+                }
+                lastLoadedPackageCode = packageCode;
+            })
+            .catch(function (err) {
+                if (typeof window.showErFormToast === "function") {
+                    window.showErFormToast(err.message || "Could not load package items.", true);
+                } else {
+                    window.alert(err.message || "Could not load package items.");
+                }
+            });
+        }
+
+        search.addEventListener("input", function () {
+            var selected = findPackageOption();
+            if (!selected) {
+                lastLoadedPackageCode = "";
+            }
+            setTimeout(tryLoadPackage, 50);
+        });
+        search.addEventListener("change", tryLoadPackage);
+
+        body.addEventListener("change", function (e) {
+            var target = e.target;
+            if (!target || !target.classList) return;
+
+            if (target.classList.contains("pkg-discontinue")) {
+                var row = target.closest("tr");
+                if (row) {
+                    if (row.getAttribute("data-pharmacy-charged") === "1") {
+                        target.checked = false;
+                        return;
+                    }
+                    row.classList.toggle("pkg-row-discontinued", target.checked);
+                    row.setAttribute("data-discontinued", target.checked ? "1" : "0");
+                    var statusEl = row.querySelector(".pkg-pharmacy-status");
+                    if (statusEl) {
+                        statusEl.innerHTML = target.checked
+                            ? '<span class="text-danger">Disc.</span>'
+                            : '<span class="text-muted">Pending</span>';
+                    }
+                    setPackageRowRemarksState(row);
+                }
+            }
+        });
+
+        body.addEventListener("click", function (e) {
+            var removeBtn = e.target.closest(".pkg-remove-btn");
+            if (!removeBtn) return;
+            removeBtn.closest("tr").remove();
+        });
+    }
+
+    initPackageGrid({
+        searchId: "medicinePackageSearch",
+        hiddenId: "MedicinePackageCode",
+        listId: "medicinePackageOptions",
+        bodyId: "medicinePackageBody",
+        placeholderId: "medicinePackagePlaceholder",
+        tableId: "medicinePackageTable"
+    });
+
+    initPackageGrid({
+        searchId: "surgicalPackageSearch",
+        hiddenId: "SurgicalPackageCode",
+        listId: "surgicalPackageOptions",
+        bodyId: "surgicalPackageBody",
+        placeholderId: "surgicalPackagePlaceholder",
+        tableId: "surgicalPackageTable"
+    });
+})();
+</script>
+}
+
+@* ── 5. Vital sparklines + history row-click (always rendered) ──────────── *@
+<script>
+(function () {
+    "use strict";
+
+    var historyRows = document.querySelectorAll(".vitals-row");
+    var sparklines  = document.querySelectorAll(".vital-sparkline");
+
+    function getVal(row, metric) {
+        if (metric === "bpSystolic") {
+            var bp    = row.getAttribute("data-bp") || "";
+            var slash = bp.indexOf("/");
+            return Number(slash > 0 ? bp.substring(0, slash) : bp);
+        }
+        return Number(row.getAttribute("data-" + metric));
+    }
+
+    function drawSparkline(svg, values) {
+        if (!svg || !values.length) return;
+        var valid = values.filter(function (v) { return isFinite(v) && !isNaN(v); });
+        if (!valid.length) return;
+        var lo    = Math.min.apply(null, valid);
+        var hi    = Math.max.apply(null, valid);
+        var range = Math.max(1, hi - lo);
+        var W = 100, H = 28, pad = 2;
+        var stepX = valid.length > 1 ? W / (valid.length - 1) : W;
+        var pts = valid.map(function (v, i) {
+            return (i * stepX).toFixed(1) + "," +
+                   (H - pad - ((v - lo) / range) * (H - pad * 2)).toFixed(1);
+        }).join(" ");
+        svg.innerHTML = '<polyline points="' + pts + '" />';
+    }
+
+    sparklines.forEach(function (svg) {
+        var metric = svg.getAttribute("data-metric");
+        var vals = Array.prototype.slice.call(historyRows)
+                       .reverse()
+                       .map(function (r) { return getVal(r, metric); });
+        drawSparkline(svg, vals);
+    });
+
+    historyRows.forEach(function (row) {
+        row.style.cursor = "pointer";
+        row.addEventListener("click", function () {
+            function set(id, val) {
+                var el = document.getElementById(id);
+                if (el) el.textContent = val;
+            }
+            set("latestRecorded", row.getAttribute("data-recorded"));
+            set("latestHeart",    row.getAttribute("data-heart"));
+            set("latestPulse",    row.getAttribute("data-pulse"));
+            set("latestRr",       row.getAttribute("data-rr"));
+            set("latestBp",       row.getAttribute("data-bp"));
+            set("latestSpo2",     (row.getAttribute("data-spo2") || "") + "%");
+            set("latestTemp",     row.getAttribute("data-temp"));
+            set("latestGlucoseR", row.getAttribute("data-glucose-r"));
+            set("latestBmi",      row.getAttribute("data-bmi"));
+            set("latestFallRisk", row.getAttribute("data-fall-risk"));
+            set("latestPainScore", row.getAttribute("data-pain-score"));
+
+            historyRows.forEach(function (r) { r.classList.remove("vitals-row-active"); });
+            row.classList.add("vitals-row-active");
+        });
+    });
+
+    var addVitalForm = document.querySelector("#addVitalModal form");
+    var addVitalModal = document.getElementById("addVitalModal");
+
+    function resetAddVitalForm() {
+        if (!addVitalForm) return;
+
+        addVitalForm.querySelectorAll("input[type='number'], input[type='text']").forEach(function (input) {
+            if (input.type === "hidden" || input.name === "PatientId") return;
+            input.value = "";
+        });
+
+        var errorBox = document.getElementById("addVitalError");
+        if (errorBox) {
+            errorBox.classList.add("d-none");
+            errorBox.textContent = "";
+        }
+    }
+
+    if (addVitalModal) {
+        addVitalModal.addEventListener("show.bs.modal", resetAddVitalForm);
+    }
+
+    if (addVitalForm) {
+        addVitalForm.addEventListener("submit", function (e) {
+            e.preventDefault();
+
+            var errorBox = document.getElementById("addVitalError");
+            var saveBtn = document.getElementById("btnSaveVital");
+            if (errorBox) {
+                errorBox.classList.add("d-none");
+                errorBox.textContent = "";
+            }
+            if (saveBtn) {
+                saveBtn.disabled = true;
+                saveBtn.textContent = "Saving...";
+            }
+
+            fetch(addVitalForm.action, {
+                method: "POST",
+                body: new FormData(addVitalForm),
+                headers: { "X-Requested-With": "XMLHttpRequest" },
+                credentials: "same-origin"
+            })
+            .then(function (response) {
+                if (!response.ok) throw new Error("Save failed. Please try again.");
+                return response.json();
+            })
+            .then(function (result) {
+                if (!result.ok) {
+                    throw new Error(result.message || "Could not save vital record.");
+                }
+
+                var modalEl = document.getElementById("addVitalModal");
+                var modal = bootstrap.Modal.getInstance(modalEl);
+                resetAddVitalForm();
+                if (modal) modal.hide();
+                window.location.href = result.refreshUrl || window.location.href;
+            })
+            .catch(function (err) {
+                if (errorBox) {
+                    errorBox.textContent = err.message || "Could not save vital record.";
+                    errorBox.classList.remove("d-none");
+                }
+            })
+            .finally(function () {
+                if (saveBtn) {
+                    saveBtn.disabled = false;
+                    saveBtn.textContent = "Save Vital";
+                }
+            });
+        });
+    }
+
+})();
+</script>
+
+@* ── 6. ER Review Form save (AJAX — preserves fields on error) ─────────── *@
+@if (canSaveReviewForm || canPrintOutcome || isMOUser)
+{
+<script>
+(function () {
+    "use strict";
+
+    var patientIdEl = document.getElementById("erPatientId");
+    var admissionCodeEl = document.getElementById("erAdmissionCode");
+    var saveUrlEl = document.getElementById("saveReviewFormUrl");
+    var packageUrlEl = document.getElementById("savePackageOrdersUrl");
+    var printDischargeUrlEl = document.getElementById("printDischargeSummaryUrl");
+    var printDeathUrlEl = document.getElementById("printDeathCertificateUrl");
+    var printReferralUrlEl = document.getElementById("printPatientReferralUrl");
+    var printLamaUrlEl = document.getElementById("printLamaUrl");
+    var uploadUrlEl = document.getElementById("uploadDocumentUrl");
+    var deleteDocUrlEl = document.getElementById("deleteDocumentUrl");
+    var isMO = document.getElementById("erFormIsMO") && document.getElementById("erFormIsMO").value === "1";
+    var isNursing = document.getElementById("erFormIsNursing") && document.getElementById("erFormIsNursing").value === "1";
+
+    function showAlert(message, isError) {
+        if (typeof window.showErFormToast === "function") {
+            window.showErFormToast(message, isError);
+        }
+    }
+
+    function parseIntOrNull(value) {
+        var n = parseInt(value, 10);
+        return isNaN(n) || n <= 0 ? null : n;
+    }
+
+    function radioValue(name) {
+        var el = document.querySelector('input[name="' + name + '"]:checked');
+        return el ? parseIntOrNull(el.value) : null;
+    }
+
+    function fieldValue(id) {
+        var el = document.getElementById(id);
+        return el ? (el.value || "").trim() : "";
+    }
+
+    function collectChiefComplaints() {
+        var list = [];
+        document.querySelectorAll("[data-complaint-code]:checked").forEach(function (chk) {
+            var code = parseInt(chk.getAttribute("data-complaint-code") || chk.value, 10);
+            if (!code) return;
+            var rmkEl = document.getElementById(chk.getAttribute("data-target-id"));
+            list.push({ Code: code, Remark: rmkEl ? rmkEl.value : "" });
+        });
+        return list;
+    }
+
+    function collectDrugAllergies() {
+        var list = [];
+        document.querySelectorAll("[data-allergy-code]:checked").forEach(function (chk) {
+            var code = parseInt(chk.getAttribute("data-allergy-code") || chk.value, 10);
+            if (!code) return;
+            var rmkEl = document.getElementById(chk.getAttribute("data-target-id"));
+            list.push({ Code: code, Remark: rmkEl ? rmkEl.value : "" });
+        });
+        return list;
+    }
+
+    function collectPastHistoryCodes() {
+        var codes = [];
+        document.querySelectorAll(".past-history-check:checked").forEach(function (chk) {
+            var code = parseInt(chk.value, 10);
+            if (code) codes.push(code);
+        });
+        return codes;
+    }
+
+    function collectInvestigations() {
+        var rows = [];
+        document.querySelectorAll("#investigationsBody tr.inv-data-row").forEach(function (tr) {
+            var testInput = tr.querySelector(".inv-test");
+            var testName = testInput ? (testInput.value || "").trim() : "";
+            if (!testName) return;
+            var cancelCheckbox = tr.querySelector(".inv-cancel-checkbox");
+            rows.push({
+                Id: parseInt(tr.getAttribute("data-id") || "0", 10) || 0,
+                ServiceGroupCode: parseIntOrNull(tr.getAttribute("data-service-group")),
+                TestName: testName,
+                Remarks: tr.querySelector(".inv-remarks") ? tr.querySelector(".inv-remarks").value : "",
+                IsCancelled: cancelCheckbox ? cancelCheckbox.checked : tr.getAttribute("data-cancelled") === "1"
+            });
+        });
+        return rows;
+    }
+
+    function collectReviewPayload() {
+        return {
+            PatientId: patientIdEl ? patientIdEl.value : "",
+            PastMedicalHistory: fieldValue("PastMedicalHistory"),
+            FoodAllergy: fieldValue("FoodAllergy"),
+            PastSurgicalHistory: fieldValue("PastSurgicalHistory"),
+            GcsCode: parseIntOrNull(fieldValue("GcsCode")),
+            PlanterCode: radioValue("PlanterCode"),
+            CvsCode: radioValue("CvsCode"),
+            RespiratoryCode: radioValue("RespiratoryCode"),
+            BowelSoundCode: radioValue("BowelSoundCode"),
+            AbdomenCode: radioValue("AbdomenCode"),
+            AdmissionCategoryCode: radioValue("AdmissionCategoryCode"),
+            ReceivedFromCode: radioValue("ReceivedFromCode"),
+            OutcomeCode: radioValue("OutcomeCode"),
+            DiscussedWith: fieldValue("DiscussedWith"),
+            ReferredTo: fieldValue("ReferredTo"),
+            AssessmentDiagnosis: fieldValue("AssessmentDiagnosis"),
+            ConditionUponReleaseCode: radioValue("ConditionUponReleaseCode"),
+            AdrCode: radioValue("AdrCode"),
+            TreatmentNotes: fieldValue("TreatmentNotes"),
+            ConsultantPlan: fieldValue("ConsultantPlan"),
+            NursingObservations: fieldValue("NursingObservations"),
+            NursingCarePlan: fieldValue("NursingCarePlan"),
+            DischargeFinalize: !!(document.getElementById("chkDischargeFinalize") && document.getElementById("chkDischargeFinalize").checked),
+            ChiefComplaints: collectChiefComplaints(),
+            DrugAllergies: isMO ? collectDrugAllergies() : [],
+            PastHistoryCodes: collectPastHistoryCodes(),
+            Investigations: isMO ? collectInvestigations() : []
+        };
+    }
+
+    function validateDischargeFinalizeSelections(payload) {
+        if (!payload || !payload.DischargeFinalize) return "";
+
+        if (!payload.GcsCode) return "GCS is required before Discharged Finalize.";
+        if (!payload.PlanterCode) return "Planter response is required before Discharged Finalize.";
+        if (!payload.CvsCode) return "CVS selection is required before Discharged Finalize.";
+        if (!payload.RespiratoryCode) return "Respiratory selection is required before Discharged Finalize.";
+        if (!payload.BowelSoundCode) return "Bowel sound selection is required before Discharged Finalize.";
+        if (!payload.AbdomenCode) return "Abdomen selection is required before Discharged Finalize.";
+        if (!payload.AdmissionCategoryCode) return "Admission category is required before Discharged Finalize.";
+        if (!payload.ReceivedFromCode) return "Received from is required before Discharged Finalize.";
+        if (!payload.OutcomeCode) return "Outcome selection is required before Discharged Finalize.";
+        if (!payload.ConditionUponReleaseCode) return "Condition upon release is required before Discharged Finalize.";
+        if (!payload.AdrCode) return "ADR selection is required before Discharged Finalize.";
+        if (!payload.ChiefComplaints || !payload.ChiefComplaints.length) return "At least one chief complaint tick is required before Discharged Finalize.";
+        if (!payload.PastHistoryCodes || !payload.PastHistoryCodes.length) return "At least one past history tick is required before Discharged Finalize.";
+        return "";
+    }
+
+    function collectPackageItems(bodyId, packageCodeHiddenId) {
+        var items = [];
+        var body = document.getElementById(bodyId);
+        if (!body) return items;
+
+        body.querySelectorAll("tr.pkg-data-row").forEach(function (tr) {
+            var customInput = tr.querySelector(".pkg-item-name-input");
+            var itemName = customInput
+                ? (customInput.value || "").trim()
+                : (function () {
+                    var itemNameEl = tr.querySelector(".pkg-item-name");
+                    return itemNameEl ? (itemNameEl.textContent || "").trim() : "";
+                })();
+            if (!itemName) return;
+
+            var doseEl = tr.querySelector(".pkg-dose");
+            var doseVal = doseEl ? (doseEl.value || "").trim() : "";
+            if (!doseVal) return;
+
+            var routeCodeEl = tr.querySelector(".pkg-route-code");
+            var routeCode = routeCodeEl ? parseIntOrNull(routeCodeEl.value) : null;
+            var disc = tr.querySelector(".pkg-discontinue");
+            var isCustom = tr.getAttribute("data-custom") === "1";
+
+            items.push({
+                Id: parseInt(tr.getAttribute("data-order-id") || "0", 10) || 0,
+                PackageCode: isCustom ? 0 : (parseInt(tr.getAttribute("data-package-code") || "0", 10) || 0),
+                PackageDetailCode: isCustom ? 0 : (parseInt(tr.getAttribute("data-item-code") || "0", 10) || 0),
+                ItemName: itemName,
+                Dose: doseVal,
+                DrugRouteCode: routeCode,
+                Discontinue: disc ? disc.checked : false,
+                Remarks: tr.querySelector(".pkg-remarks") ? tr.querySelector(".pkg-remarks").value : ""
+            });
+        });
+
+        return items;
+    }
+
+    function getPackageRowsMissingDose(bodyId, doseLabel) {
+        var missing = [];
+        var body = document.getElementById(bodyId);
+        if (!body) return missing;
+
+        body.querySelectorAll("tr.pkg-data-row").forEach(function (tr) {
+            var customInput = tr.querySelector(".pkg-item-name-input");
+            var itemName = customInput
+                ? (customInput.value || "").trim()
+                : (function () {
+                    var itemNameEl = tr.querySelector(".pkg-item-name");
+                    return itemNameEl ? (itemNameEl.textContent || "").trim() : "";
+                })();
+            if (!itemName) return;
+
+            var doseEl = tr.querySelector(".pkg-dose");
+            var doseVal = doseEl ? (doseEl.value || "").trim() : "";
+            if (!doseVal) {
+                missing.push(itemName);
+            }
+        });
+
+        return missing;
+    }
+
+    function postJson(url, payload, btn, busyText) {
+        if (!url) return Promise.reject(new Error("Save URL missing."));
+
+        if (btn) {
+            btn.disabled = true;
+            btn.dataset.originalText = btn.textContent;
+            btn.textContent = busyText || "Saving...";
+        }
+
+        return fetch(url, {
+            method: "POST",
+            credentials: "same-origin",
+            headers: {
+                "Content-Type": "application/json",
+                "X-Requested-With": "XMLHttpRequest"
+            },
+            body: JSON.stringify(payload)
+        })
+        .then(function (response) {
+            return response.json().catch(function () {
+                throw new Error("Save failed. Please try again.");
+            });
+        })
+        .then(function (data) {
+            if (!data || data.ok === false) {
+                throw new Error((data && data.message) || "Save failed. Please try again.");
+            }
+            return data;
+        })
+        .finally(function () {
+            if (btn) {
+                btn.disabled = false;
+                btn.textContent = btn.dataset.originalText || "Save";
+            }
+        });
+    }
+
+    function syncInvestigationIds(investigations) {
+        if (!investigations || !investigations.length) return;
+        var rows = document.querySelectorAll("#investigationsBody tr.inv-data-row");
+        investigations.forEach(function (item, index) {
+            if (!rows[index]) return;
+            var tr = rows[index];
+            tr.setAttribute("data-id", item.id);
+            tr.setAttribute("data-billing-ack", item.isAcknowledged ? "1" : "0");
+            tr.setAttribute("data-cancelled", item.isCancelled ? "1" : "0");
+
+            var cancelCheckbox = tr.querySelector(".inv-cancel-checkbox");
+            if (cancelCheckbox) {
+                cancelCheckbox.checked = !!item.isCancelled;
+                cancelCheckbox.disabled = !!item.isAcknowledged;
+            }
+
+            tr.classList.remove("inv-row-cancelled", "inv-row-billing-ack", "inv-row-locked");
+            if (item.isAcknowledged) {
+                tr.classList.add("inv-row-billing-ack", "inv-row-locked");
+            } else if (item.isCancelled) {
+                tr.classList.add("inv-row-cancelled");
+            }
+
+            var testInput = tr.querySelector(".inv-test");
+            var remarksInput = tr.querySelector(".inv-remarks");
+            var removeBtn = tr.querySelector(".inv-remove-btn");
+            if (item.isAcknowledged) {
+                if (testInput) testInput.readOnly = true;
+                if (remarksInput) remarksInput.readOnly = true;
+                if (removeBtn) removeBtn.classList.add("d-none");
+            }
+        });
+    }
+
+    function syncPackageIds(bodyId, items) {
+        if (!items || !items.length) return;
+        var body = document.getElementById(bodyId);
+        if (!body) return;
+        var rows = body.querySelectorAll("tr.pkg-data-row");
+        items.forEach(function (item, index) {
+            if (!rows[index]) return;
+            var tr = rows[index];
+            tr.setAttribute("data-order-id", item.id);
+            tr.setAttribute("data-pharmacy-charged", item.isAcknowledged ? "1" : "0");
+            tr.setAttribute("data-discontinued", item.discontinue ? "1" : "0");
+
+            tr.classList.remove("pkg-row-pharmacy-charged", "pkg-row-discontinued", "pkg-row-locked");
+            if (item.isAcknowledged) {
+                tr.classList.add("pkg-row-pharmacy-charged", "pkg-row-locked");
+            } else if (item.discontinue) {
+                tr.classList.add("pkg-row-discontinued");
+            }
+
+            var disc = tr.querySelector(".pkg-discontinue");
+            var dose = tr.querySelector(".pkg-dose");
+            var route = tr.querySelector(".pkg-route");
+            var remarks = tr.querySelector(".pkg-remarks");
+            var removeBtn = tr.querySelector(".pkg-remove-btn");
+            var statusEl = tr.querySelector(".pkg-pharmacy-status");
+            var chargedByEl = tr.querySelector(".pkg-pharmacy-by");
+
+            if (item.isAcknowledged) {
+                if (disc) disc.disabled = true;
+                if (dose) dose.readOnly = true;
+                if (route) route.readOnly = true;
+                if (remarks) remarks.readOnly = true;
+                if (removeBtn) removeBtn.classList.add("d-none");
+                if (statusEl) statusEl.innerHTML = '<span class="text-success">Charged</span>';
+                if (chargedByEl) {
+                    chargedByEl.innerHTML = (item.ackByName || "-") +
+                        (item.ackDate ? '<div class="text-muted">' + item.ackDate + '</div>' : "");
+                }
+            } else if (item.discontinue) {
+                if (statusEl) statusEl.innerHTML = '<span class="text-danger">Disc.</span>';
+            }
+        });
+    }
+
+    function saveReviewForm(btn) {
+        var payload = collectReviewPayload();
+        var finalizeValidationMessage = validateDischargeFinalizeSelections(payload);
+        if (finalizeValidationMessage) {
+            showAlert(finalizeValidationMessage, true);
+            return;
+        }
+
+        var doSave = function () {
+            postJson(saveUrlEl ? saveUrlEl.value : "", payload, btn, "Saving...")
+                .then(function (result) {
+                    if (!result.ok) throw new Error(result.message || "Could not save form.");
+                    showAlert(result.message || "Form saved successfully.", false);
+                    syncInvestigationIds(result.investigations);
+                    if (payload.DischargeFinalize) {
+                        window.setTimeout(function () { window.location.reload(); }, 350);
+                    }
+                })
+                .catch(function (err) {
+                    showAlert(err.message || "Could not save form.", true);
+                });
+        };
+
+        if (!payload.DischargeFinalize) {
+            doSave();
+            return;
+        }
+
+        checkDischargeFinalizeEligibility().then(function (gate) {
+            if (!gate || !gate.canDischarge) {
+                var chk = document.getElementById("chkDischargeFinalize");
+                if (chk) chk.checked = false;
+                showAlert((gate && gate.message) || "Cannot finalize discharge.", true);
+                return;
+            }
+            doSave();
+        });
+    }
+
+    function checkDischargeFinalizeEligibility() {
+        var urlEl = document.getElementById("getDischargeEligibilityUrl");
+        var url = urlEl ? urlEl.value : "";
+        var patientId = patientIdEl ? (patientIdEl.value || "").trim() : "";
+        if (!url || !patientId) {
+            return Promise.resolve({ canDischarge: false, message: "Patient context not found." });
+        }
+
+        var admissionCode = admissionCodeEl ? (admissionCodeEl.value || "").trim() : "";
+        var query = url
+            + "?patientId=" + encodeURIComponent(patientId)
+            + (admissionCode ? ("&admissionCode=" + encodeURIComponent(admissionCode)) : "")
+            + "&_=" + Date.now();
+
+        return fetch(query, {
+            method: "GET",
+            credentials: "same-origin",
+            headers: { "Cache-Control": "no-cache", "Pragma": "no-cache" }
+        })
+            .then(function (res) { return res.json(); })
+            .then(function (json) {
+                if (!json || json.ok === false) {
+                    return {
+                        canDischarge: false,
+                        message: (json && json.message) || "Could not verify discharge eligibility."
+                    };
+                }
+                return {
+                    canDischarge: !!json.canDischarge,
+                    message: json.message || ""
+                };
+            })
+            .catch(function () {
+                return { canDischarge: false, message: "Could not verify discharge eligibility." };
+            });
+    }
+
+    var dischargeFinalizeChk = document.getElementById("chkDischargeFinalize");
+    if (dischargeFinalizeChk && !dischargeFinalizeChk.disabled) {
+        dischargeFinalizeChk.addEventListener("change", function () {
+            if (!dischargeFinalizeChk.checked) return;
+
+            dischargeFinalizeChk.disabled = true;
+            checkDischargeFinalizeEligibility().then(function (gate) {
+                dischargeFinalizeChk.disabled = false;
+                if (gate && gate.canDischarge) return;
+
+                dischargeFinalizeChk.checked = false;
+                showAlert(
+                    (gate && gate.message)
+                        || "Cannot finalize discharge. Clear pending items and finalize an outcome form first.",
+                    true);
+            });
+        });
+    }
+
+    var saveBtn = document.getElementById("btnSaveReviewForm");
+    if (saveBtn) {
+        saveBtn.addEventListener("click", function () { saveReviewForm(saveBtn); });
+    }
+
+    var invSaveBtn = document.getElementById("btnSaveInvestigations");
+    if (invSaveBtn) {
+        invSaveBtn.addEventListener("click", function () { saveReviewForm(invSaveBtn); });
+    }
+
+    function bindPackageSave(btnId, bodyId, hiddenId, packageTypeCode, doseLabel) {
+        var btn = document.getElementById(btnId);
+        if (!btn) return;
+
+        btn.addEventListener("click", function () {
+            var missingDose = getPackageRowsMissingDose(bodyId, doseLabel);
+            if (missingDose.length) {
+                showAlert(
+                    (doseLabel || "Dose") + " is required. Enter " + (doseLabel || "dose").toLowerCase() +
+                    " for: " + missingDose.join(", "),
+                    true);
+                return;
+            }
+
+            var hidden = document.getElementById(hiddenId);
+            var payload = {
+                PatientId: patientIdEl ? patientIdEl.value : "",
+                PackageTypeCode: packageTypeCode,
+                PackageCode: hidden ? parseIntOrNull(hidden.value) : null,
+                Items: collectPackageItems(bodyId, hiddenId)
+            };
+
+            postJson(packageUrlEl ? packageUrlEl.value : "", payload, btn, "Saving...")
+                .then(function (result) {
+                    if (!result.ok) throw new Error(result.message || "Could not save package.");
+                    showAlert(result.message || "Package saved.", false);
+                    syncPackageIds(bodyId, result.items);
+                })
+                .catch(function (err) {
+                    showAlert(err.message || "Could not save package.", true);
+                });
+        });
+    }
+
+    if (isMO) {
+        bindPackageSave("btnSaveMedicinePackage", "medicinePackageBody", "MedicinePackageCode", 1, "Dose");
+    }
+    if (isNursing) {
+        bindPackageSave("btnSaveSurgicalPackage", "surgicalPackageBody", "SurgicalPackageCode", 2, "QTY");
+    }
+
+    var uploadBtn = document.getElementById("btnUploadDoc");
+    var docFileInput = document.getElementById("docUploadInput");
+    var docCameraInput = document.getElementById("docCameraInput");
+    var cameraPickBtn = document.getElementById("btnPickCameraDoc");
+    var galleryPickBtn = document.getElementById("btnPickGalleryDoc");
+    var docCameraModalEl = document.getElementById("docCameraModal");
+    var docCameraVideo = document.getElementById("docCameraVideo");
+    var docCameraCanvas = document.getElementById("docCameraCanvas");
+    var takeDocPhotoBtn = document.getElementById("btnTakeDocPhoto");
+    var webcamStream = null;
+    var capturedDocFile = null;
+
+    function stopWebcam() {
+        if (webcamStream && webcamStream.getTracks) {
+            webcamStream.getTracks().forEach(function (t) { t.stop(); });
+        }
+        webcamStream = null;
+        if (docCameraVideo) docCameraVideo.srcObject = null;
+    }
+
+    function startWebcamAndOpenModal() {
+        if (!docCameraModalEl || !docCameraVideo || !window.bootstrap || !window.bootstrap.Modal) {
+            return Promise.reject(new Error("Camera preview is not available."));
+        }
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            return Promise.reject(new Error("Webcam is not supported on this device/browser."));
+        }
+
+        return navigator.mediaDevices.getUserMedia({
+            video: { facingMode: { ideal: "environment" } },
+            audio: false
+        }).then(function (stream) {
+            webcamStream = stream;
+            docCameraVideo.srcObject = stream;
+            var modal = window.bootstrap.Modal.getOrCreateInstance(docCameraModalEl);
+            modal.show();
+        });
+    }
+
+    function getSelectedDocumentFile() {
+        if (capturedDocFile) {
+            return capturedDocFile;
+        }
+        if (docCameraInput && docCameraInput.files && docCameraInput.files.length) {
+            return docCameraInput.files[0];
+        }
+        if (docFileInput && docFileInput.files && docFileInput.files.length) {
+            return docFileInput.files[0];
+        }
+        return null;
+    }
+
+    if (cameraPickBtn) {
+        cameraPickBtn.addEventListener("click", function () {
+            startWebcamAndOpenModal()
+                .catch(function () {
+                    // Fallback for mobile/tablet browsers that prefer file-input capture.
+                    if (docCameraInput) {
+                        docCameraInput.click();
+                    } else {
+                        showAlert("Camera is not available on this device.", true);
+                    }
+                });
+        });
+    }
+
+    if (galleryPickBtn) {
+        galleryPickBtn.addEventListener("click", function () {
+            if (docFileInput) docFileInput.click();
+        });
+    }
+
+    if (docCameraInput && uploadBtn) {
+        docCameraInput.addEventListener("change", function () {
+            // On tablets/phones, a camera capture is usually ready to upload immediately.
+            if (docCameraInput.files && docCameraInput.files.length) {
+                capturedDocFile = null;
+                uploadBtn.click();
+            }
+        });
+    }
+
+    if (takeDocPhotoBtn && docCameraVideo && docCameraCanvas && uploadBtn) {
+        takeDocPhotoBtn.addEventListener("click", function () {
+            if (!docCameraVideo.videoWidth || !docCameraVideo.videoHeight) {
+                showAlert("Camera is not ready. Please wait and try again.", true);
+                return;
+            }
+
+            docCameraCanvas.width = docCameraVideo.videoWidth;
+            docCameraCanvas.height = docCameraVideo.videoHeight;
+            var ctx = docCameraCanvas.getContext("2d");
+            if (!ctx) {
+                showAlert("Could not capture camera image.", true);
+                return;
+            }
+            ctx.drawImage(docCameraVideo, 0, 0, docCameraCanvas.width, docCameraCanvas.height);
+
+            docCameraCanvas.toBlob(function (blob) {
+                if (!blob) {
+                    showAlert("Could not capture camera image.", true);
+                    return;
+                }
+
+                capturedDocFile = new File(
+                    [blob],
+                    "camera-" + Date.now() + ".jpg",
+                    { type: "image/jpeg" });
+
+                if (docCameraModalEl && window.bootstrap && window.bootstrap.Modal) {
+                    var modal = window.bootstrap.Modal.getOrCreateInstance(docCameraModalEl);
+                    modal.hide();
+                }
+
+                uploadBtn.click();
+            }, "image/jpeg", 0.92);
+        });
+    }
+
+    if (docCameraModalEl) {
+        docCameraModalEl.addEventListener("hidden.bs.modal", function () {
+            stopWebcam();
+        });
+    }
+
+    if (uploadBtn && uploadUrlEl) {
+        uploadBtn.addEventListener("click", function () {
+            var docTypeEl = document.getElementById("docTypeSearch");
+            var tokenEl = document.querySelector('input[name="__RequestVerificationToken"]');
+            var documentType = docTypeEl ? (docTypeEl.value || "").trim() : "";
+            var selectedFile = getSelectedDocumentFile();
+            if (!selectedFile) {
+                showAlert("Please choose a file to upload.", true);
+                return;
+            }
+            if (!documentType) {
+                showAlert("Please select a document type.", true);
+                if (docTypeEl) docTypeEl.focus();
+                return;
+            }
+
+            var formData = new FormData();
+            formData.append("patientId", patientIdEl ? patientIdEl.value : "");
+            formData.append("documentType", documentType);
+            formData.append("file", selectedFile);
+            if (tokenEl) formData.append("__RequestVerificationToken", tokenEl.value);
+
+            uploadBtn.disabled = true;
+            fetch(uploadUrlEl.value, {
+                method: "POST",
+                credentials: "same-origin",
+                body: formData,
+                headers: { "X-Requested-With": "XMLHttpRequest" }
+            })
+            .then(function (r) { return r.json(); })
+            .then(function (result) {
+                if (!result.ok) throw new Error(result.message || "Upload failed.");
+                showAlert(result.message || "Document uploaded.", false);
+                capturedDocFile = null;
+                if (docFileInput) docFileInput.value = "";
+                if (docCameraInput) docCameraInput.value = "";
+                window.location.reload();
+            })
+            .catch(function (err) {
+                showAlert(err.message || "Upload failed.", true);
+            })
+            .finally(function () { uploadBtn.disabled = false; });
+        });
+    }
+
+    document.addEventListener("click", function (e) {
+        var removeDocBtn = e.target.closest(".doc-remove-btn");
+        if (!removeDocBtn || !deleteDocUrlEl) return;
+
+        var row = removeDocBtn.closest(".doc-data-row");
+        if (!row) return;
+        var docId = row.getAttribute("data-id");
+        var tokenEl = document.querySelector('input[name="__RequestVerificationToken"]');
+        var formData = new FormData();
+        formData.append("documentId", docId);
+        formData.append("patientId", patientIdEl ? patientIdEl.value : "");
+        if (tokenEl) formData.append("__RequestVerificationToken", tokenEl.value);
+
+        fetch(deleteDocUrlEl.value, {
+            method: "POST",
+            credentials: "same-origin",
+            body: formData,
+            headers: { "X-Requested-With": "XMLHttpRequest" }
+        })
+        .then(function (r) { return r.json(); })
+        .then(function (result) {
+            if (!result.ok) throw new Error(result.message || "Could not remove document.");
+            row.remove();
+            showAlert(result.message || "Document removed.", false);
+        })
+        .catch(function (err) {
+            showAlert(err.message || "Could not remove document.", true);
+        });
+    });
+
+    document.querySelectorAll(".outcome-print-btn").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+            var admissionCode = admissionCodeEl ? (admissionCodeEl.value || "").trim() : "";
+            if (!admissionCode) {
+                showAlert("Admission reference is missing.", true);
+                return;
+            }
+
+            var printType = (btn.getAttribute("data-print-type") || "").toLowerCase();
+            var baseUrl = "";
+            if (printType === "discharge") baseUrl = printDischargeUrlEl ? printDischargeUrlEl.value : "";
+            else if (printType === "death") baseUrl = printDeathUrlEl ? printDeathUrlEl.value : "";
+            else if (printType === "referral") baseUrl = printReferralUrlEl ? printReferralUrlEl.value : "";
+            else if (printType === "lama") baseUrl = printLamaUrlEl ? printLamaUrlEl.value : "";
+
+            if (!baseUrl) {
+                showAlert("Print endpoint is not configured.", true);
+                return;
+            }
+
+            window.open(baseUrl + "?admissionCode=" + encodeURIComponent(admissionCode), "_blank");
+        });
+    });
+})();
+</script>
+
+<script>
+(function () {
+    "use strict";
+
+    var actionWrap = document.getElementById("outcomeFormActionWrap");
+    var openBtn = document.getElementById("btnOpenOutcomeFormModal");
+    var actionNameEl = document.getElementById("outcomeFormActionName");
+    var patientIdEl = document.getElementById("erPatientId");
+    var admissionCodeEl = document.getElementById("erAdmissionCode");
+    var currentUserNameEl = document.getElementById("currentUserDisplayName");
+    var saveUrlEl = document.getElementById("saveOutcomeFormUrl");
+    var autoPopulateUrlEl = document.getElementById("getOutcomeAutoPopulateUrl");
+    var printDischargeUrlEl = document.getElementById("printDischargeSummaryUrl");
+    var printDeathUrlEl = document.getElementById("printDeathCertificateUrl");
+    if (!actionWrap || !openBtn || !actionNameEl) return;
+
+    function normalizeOutcome(label) {
+        var value = (label || "").toLowerCase();
+        if (value.indexOf("lama") >= 0) {
+            return { title: "LAMA", modalId: "outcomeLamaModal" };
+        }
+        if (value.indexOf("refer") >= 0 || value.indexOf("refrel") >= 0) {
+            return { title: "Patient Referral", modalId: "outcomeReferralModal" };
+        }
+        if (value.indexOf("discharge") >= 0) {
+            return { title: "Discharge Summary", modalId: "outcomeDischargeModal" };
+        }
+        if (value.indexOf("death") >= 0) {
+            return { title: "Death Certificate", modalId: "outcomeDeathModal" };
+        }
+        return null;
+    }
+
+    function getSelectedOutcomeLabel() {
+        var checked = document.querySelector('input[name="OutcomeCode"]:checked');
+        if (!checked) return "";
+        var labelEl = checked.id ? document.querySelector('label[for="' + checked.id + '"]') : null;
+        return labelEl ? (labelEl.textContent || "").trim() : "";
+    }
+
+    function refreshOutcomeAction() {
+        var selectedLabel = getSelectedOutcomeLabel();
+        var target = normalizeOutcome(selectedLabel);
+        if (!target) {
+            actionWrap.classList.add("d-none");
+            openBtn.removeAttribute("data-target-modal");
+            actionNameEl.textContent = "Form";
+            return;
+        }
+
+        actionNameEl.textContent = target.title;
+        openBtn.setAttribute("data-target-modal", target.modalId);
+        actionWrap.classList.remove("d-none");
+    }
+
+    document.querySelectorAll('input[name="OutcomeCode"]').forEach(function (radio) {
+        radio.addEventListener("change", refreshOutcomeAction);
+    });
+    refreshOutcomeAction();
+
+    function collectChiefComplaintRemarks() {
+        var remarks = [];
+        document.querySelectorAll(".chief-complaint-row").forEach(function (row) {
+            var chk = row.querySelector(".complaint-toggle");
+            var remarkEl = row.querySelector(".complaint-remark");
+            if (!chk || !chk.checked || !remarkEl) return;
+            var remark = (remarkEl.value || "").trim();
+            if (remark) remarks.push(remark);
+        });
+        return remarks;
+    }
+
+    function collectChiefComplaintText() {
+        var parts = [];
+        document.querySelectorAll(".chief-complaint-row").forEach(function (row) {
+            var chk = row.querySelector(".complaint-toggle");
+            if (!chk || !chk.checked) return;
+            var nameEl = row.querySelector(".complaint-check span");
+            var remarkEl = row.querySelector(".complaint-remark");
+            var name = nameEl ? (nameEl.textContent || "").trim() : "";
+            var remark = remarkEl ? (remarkEl.value || "").trim() : "";
+            if (!name && !remark) return;
+            if (!remark) parts.push(name);
+            else if (!name) parts.push(remark);
+            else parts.push(name + ": " + remark);
+        });
+        return parts;
+    }
+
+    function getSelectedConditionUponReleaseName() {
+        var checked = document.querySelector('input[name="ConditionUponReleaseCode"]:checked');
+        if (!checked) return "";
+        var labelEl = checked.id ? document.querySelector('label[for="' + checked.id + '"]') : null;
+        if (labelEl) return (labelEl.textContent || "").trim();
+        var wrapLabel = checked.closest("label");
+        return wrapLabel ? (wrapLabel.textContent || "").trim() : "";
+    }
+
+    function collectReferralMedicinesFromBilling() {
+        var parts = [];
+        var body = document.getElementById("medicinePackageBody");
+        if (!body) return parts;
+
+        body.querySelectorAll("tr.pkg-data-row").forEach(function (tr) {
+            var disc = tr.querySelector(".pkg-discontinue");
+            if (disc && disc.checked) return;
+
+            var customInput = tr.querySelector(".pkg-item-name-input");
+            var itemName = customInput
+                ? (customInput.value || "").trim()
+                : (function () {
+                    var itemNameEl = tr.querySelector(".pkg-item-name");
+                    return itemNameEl ? (itemNameEl.textContent || "").trim() : "";
+                })();
+            if (!itemName) return;
+
+            var chunks = [itemName];
+            var doseEl = tr.querySelector(".pkg-dose");
+            var dose = doseEl ? (doseEl.value || "").trim() : "";
+            if (dose) chunks.push("Dose: " + dose);
+
+            var routeEl = tr.querySelector(".pkg-route");
+            var route = routeEl ? (routeEl.value || "").trim() : "";
+            if (route) chunks.push("Route: " + route);
+
+            parts.push(chunks.join(", "));
+        });
+        return parts;
+    }
+
+    function collectReferralInvestigationsFromBilling() {
+        var parts = [];
+        document.querySelectorAll("#investigationsBody tr.inv-data-row").forEach(function (tr) {
+            var cancelCheckbox = tr.querySelector(".inv-cancel-checkbox");
+            if (cancelCheckbox && cancelCheckbox.checked) return;
+            var testInput = tr.querySelector(".inv-test");
+            var testName = testInput ? (testInput.value || "").trim() : "";
+            if (testName) parts.push(testName);
+        });
+        return parts;
+    }
+
+    function fillIfEmpty(id, value) {
+        var el = document.getElementById(id);
+        if (!el) return;
+        if ((el.value || "").trim()) return;
+        var next = (value || "").trim();
+        if (!next) return;
+        el.value = next;
+    }
+
+    function setFieldValue(id, value) {
+        var el = document.getElementById(id);
+        if (!el) return;
+        el.value = value || "";
+    }
+
+    function applyFieldFromDb(id, value, alreadySaved) {
+        if (alreadySaved) return;
+        var next = (value || "").trim();
+        if (!next) return;
+        setFieldValue(id, next);
+    }
+
+    function fetchOutcomeAutoPopulateData() {
+        var url = autoPopulateUrlEl ? autoPopulateUrlEl.value : "";
+        var patientId = patientIdEl ? (patientIdEl.value || "").trim() : "";
+        if (!url || !patientId) return Promise.resolve(null);
+
+        var admissionCode = admissionCodeEl ? (admissionCodeEl.value || "").trim() : "";
+        var query = url
+            + "?patientId=" + encodeURIComponent(patientId)
+            + (admissionCode ? ("&admissionCode=" + encodeURIComponent(admissionCode)) : "")
+            + "&_=" + Date.now();
+
+        return fetch(query, {
+            method: "GET",
+            credentials: "same-origin",
+            headers: { "Cache-Control": "no-cache", "Pragma": "no-cache" }
+        })
+            .then(function (res) { return res.json(); })
+            .then(function (json) {
+                if (!json || !json.ok || !json.data) return null;
+                return json.data;
+            })
+            .catch(function () { return null; });
+    }
+
+    function autoPopulateDischargeSummaryFromErForm() {
+        var finalizeEl = document.getElementById("dischargeFinalize");
+        if (finalizeEl && finalizeEl.checked) return Promise.resolve();
+
+        return fetchOutcomeAutoPopulateData().then(function (data) {
+            if (!data) {
+                // Fallback to live ER form DOM if API unavailable.
+                fillIfEmpty("dischargeFinalDiagnosis", valueOf("AssessmentDiagnosis"));
+                fillIfEmpty("dischargeSurgeryProcedures", valueOf("TreatmentNotes"));
+                fillIfEmpty("dischargeBriefHistory", collectChiefComplaintText().join("\n"));
+                fillIfEmpty("dischargeClinicalAssessment", getSelectedConditionUponReleaseName());
+                return;
+            }
+
+            var saved = data.Discharge || {};
+            applyFieldFromDb("dischargeFinalDiagnosis", data.Diagnosis, !!saved.HasDiagnosis);
+            applyFieldFromDb("dischargeSurgeryProcedures", data.Treatment, !!saved.HasTreatment);
+            applyFieldFromDb("dischargeBriefHistory", data.ChiefComplaints, !!saved.HasBriefHistory);
+            applyFieldFromDb("dischargeClinicalAssessment", data.ConditionUponRelease, !!saved.HasClinicalAssessment);
+        });
+    }
+
+    function autoPopulateReferralFormFromErForm() {
+        var finalizeEl = document.getElementById("referralFinalize");
+        if (finalizeEl && finalizeEl.checked) return Promise.resolve();
+
+        return fetchOutcomeAutoPopulateData().then(function (data) {
+            if (!data) {
+                fillIfEmpty("referralPatientComplaint", collectChiefComplaintText().join("\n"));
+                fillIfEmpty("referralClinicalDiagnosis", valueOf("AssessmentDiagnosis"));
+                var treatmentNotes = valueOf("TreatmentNotes");
+                var medicines = collectReferralMedicinesFromBilling();
+                var treatmentParts = [];
+                if (treatmentNotes) treatmentParts.push(treatmentNotes);
+                if (medicines.length) treatmentParts.push(medicines.join(" | "));
+                fillIfEmpty("referralTreatment", treatmentParts.join(" | "));
+                fillIfEmpty("referralPertinentInvestigation", collectReferralInvestigationsFromBilling().join(" | "));
+                fillIfEmpty("referralClinicalSummary", getSelectedConditionUponReleaseName());
+                return;
+            }
+
+            var saved = data.Referral || {};
+            applyFieldFromDb("referralPatientComplaint", data.ChiefComplaints, !!saved.HasPatientComplaint);
+            applyFieldFromDb("referralClinicalDiagnosis", data.Diagnosis, !!saved.HasDiagnosis);
+
+            var treatmentParts = [];
+            if ((data.Treatment || "").trim()) treatmentParts.push((data.Treatment || "").trim());
+            if ((data.Medicines || "").trim()) treatmentParts.push((data.Medicines || "").trim());
+            applyFieldFromDb("referralTreatment", treatmentParts.join(" | "), !!saved.HasTreatment);
+
+            applyFieldFromDb("referralPertinentInvestigation", data.Investigations, !!saved.HasInvestigations);
+            applyFieldFromDb("referralClinicalSummary", data.ConditionUponRelease, !!saved.HasCondition);
+        });
+    }
+
+    openBtn.addEventListener("click", function () {
+        var modalId = openBtn.getAttribute("data-target-modal");
+        if (!modalId || !window.bootstrap || !window.bootstrap.Modal) return;
+        var modalEl = document.getElementById(modalId);
+        if (!modalEl) return;
+
+        var populatePromise = Promise.resolve();
+        if (modalId === "outcomeDischargeModal") {
+            populatePromise = autoPopulateDischargeSummaryFromErForm();
+        } else if (modalId === "outcomeReferralModal") {
+            populatePromise = autoPopulateReferralFormFromErForm();
+        }
+
+        populatePromise.then(function () {
+            var modal = window.bootstrap.Modal.getOrCreateInstance(modalEl);
+            modal.show();
+        });
+    });
+
+    function autoSelectDefaultMo(searchInputId, hiddenCodeId) {
+        var searchEl = document.getElementById(searchInputId);
+        var hiddenEl = document.getElementById(hiddenCodeId);
+        var optionsList = document.getElementById("consultantOptionsList");
+        var currentUserName = currentUserNameEl ? (currentUserNameEl.value || "").trim() : "";
+        if (!searchEl || !hiddenEl || !optionsList || !currentUserName) return;
+        if ((hiddenEl.value || "").trim()) return;
+        if ((searchEl.value || "").trim()) return;
+
+        var normalizedCurrentUser = currentUserName.toLowerCase();
+        var matchedOption = Array.prototype.find.call(optionsList.options, function (opt) {
+            var optionName = (opt.value || "").trim().toLowerCase();
+            return optionName === normalizedCurrentUser
+                || optionName.indexOf(normalizedCurrentUser) >= 0
+                || normalizedCurrentUser.indexOf(optionName) >= 0;
+        });
+        if (!matchedOption) return;
+
+        searchEl.value = matchedOption.value || "";
+        hiddenEl.value = matchedOption.getAttribute("data-value") || "";
+    }
+
+    autoSelectDefaultMo("referralMoSearch", "referralMoCode");
+    autoSelectDefaultMo("lamaDutyMoSearch", "lamaDutyMoCode");
+    autoSelectDefaultMo("deathDutyMoSearch", "deathDutyMoCode");
+
+    function intOrNull(value) {
+        var n = parseInt(value, 10);
+        return isNaN(n) || n <= 0 ? null : n;
+    }
+
+    function valueOf(id) {
+        var el = document.getElementById(id);
+        return el ? (el.value || "").trim() : "";
+    }
+
+    function boolOf(id) {
+        var el = document.getElementById(id);
+        return !!(el && el.checked);
+    }
+
+    function dateValueOf(id) {
+        var v = valueOf(id);
+        return v ? v : null;
+    }
+
+    function buildDischargeMedicineRows() {
+        var table = document.getElementById("dischargeMedicineTable");
+        if (!table) return [];
+
+        var rows = [];
+        table.querySelectorAll("tbody tr").forEach(function (tr) {
+            var itemCodeEl = tr.querySelector(".discharge-med-item-code");
+            var itemNameEl = tr.querySelector(".discharge-med-item-name");
+            var itemName = itemNameEl ? (itemNameEl.value || "").trim() : "";
+
+            var row = {
+                ItemCode: itemCodeEl ? intOrNull(itemCodeEl.value) : null,
+                DrugName: itemName,
+                Dose: ((tr.querySelector(".discharge-med-dose") || {}).value || "").trim(),
+                Frequency: ((tr.querySelector(".discharge-med-frequency") || {}).value || "").trim(),
+                Days: intOrNull(((tr.querySelector(".discharge-med-days") || {}).value || "").trim()),
+                Instruction: ((tr.querySelector(".discharge-med-instruction") || {}).value || "").trim()
+            };
+
+            if (row.ItemCode || row.DrugName || row.Dose || row.Frequency || row.Days || row.Instruction) {
+                rows.push(row);
+            }
+        });
+        return rows;
+    }
+
+    function validateDischargeMedicineRows(rows) {
+        var errors = [];
+        (rows || []).forEach(function (row, index) {
+            var hasData = !!(row.ItemCode || row.DrugName || row.Dose || row.Frequency || row.Days || row.Instruction);
+            if (!hasData) return;
+
+            var rowNo = index + 1;
+            if (!row.DrugName) errors.push("Medicine is required in row " + rowNo + ".");
+            if (!row.Dose) errors.push("Dose is required in row " + rowNo + ".");
+            if (!row.Frequency) errors.push("Frequency is required in row " + rowNo + ".");
+            if (!row.Days || row.Days <= 0) errors.push("Days is required in row " + rowNo + ".");
+        });
+        return errors;
+    }
+
+    function syncDischargeMedicineCodeForRow(row) {
+        if (!row) return;
+        var nameInput = row.querySelector(".discharge-med-item-name");
+        var hiddenCode = row.querySelector(".discharge-med-item-code");
+        var list = document.getElementById("dischargeMedicineOptionsList");
+        if (!nameInput || !hiddenCode || !list) return;
+
+        hiddenCode.value = "";
+        var current = (nameInput.value || "").trim();
+        if (!current) return;
+
+        var selected = Array.prototype.find.call(list.options, function (opt) {
+            return (opt.value || "").trim() === current;
+        });
+        if (selected) {
+            hiddenCode.value = selected.getAttribute("data-value") || "";
+        }
+    }
+
+    function bindDischargeMedicineRow(row) {
+        if (!row) return;
+        var nameInput = row.querySelector(".discharge-med-item-name");
+        if (nameInput) {
+            nameInput.addEventListener("input", function () {
+                setTimeout(function () { syncDischargeMedicineCodeForRow(row); }, 0);
+            });
+            nameInput.addEventListener("change", function () {
+                syncDischargeMedicineCodeForRow(row);
+            });
+            syncDischargeMedicineCodeForRow(row);
+        }
+    }
+
+    function isDischargeMedicineLocked() {
+        var finalizeEl = document.getElementById("dischargeFinalize");
+        return !!(finalizeEl && finalizeEl.checked);
+    }
+
+    function applyDischargeMedicineEditState() {
+        var table = document.getElementById("dischargeMedicineTable");
+        var addBtn = document.getElementById("btnAddDischargeMedicineRow");
+        var locked = isDischargeMedicineLocked();
+        if (addBtn) {
+            addBtn.disabled = locked;
+        }
+        if (!table) return;
+
+        table.querySelectorAll("tbody tr").forEach(function (row) {
+            row.querySelectorAll("input[type='text'], input[type='search']").forEach(function (input) {
+                input.readOnly = locked;
+            });
+
+            var removeBtn = row.querySelector(".discharge-med-remove-btn");
+            if (removeBtn) {
+                removeBtn.disabled = locked;
+                removeBtn.classList.toggle("d-none", locked);
+            }
+        });
+    }
+
+    function addDischargeMedicineRow() {
+        if (isDischargeMedicineLocked()) return;
+        var table = document.getElementById("dischargeMedicineTable");
+        if (!table) return;
+        var body = table.querySelector("tbody");
+        if (!body) return;
+
+        var tr = document.createElement("tr");
+        tr.innerHTML =
+            '<td>' +
+                '<input type="search" class="form-control form-control-sm discharge-med-item-name searchable-dropdown" ' +
+                    'list="dischargeMedicineOptionsList" autocomplete="off" placeholder="Select medicine..." />' +
+                '<input type="hidden" class="discharge-med-item-code" value="" />' +
+            '</td>' +
+            '<td><input type="text" class="form-control form-control-sm discharge-med-dose" /></td>' +
+            '<td>' +
+                '<input type="search" class="form-control form-control-sm discharge-med-frequency searchable-dropdown" ' +
+                    'list="drugFrequencyOptionsList" autocomplete="off" placeholder="Select frequency..." />' +
+            '</td>' +
+            '<td><input type="text" class="form-control form-control-sm discharge-med-days" /></td>' +
+            '<td><input type="text" class="form-control form-control-sm discharge-med-instruction" /></td>' +
+            '<td class="text-center"><button type="button" class="btn btn-link btn-sm text-danger p-0 discharge-med-remove-btn" title="Remove">&#x2715;</button></td>';
+        body.appendChild(tr);
+        bindDischargeMedicineRow(tr);
+    }
+
+    var dischargeTable = document.getElementById("dischargeMedicineTable");
+    if (dischargeTable) {
+        dischargeTable.querySelectorAll("tbody tr").forEach(bindDischargeMedicineRow);
+        dischargeTable.addEventListener("click", function (e) {
+            if (isDischargeMedicineLocked()) return;
+            var removeBtn = e.target.closest(".discharge-med-remove-btn");
+            if (!removeBtn) return;
+            var row = removeBtn.closest("tr");
+            if (!row) return;
+            var body = dischargeTable.querySelector("tbody");
+            if (!body) return;
+            if (body.querySelectorAll("tr").length <= 1) {
+                row.querySelectorAll("input").forEach(function (el) { el.value = ""; });
+                return;
+            }
+            row.remove();
+        });
+    }
+
+    var addMedicineBtn = document.getElementById("btnAddDischargeMedicineRow");
+    if (addMedicineBtn) {
+        addMedicineBtn.addEventListener("click", addDischargeMedicineRow);
+    }
+
+    var dischargeFinalizeEl = document.getElementById("dischargeFinalize");
+    if (dischargeFinalizeEl) {
+        dischargeFinalizeEl.addEventListener("change", applyDischargeMedicineEditState);
+    }
+    applyDischargeMedicineEditState();
+
+    function buildPayload(formType) {
+        var payload = {
+            PatientId: patientIdEl ? patientIdEl.value : "",
+            AdmissionCode: admissionCodeEl ? intOrNull(admissionCodeEl.value) : null,
+            FormType: formType,
+            CloseExistingDischargeOnDeath: false,
+            ReplaceExistingOutcome: false
+        };
+
+        if (formType === "referral") {
+            payload.IsFinal = boolOf("referralFinalize");
+            payload.ReferralReasonCode = intOrNull(valueOf("referralReasonCode"));
+            payload.ReferralDateTime = dateValueOf("referralDateTime");
+            payload.ReferralMoOnDutyCode = intOrNull(valueOf("referralMoCode"));
+            payload.ReferralPatientComplaint = valueOf("referralPatientComplaint");
+            payload.ReferralClinicalSummary = valueOf("referralClinicalSummary");
+            payload.ReferralTreatment = valueOf("referralTreatment");
+            payload.ReferralPertinentInvestigation = valueOf("referralPertinentInvestigation");
+            payload.ReferralClinicalDiagnosis = valueOf("referralClinicalDiagnosis");
+            return payload;
+        }
+
+        if (formType === "discharge") {
+            payload.IsFinal = boolOf("dischargeFinalize");
+            payload.DischargeFinalDiagnosis = valueOf("dischargeFinalDiagnosis");
+            payload.DischargeBriefHistory = valueOf("dischargeBriefHistory");
+            payload.DischargeSurgeryProcedures = valueOf("dischargeSurgeryProcedures");
+            payload.DischargeDietInstructions = valueOf("dischargeDietInstructions");
+            payload.DischargeClinicalAssessment = valueOf("dischargeClinicalAssessment");
+            payload.DischargeFollowUpInstructions = valueOf("dischargeFollowUpInstructions");
+            payload.DischargeMedicines = buildDischargeMedicineRows();
+            return payload;
+        }
+
+        if (formType === "death") {
+            payload.IsFinal = boolOf("deathFinalize");
+            payload.DeathPrimaryConsultantCode = intOrNull(valueOf("deathPrimaryConsultantCode"));
+            payload.DeathDateTime = dateValueOf("deathDateTime");
+            payload.DeathPrimaryCause = valueOf("deathPrimaryCause");
+            payload.DeathSecondaryCause = valueOf("deathSecondaryCause");
+            payload.DeathBroughtInDead = boolOf("deathBroughtInDead");
+            payload.DeathMedicalCondition = valueOf("deathMedicalCondition");
+            payload.DeathHandOverTo = valueOf("deathHandOverTo");
+            payload.DeathRelativeCnicPassport = valueOf("deathRelativeCnicPassport");
+            payload.DeathRelationCode = intOrNull(valueOf("deathRelationCode"));
+            payload.DeathHandOverAt = dateValueOf("deathHandOverAt");
+            payload.DeathDutyNurseCode = intOrNull(valueOf("deathDutyNurseCode"));
+            payload.DeathDutyMoCode = intOrNull(valueOf("deathDutyMoCode"));
+            return payload;
+        }
+
+        payload.IsFinal = boolOf("lamaFinalize");
+        payload.LamaRequesterName = valueOf("lamaRequesterName");
+        payload.LamaDutyNurseCode = intOrNull(valueOf("lamaDutyNurseCode"));
+        payload.LamaDutyMoCode = intOrNull(valueOf("lamaDutyMoCode"));
+        payload.LamaRelationCode = intOrNull(valueOf("lamaRelationCode"));
+        payload.LamaRequestedOn = dateValueOf("lamaRequestedOn");
+        payload.LamaReason = valueOf("lamaReason");
+        payload.LamaDoctorRemarks = valueOf("lamaDoctorRemarks");
+        payload.LamaNurseComments = valueOf("lamaNurseComments");
+        return payload;
+    }
+
+    function closeOutcomeModalByFormType(formType) {
+        var modalId = "";
+        if (formType === "referral") modalId = "outcomeReferralModal";
+        else if (formType === "discharge") modalId = "outcomeDischargeModal";
+        else if (formType === "death") modalId = "outcomeDeathModal";
+        else if (formType === "lama") modalId = "outcomeLamaModal";
+        if (!modalId || !window.bootstrap || !window.bootstrap.Modal) return;
+        var modalEl = document.getElementById(modalId);
+        if (!modalEl) return;
+        var modal = window.bootstrap.Modal.getOrCreateInstance(modalEl);
+        modal.hide();
+    }
+
+    document.querySelectorAll(".outcome-form-save-btn").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+            var formType = (btn.getAttribute("data-form-type") || "").toLowerCase();
+            if (!formType) return;
+            if (!saveUrlEl || !saveUrlEl.value) {
+                if (typeof window.showErFormToast === "function") {
+                    window.showErFormToast("Save endpoint is not configured.", true);
+                }
+                return;
+            }
+
+            var payload = buildPayload(formType);
+            if (!payload.PatientId) {
+                if (typeof window.showErFormToast === "function") {
+                    window.showErFormToast("Patient reference is missing.", true);
+                }
+                return;
+            }
+
+            if (formType === "discharge") {
+                var dischargeErrors = validateDischargeMedicineRows(payload.DischargeMedicines);
+                if (dischargeErrors.length) {
+                    if (typeof window.showErFormToast === "function") {
+                        window.showErFormToast(dischargeErrors[0], true);
+                    }
+                    return;
+                }
+            }
+
+            btn.disabled = true;
+            var oldText = btn.textContent;
+            btn.textContent = "Saving...";
+
+            function submitOutcomeSave(currentPayload) {
+                return fetch(saveUrlEl.value, {
+                    method: "POST",
+                    credentials: "same-origin",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-Requested-With": "XMLHttpRequest"
+                    },
+                    body: JSON.stringify(currentPayload)
+                })
+                .then(function (response) { return response.json(); })
+                .then(function (result) {
+                    if (result && result.requiresConfirmation
+                        && (result.confirmationType === "replace_outcome" || result.confirmationType === "close_discharge")) {
+                        var confirmMsg = result.message
+                            || "Another outcome form already exists. Do you want to close it and continue?";
+                        if (window.confirm(confirmMsg)) {
+                            currentPayload.ReplaceExistingOutcome = true;
+                            currentPayload.CloseExistingDischargeOnDeath = true;
+                            return submitOutcomeSave(currentPayload);
+                        }
+                        throw new Error("Save cancelled by user.");
+                    }
+
+                    if (!result || result.ok === false) {
+                        throw new Error((result && result.message) || "Could not save form.");
+                    }
+
+                    if (typeof window.showErFormToast === "function") {
+                        window.showErFormToast(result.message || "Form saved successfully.", false);
+                    }
+
+                    // Reload so bottom print buttons appear for any saved outcome form.
+                    window.setTimeout(function () { window.location.reload(); }, 300);
+                });
+            }
+
+            submitOutcomeSave(payload)
+                .then(function () {
+                    closeOutcomeModalByFormType(formType);
+                })
+                .catch(function (err) {
+                    if ((err.message || "").indexOf("Save cancelled by user.") >= 0) return;
+                    if (typeof window.showErFormToast === "function") {
+                        window.showErFormToast(err.message || "Could not save form.", true);
+                    }
+                })
+                .finally(function () {
+                    if (payload.IsFinal) {
+                        btn.disabled = true;
+                        btn.textContent = "Finalized";
+                    } else {
+                        btn.disabled = false;
+                        btn.textContent = oldText;
+                    }
+                });
+        });
+    });
+
+    document.querySelectorAll(".outcome-form-print-btn").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+            var formType = (btn.getAttribute("data-form-type") || "").toLowerCase();
+            var admissionCode = admissionCodeEl ? (admissionCodeEl.value || "").trim() : "";
+            if (!admissionCode) {
+                if (typeof window.showErFormToast === "function") {
+                    window.showErFormToast("Admission reference is missing.", true);
+                }
+                return;
+            }
+
+            if (formType === "discharge") {
+                var dischargeUrl = printDischargeUrlEl ? printDischargeUrlEl.value : "";
+                if (!dischargeUrl) return;
+                window.open(dischargeUrl + "?admissionCode=" + encodeURIComponent(admissionCode), "_blank");
+                return;
+            }
+
+            if (formType === "death") {
+                var deathUrl = printDeathUrlEl ? printDeathUrlEl.value : "";
+                if (!deathUrl) return;
+                window.open(deathUrl + "?admissionCode=" + encodeURIComponent(admissionCode), "_blank");
+                return;
+            }
+
+            window.print();
+        });
+    });
+})();
+</script>
+}
+
+}

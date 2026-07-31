@@ -1,0 +1,15 @@
+@{
+    bool isMO = ViewBag.IsMO == true;
+    var rf = ViewBag.ReviewForm as ERPaperless.Models.ErReviewFormStateViewModel
+             ?? new ERPaperless.Models.ErReviewFormStateViewModel();
+}
+
+<section class="panel-card h-100">
+    <h3>
+        Diagnosis
+        @if (!isMO) { <small class="text-muted fw-normal">(MO only)</small> }
+    </h3>
+    <textarea id="AssessmentDiagnosis" class="form-control" rows="8"
+              placeholder="@(isMO ? "Enter diagnosis..." : "Restricted to MO.")"
+              @(isMO ? "" : "disabled=\"disabled\"")>@(rf.AssessmentDiagnosis ?? "")</textarea>
+</section>
