@@ -1,4 +1,5 @@
 using ERPaperless.Abstractions.Security;
+using ERPaperless.Filters;
 using ERPaperless.Infrastructure.Security;
 using ERPaperless.Models;
 using ERPaperless.Services;
@@ -29,8 +30,21 @@ namespace ERPaperless.Controllers
         [OutputCache(NoStore = true, Duration = 0, VaryByParam = "*")]
         public ActionResult Login(string returnUrl)
         {
+            // Stale FormsAuth cookie + empty session: force a clean anonymous login page
+            // so the antiforgery token is issued for "" and matches the POST check.
             if (Request.IsAuthenticated)
+            {
+                var sessionUser = _currentUserContext.GetCurrentUser(HttpContext);
+                if (sessionUser == null)
+                {
+                    FormsAuthentication.SignOut();
+                    Session.Clear();
+                    _currentUserContext.ClearCurrentUser(Session);
+                    return RedirectToAction("Login", new { returnUrl });
+                }
+
                 return RedirectToLocal(returnUrl);
+            }
 
             SetSecurityHeaders();
             ViewBag.ReturnUrl = returnUrl;
@@ -39,7 +53,7 @@ namespace ERPaperless.Controllers
 
         // ── POST /Account/Login ───────────────────────────────────────────────
         [HttpPost]
-        [ValidateAntiForgeryToken]
+        [ValidateAnonymousAntiForgeryToken]
         [OutputCache(NoStore = true, Duration = 0, VaryByParam = "*")]
         public ActionResult Login(LoginViewModel model, string returnUrl)
         {
@@ -146,15 +160,25 @@ namespace ERPaperless.Controllers
                 return Redirect(returnUrl);
 
             var user = _currentUserContext.GetCurrentUser(HttpContext);
-            if (user != null)
-            {
-                if (user.IsPharmacyOnly)
-                    return RedirectToAction("PatientForm", "Pharmacy");
-                if (user.IsBillingOnly)
-                    return RedirectToAction("PatientForm", "Billing");
-            }
+            if (user == null)
+                return RedirectToAction("Index", "Home");
 
-            return RedirectToAction("Patients", "Home");
+            // Multiple roles → Dashboard
+            if (user.HasMultipleWorkRoles)
+                return RedirectToAction("Index", "Home");
+
+            // Single role destinations
+            if (user.IsPharmacyOnly)
+                return RedirectToAction("PatientForm", "Pharmacy");
+
+            if (user.IsBillingOnly)
+                return RedirectToAction("PatientForm", "Billing");
+
+            // Single MO or single Nursing → Patients
+            if (user.MO || user.Nursing)
+                return RedirectToAction("Patients", "Home");
+
+            return RedirectToAction("Index", "Home");
         }
 
         private void SetSecurityHeaders()

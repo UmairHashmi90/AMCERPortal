@@ -14,6 +14,15 @@ namespace ERPaperless.Models
         public string UserName    { get; set; }   // strUserName (display name)
         public int    CompanyCode { get; set; }   // intCompanyCode
 
+        /// <summary>Linked employee key (intEmpCode) when available on tblUser.</summary>
+        public int EmployeeCode { get; set; }
+
+        /// <summary>Linked consultant key (intConsultantCode) for MO LOV auto-pick.</summary>
+        public int ConsultantCode { get; set; }
+
+        /// <summary>True after Employee/Consultant lookup has been attempted for this session user.</summary>
+        public bool IdentityLinksResolved { get; set; }
+
         // From tblERRoleRights  (false = no row found = View Only)
         public bool MO       { get; set; }   // bolisMO
         public bool Nursing  { get; set; }   // bolisNursing

@@ -6,6 +6,11 @@ namespace ERPaperless.Models
     {
         public string PatientId { get; set; }
         public bool DischargeFinalize { get; set; }
+        /// <summary>When true, Discharged Finalize skips form/pending/outcome eligibility checks.</summary>
+        public bool DischargeSummaryNotRequired { get; set; }
+
+        /// <summary>Triage color stored on tblERPatient.strTriageColor (Red/Orange/Yellow/Green/Blue).</summary>
+        public string TriageColor { get; set; }
 
         public string PastMedicalHistory { get; set; }
         public string FoodAllergy { get; set; }

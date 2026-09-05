@@ -23,6 +23,7 @@
         <table class="app-table pharmacy-pkg-table" id="@tableId">
             <thead>
                 <tr>
+                    <th style="width:5%">Ack</th>
                     <th style="width:4%">#</th>
                     @if (showPatient)
                     {
@@ -36,7 +37,6 @@
                     <th style="width:12%">Requested</th>
                     <th style="width:12%">Requested By</th>
                     <th style="width:10%">Status</th>
-                    <th style="width:5%">Ack</th>
                     <th style="width:10%">Charged By</th>
                     @if (showPatient)
                     {
@@ -80,6 +80,26 @@
                             data-deleted="@(isDeleted ? "1" : "0")"
                             data-filter-status="@order.WorkQueueFilterStatus"
                             data-search="@searchText">
+                            <td class="text-center pharmacy-pkg-ack-cell">
+                                @if (isDeleted || order.Discontinue)
+                                {
+                                    <span class="text-danger small">N/A</span>
+                                }
+                                else if (order.IsPharmacyCharged)
+                                {
+                                    <span class="text-success small">&#10003;</span>
+                                }
+                                else if (canWork)
+                                {
+                                    <input type="checkbox"
+                                           class="form-check-input pharmacy-pkg-ack-checkbox mt-1"
+                                           title="Acknowledge / charge item" />
+                                }
+                                else
+                                {
+                                    <span class="text-muted">-</span>
+                                }
+                            </td>
                             <td>@n</td>
                             @if (showPatient)
                             {
@@ -110,26 +130,6 @@
                                 else
                                 {
                                     <span class="text-warning">Pending</span>
-                                }
-                            </td>
-                            <td class="text-center pharmacy-pkg-ack-cell">
-                                @if (isDeleted || order.Discontinue)
-                                {
-                                    <span class="text-danger small">N/A</span>
-                                }
-                                else if (order.IsPharmacyCharged)
-                                {
-                                    <span class="text-success small">&#10003;</span>
-                                }
-                                else if (canWork)
-                                {
-                                    <input type="checkbox"
-                                           class="form-check-input pharmacy-pkg-ack-checkbox mt-1"
-                                           title="Acknowledge / charge item" />
-                                }
-                                else
-                                {
-                                    <span class="text-muted">-</span>
                                 }
                             </td>
                             <td class="pharmacy-pkg-ack-by small">

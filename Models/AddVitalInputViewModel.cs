@@ -34,6 +34,9 @@ namespace ERPaperless.Models
         [Range(0, 100)]
         public int? Spo2 { get; set; }
 
+        [StringLength(50)]
+        public string Spo2Remark { get; set; }
+
         [Range(0, 800)]
         public decimal? GlucoseF { get; set; }
 
@@ -48,5 +51,8 @@ namespace ERPaperless.Models
 
         [Range(0, 10)]
         public int? PainScore { get; set; }
+
+        /// <summary>Selected Consciousness LOV key (tblERPatientVitals.intConciousness).</summary>
+        public int? ConsciousnessCode { get; set; }
     }
 }

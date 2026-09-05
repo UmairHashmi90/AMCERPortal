@@ -14,6 +14,12 @@ namespace ERPaperless.Models
     
     public partial class tblDrugRoute
     {
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2214:DoNotCallOverridableMethodsInConstructors")]
+        public tblDrugRoute()
+        {
+            this.tblIPDAdmPrescriptionOrders = new HashSet<tblIPDAdmPrescriptionOrder>();
+        }
+    
         public int intDrugRouteCode { get; set; }
         public string strDrugRoute { get; set; }
         public string strDrugRouteShortName { get; set; }
@@ -25,5 +31,8 @@ namespace ERPaperless.Models
         public Nullable<int> intAlteredByCode { get; set; }
         public int intRecordStatusCode { get; set; }
         public int intCompanyCode { get; set; }
+    
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")]
+        public virtual ICollection<tblIPDAdmPrescriptionOrder> tblIPDAdmPrescriptionOrders { get; set; }
     }
 }

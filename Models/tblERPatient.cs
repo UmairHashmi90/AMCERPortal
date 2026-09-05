@@ -19,12 +19,12 @@ namespace ERPaperless.Models
         {
             this.tblERPatientChiefComplaints = new HashSet<tblERPatientChiefComplaint>();
             this.tblERPatientDocuments = new HashSet<tblERPatientDocument>();
-            this.tblERPatientInvestigations = new HashSet<tblERPatientInvestigation>();
-            this.tblERPatientPastHistories = new HashSet<tblERPatientPastHistory>();
-            this.tblERPatientPackageOrders = new HashSet<tblERPatientPackageOrder>();
-            this.tblERPatientVitals = new HashSet<tblERPatientVital>();
             this.tblERPatientDrugAllergies = new HashSet<tblERPatientDrugAllergy>();
             this.tblERPatientReviewForms = new HashSet<tblERPatientReviewForm>();
+            this.tblERPatientInvestigations = new HashSet<tblERPatientInvestigation>();
+            this.tblERPatientPackageOrders = new HashSet<tblERPatientPackageOrder>();
+            this.tblERPatientPastHistories = new HashSet<tblERPatientPastHistory>();
+            this.tblERPatientVitals = new HashSet<tblERPatientVital>();
         }
     
         public long intERPatientCode { get; set; }
@@ -32,8 +32,12 @@ namespace ERPaperless.Models
         public Nullable<long> intERAdmissionCode { get; set; }
         public System.DateTime dtmAdmission { get; set; }
         public string strName { get; set; }
+        public Nullable<bool> bolIsDischargeStart { get; set; }
+        public Nullable<System.DateTime> dtmDischargeStart { get; set; }
         public Nullable<bool> bolIsDischarge { get; set; }
         public Nullable<System.DateTime> dtmDischarge { get; set; }
+        public string strTriageColor { get; set; }
+        public string strHOPI { get; set; }
         public byte[] tmVersion { get; set; }
         public System.DateTime dtmCreated { get; set; }
         public Nullable<System.DateTime> dtmLastM { get; set; }
@@ -49,16 +53,16 @@ namespace ERPaperless.Models
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")]
         public virtual ICollection<tblERPatientDocument> tblERPatientDocuments { get; set; }
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")]
-        public virtual ICollection<tblERPatientInvestigation> tblERPatientInvestigations { get; set; }
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")]
-        public virtual ICollection<tblERPatientPastHistory> tblERPatientPastHistories { get; set; }
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")]
-        public virtual ICollection<tblERPatientPackageOrder> tblERPatientPackageOrders { get; set; }
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")]
-        public virtual ICollection<tblERPatientVital> tblERPatientVitals { get; set; }
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")]
         public virtual ICollection<tblERPatientDrugAllergy> tblERPatientDrugAllergies { get; set; }
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")]
         public virtual ICollection<tblERPatientReviewForm> tblERPatientReviewForms { get; set; }
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")]
+        public virtual ICollection<tblERPatientInvestigation> tblERPatientInvestigations { get; set; }
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")]
+        public virtual ICollection<tblERPatientPackageOrder> tblERPatientPackageOrders { get; set; }
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")]
+        public virtual ICollection<tblERPatientPastHistory> tblERPatientPastHistories { get; set; }
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")]
+        public virtual ICollection<tblERPatientVital> tblERPatientVitals { get; set; }
     }
 }

@@ -117,6 +117,8 @@
     </Reference>
     <Reference Include="System.Runtime.Serialization" />
     <Reference Include="System.Security" />
+    <Reference Include="System.IO.Compression" />
+    <Reference Include="System.IO.Compression.FileSystem" />
     <Reference Include="System.Web.DynamicData" />
     <Reference Include="System.Web.Entity" />
     <Reference Include="System.Web.ApplicationServices" />
@@ -205,6 +207,7 @@
     <Compile Include="Controllers\DicomController.cs" />
     <Compile Include="Filters\ERPageModeAttribute.cs" />
     <Compile Include="Filters\RequireERRoleAttribute.cs" />
+    <Compile Include="Filters\ValidateAnonymousAntiForgeryTokenAttribute.cs" />
     <Compile Include="Global.asax.cs">
       <DependentUpon>Global.asax</DependentUpon>
     </Compile>
@@ -243,6 +246,7 @@
     <Compile Include="Models\ERServiceGroupViewModel.cs" />
     <Compile Include="Models\ERRoleModel.cs" />
     <Compile Include="Models\ErFormViewModel.cs" />
+    <Compile Include="Models\DashboardViewModel.cs" />
     <Compile Include="Models\KpiCardViewModel.cs" />
     <Compile Include="Models\LocationCardViewModel.cs" />
     <Compile Include="Models\LoginViewModel.cs" />
@@ -253,6 +257,7 @@
     <Compile Include="Models\LovDropdownViewModel.cs" />
     <Compile Include="Models\DocumentRowViewModel.cs" />
     <Compile Include="Models\ErReviewFormStateViewModel.cs" />
+    <Compile Include="Models\IpdAdmissionOrderViewModels.cs" />
     <Compile Include="Models\InvestigationRowViewModel.cs" />
     <Compile Include="Models\PackageOrderRowViewModel.cs" />
     <Compile Include="Models\OutcomeFormStateViewModel.cs" />
@@ -306,6 +311,18 @@
     <Compile Include="Models\tblException.cs">
       <DependentUpon>dbERPatient.tt</DependentUpon>
     </Compile>
+    <Compile Include="Models\tblIPDAdmOrder.cs">
+      <DependentUpon>dbERPatient.tt</DependentUpon>
+    </Compile>
+    <Compile Include="Models\tblIPDAdmPrescriptionOrder.cs">
+      <DependentUpon>dbERPatient.tt</DependentUpon>
+    </Compile>
+    <Compile Include="Models\tblIPDAdmServiceInst.cs">
+      <DependentUpon>dbERPatient.tt</DependentUpon>
+    </Compile>
+    <Compile Include="Models\tblIPDAdmServiceOrder.cs">
+      <DependentUpon>dbERPatient.tt</DependentUpon>
+    </Compile>
     <Compile Include="Models\tblLAMA.cs">
       <DependentUpon>dbERPatient.tt</DependentUpon>
     </Compile>
@@ -334,6 +351,7 @@
     <Compile Include="Infrastructure\Infrastructure\DbContextFactory.cs" />
     <Compile Include="Infrastructure\Security\CurrentUserContext.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Services\DashboardRepository.cs" />
     <Compile Include="Services\BedRepository.cs" />
     <Compile Include="Services\Data.cs" />
     <Compile Include="Services\DBHelper.cs" />
@@ -345,7 +363,9 @@
     <Compile Include="Services\ERLovRepository.cs" />
     <Compile Include="Services\Errorlogging.cs" />
     <Compile Include="Services\ERServiceGroupRepository.cs" />
+    <Compile Include="Services\ErFormExcelExporter.cs" />
     <Compile Include="Services\EROutcomeFormRepository.cs" />
+    <Compile Include="Services\ERIpdAdmissionOrderRepository.cs" />
     <Compile Include="Services\ERReviewFormRepository.cs" />
     <Compile Include="Services\ERQueueRepository.cs" />
     <Compile Include="Services\ERPatientRepository.cs" />
@@ -480,6 +500,7 @@
     <Content Include="Views\Shared\_PharmacyBillingNav.cshtml" />
     <Content Include="Views\Shared\_WorkQueueStatusFilters.cshtml" />
     <Content Include="Views\Account\Login.cshtml" />
+    <Content Include="Views\Home\_ErTriageColor.cshtml" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="App_Data\" />
@@ -505,6 +526,11 @@
     <None Include="SQL\DB_Setup.sql" />
     <None Include="SQL\procCmbERLovList.sql" />
     <None Include="SQL\procCmbDocumentTypeForERPortal.sql" />
+    <None Include="SQL\procCmbAdmissionType.sql" />
+    <None Include="SQL\procCmbAdmissionCareLevel.sql" />
+    <None Include="SQL\procCmbMedicineForIPDPrescription.sql" />
+    <None Include="SQL\procCmbInvestigationServicesForIPD.sql" />
+    <None Include="SQL\procCmbRoutineServicesForIPD.sql" />
     <None Include="SQL\procCmbConsultant.sql" />
     <None Include="SQL\procCmbEmployeeForERPortal.sql" />
     <None Include="SQL\procCmbItemInterListForERPortal.sql" />

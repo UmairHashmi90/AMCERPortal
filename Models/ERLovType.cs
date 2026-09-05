@@ -14,6 +14,7 @@ namespace ERPaperless.Models
         ReceivedFrom = 10,
         Outcome = 11,
         ConditionUponRelease = 12,
-        Adr = 13
+        Adr = 13,
+        Conciousness = 14
     }
 }

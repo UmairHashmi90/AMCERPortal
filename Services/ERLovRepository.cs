@@ -27,7 +27,8 @@ namespace ERPaperless.Services
                 { ERLovType.ReceivedFrom, new[] { "RECEIVED FROM" } },
                 { ERLovType.Outcome, new[] { "OUTCOME" } },
                 { ERLovType.ConditionUponRelease, new[] { "CONDITION UPON RELEASE", "CONDITION ON RELEASE" } },
-                { ERLovType.Adr, new[] { "ADR", "ADVERSE DRUG REACTION" } }
+                { ERLovType.Adr, new[] { "ADR", "ADVERSE DRUG REACTION" } },
+                { ERLovType.Conciousness, new[] { "CONSCIOUSNESS", "CONCIOUSNESS", "CONSCIOUS" } }
             };
 
         public static string LastError { get; private set; }
@@ -157,22 +158,87 @@ namespace ERPaperless.Services
 
         public static List<ERLovOptionViewModel> GetEmployeesForERPortal(int companyCode)
         {
+            // Nursing staff LOV (Duty Nurse on LAMA / Death).
+            return GetNursingEmployeesForER(companyCode);
+        }
+
+        public static List<ERLovOptionViewModel> GetNursingEmployeesForER(int companyCode)
+        {
             return ExecuteLovProc(
-                "procCmbEmployeeForERPortal",
+                "procCmbNursingEmployeeForER",
                 companyCode,
                 "Code",
                 "Name",
-                nameof(GetEmployeesForERPortal));
+                nameof(GetNursingEmployeesForER));
+        }
+
+        public static List<ERLovOptionViewModel> GetMoEmployeesForER(int companyCode)
+        {
+            return ExecuteLovProc(
+                "procCmbMOEmployeeForER",
+                companyCode,
+                "Code",
+                "Name",
+                nameof(GetMoEmployeesForER));
         }
 
         public static List<ERLovOptionViewModel> GetConsultantsForERPortal(int companyCode)
         {
-            return ExecuteLovProc(
-                "procCmbConsultant",
-                companyCode,
-                "Code",
-                "Name",
-                nameof(GetConsultantsForERPortal));
+            LastError = null;
+            var result = new List<ERLovOptionViewModel>();
+
+            try
+            {
+                using (var conn = DBHelper.GetConnection())
+                {
+                    conn.Open();
+                    using (var cmd = new SqlCommand("procCmbConsultant", conn))
+                    {
+                        cmd.CommandType = CommandType.StoredProcedure;
+                        cmd.Parameters.Add("@intCompanyCode", SqlDbType.Int).Value = companyCode;
+
+                        using (var rdr = cmd.ExecuteReader())
+                        {
+                            while (rdr.Read())
+                            {
+                                var id = ReadInt32(rdr, "Code", "intConsultantCode");
+                                var name = ReadString(rdr, "Name", "strFullName");
+                                if (id <= 0 || string.IsNullOrWhiteSpace(name))
+                                    continue;
+
+                                var department = ReadString(rdr, "Department", "strDepartmentName");
+                                var designation = ReadString(rdr, "Designation", "strDesignationName");
+                                var status = ReadString(rdr, "Status");
+
+                                var display = name.Trim();
+                                if (!string.IsNullOrWhiteSpace(designation))
+                                    display += " — " + designation.Trim();
+                                if (!string.IsNullOrWhiteSpace(department))
+                                    display += " (" + department.Trim() + ")";
+                                if (!string.IsNullOrWhiteSpace(status))
+                                    display += " [" + status.Trim() + "]";
+
+                                result.Add(new ERLovOptionViewModel
+                                {
+                                    Id = id,
+                                    Name = display
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                ErrorLogging.Log(nameof(ERLovRepository), nameof(GetConsultantsForERPortal), ex);
+                LastError = ex.GetBaseException().Message;
+            }
+
+            return result
+                .GroupBy(x => x.Id)
+                .Select(g => g.First())
+                .OrderBy(x => x.Name)
+                .ToList();
         }
 
         public static List<ERLovOptionViewModel> GetRelationsForERPortal(int companyCode)
@@ -250,6 +316,69 @@ namespace ERPaperless.Services
                 .Select(g => g.First())
                 .OrderBy(x => x.Name)
                 .ToList();
+        }
+
+        public static List<ERLovOptionViewModel> GetAdmissionTypes(int companyCode)
+        {
+            return ExecuteLovProc(
+                "procCmbAdmissionType",
+                companyCode,
+                "Code",
+                "AdmissionType",
+                nameof(GetAdmissionTypes));
+        }
+
+        public static List<ERLovOptionViewModel> GetAdmissionCareLevels(int companyCode)
+        {
+            return ExecuteLovProc(
+                "procCmbAdmissionCareLevel",
+                companyCode,
+                "Code",
+                "AdmissionCareLevel",
+                nameof(GetAdmissionCareLevels));
+        }
+
+        public static List<ERLovOptionViewModel> GetIpdPrescriptionMedicines(int companyCode)
+        {
+            return ExecuteLovProc(
+                "procCmbMedicineForIPDPrescription",
+                companyCode,
+                "Code",
+                "Medicine",
+                nameof(GetIpdPrescriptionMedicines));
+        }
+
+        public static List<ERLovOptionViewModel> GetIpdInvestigationServices(int companyCode)
+        {
+            return ExecuteLovProcFlexible(
+                "procCmbInvestigationServicesForIPD",
+                companyCode,
+                new[] { "Code" },
+                new[] { "Service", "strServiceName" },
+                nameof(GetIpdInvestigationServices));
+        }
+
+        public static List<ERLovOptionViewModel> GetIpdRoutineServices(int companyCode)
+        {
+            return ExecuteLovProcFlexible(
+                "procCmbRoutineServicesForIPD",
+                companyCode,
+                new[] { "Code" },
+                new[] { "Service", "strServiceName" },
+                nameof(GetIpdRoutineServices));
+        }
+
+        /// <summary>
+        /// Dose unit LOV. Uses the same company-scoped combo pattern as route/frequency (procCmbUnit).
+        /// </summary>
+        public static List<ERLovOptionViewModel> GetDoseUnitsForERPortal(int companyCode)
+        {
+            return ExecuteLovProcFlexible(
+                "procCmbUnit",
+                companyCode,
+                new[] { "Code", "intUnitCode" },
+                new[] { "Unit", "strUnit", "Name", "UnitName" },
+                nameof(GetDoseUnitsForERPortal));
         }
 
         public static List<ERLovOptionViewModel> GetItemGenericForERPortal(int companyCode)
@@ -467,6 +596,21 @@ ORDER BY d.intERLovTypeCode, d.strDescription";
             string nameColumn,
             string methodName)
         {
+            return ExecuteLovProcFlexible(
+                procedureName,
+                companyCode,
+                new[] { codeColumn },
+                new[] { nameColumn },
+                methodName);
+        }
+
+        private static List<ERLovOptionViewModel> ExecuteLovProcFlexible(
+            string procedureName,
+            int companyCode,
+            string[] codeColumns,
+            string[] nameColumns,
+            string methodName)
+        {
             LastError = null;
             var result = new List<ERLovOptionViewModel>();
 
@@ -484,8 +628,8 @@ ORDER BY d.intERLovTypeCode, d.strDescription";
                         {
                             while (rdr.Read())
                             {
-                                var id = ReadInt32(rdr, codeColumn);
-                                var name = ReadString(rdr, nameColumn);
+                                var id = ReadInt32(rdr, codeColumns);
+                                var name = ReadString(rdr, nameColumns);
                                 if (id > 0 && !string.IsNullOrWhiteSpace(name))
                                 {
                                     result.Add(new ERLovOptionViewModel

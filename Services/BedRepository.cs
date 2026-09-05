@@ -8,12 +8,19 @@ namespace ERPaperless.Services
 {
     public static class BedRepository
     {
+        private sealed class BedRowDraft
+        {
+            public LocationCardViewModel Card { get; set; }
+            public bool EnrichAdmission { get; set; }
+            public bool EnrichPending { get; set; }
+        }
+
         public static List<LocationCardViewModel> GetBeds(
             int companyCode,
             int branchCode,
             int userCode = 0)
         {
-            var result = new List<LocationCardViewModel>();
+            var drafts = new List<BedRowDraft>();
 
             try
             {
@@ -27,15 +34,16 @@ namespace ERPaperless.Services
                         cmd.Parameters.AddWithValue("@intBranchCode",  branchCode);
                         cmd.Parameters.AddWithValue("@intCompanyCode", companyCode);
 
+                        // Read all proc rows first. Do not call EF while the reader is open —
+                        // that can fail the whole bed list and blank patient info everywhere.
                         using (var rdr = cmd.ExecuteReader())
                         {
                             while (rdr.Read())
                             {
                                 var bedCode      = Convert.ToInt32(rdr["intWardBedCode"]);
                                 var bedBranch    = Convert.ToInt32(rdr["intBranchCode"]);
-                                var bedName      = rdr["strWardBedName"].ToString();
-                                var bedStatusRaw = rdr["strWardBedStatusName"]?.ToString()?.Trim()
-                                                   ?? string.Empty;
+                                var bedName      = ReadDbString(rdr, "strWardBedName") ?? string.Empty;
+                                var bedStatusRaw = (ReadDbString(rdr, "strWardBedStatusName") ?? string.Empty).Trim();
                                 var admCode      = rdr["intERAdmissionCode"] != DBNull.Value
                                                    ? Convert.ToInt32(rdr["intERAdmissionCode"]) : 0;
 
@@ -48,31 +56,44 @@ namespace ERPaperless.Services
                                        mrNo = "-",  admNo = "-",
                                        stateClass,  stateLabel;
                                 DateTime? admDate = null;
+                                var enrichAdmission = false;
+                                var enrichPending = false;
 
                                 // ── Colour / label driven by strWardBedStatusName ──────────────
                                 switch (bedStatusRaw.ToUpperInvariant())
                                 {
                                     case "OCCUPIED":
-                                        var mrNoRaw = rdr["strMrNo"]?.ToString()        ?? string.Empty;
-                                        patientName = rdr["strDisplayName"]?.ToString() ?? "-";
-                                        ageGender   = BuildAgeGender(
-                                                          rdr["age"]?.ToString()           ?? string.Empty,
-                                                          rdr["strGenderName"]?.ToString() ?? string.Empty);
-                                        mrNo   = string.IsNullOrWhiteSpace(mrNoRaw) ? "PENDING" : mrNoRaw;
-                                        admNo  = rdr["strERAdmissionNo"]?.ToString() ?? "-";
-                                        if (rdr["dtmERAdmission"] != DBNull.Value)
-                                            admDate = Convert.ToDateTime(rdr["dtmERAdmission"]);
-                                        stateClass = string.IsNullOrWhiteSpace(mrNoRaw)
+                                        ApplyAdmissionPatientFields(
+                                            rdr,
+                                            out patientName,
+                                            out ageGender,
+                                            out mrNo,
+                                            out admNo,
+                                            out admDate);
+                                        stateClass = string.Equals(mrNo, "PENDING", StringComparison.OrdinalIgnoreCase)
                                                      ? "status-orange" : "status-red";
-                                        stateLabel = string.IsNullOrWhiteSpace(mrNoRaw)
-                                                     ? "Pending MR"    : "Occupied";
-                                        if (admCode > 0 && userCode > 0)
-                                        {
-                                            var erAdmissionPatient = ERPatientRepository.GetOrCreateAdmissionPatient(
-                                                admCode, companyCode, userCode);
-                                            if (erAdmissionPatient != null)
-                                                patientId = erAdmissionPatient.intERPatientCode.ToString();
-                                        }
+                                        stateLabel = string.Equals(mrNo, "PENDING", StringComparison.OrdinalIgnoreCase)
+                                                     ? "Pending MR" : "Occupied";
+                                        enrichAdmission = admCode > 0 && userCode > 0;
+                                        break;
+
+                                    case "DISCHARGE START":
+                                    case "DISCHARGESTARTED":
+                                    case "DISCHARGE STARTED":
+                                        // Discharge finalize started — patient still on bed; show full admission info.
+                                        ApplyAdmissionPatientFields(
+                                            rdr,
+                                            out patientName,
+                                            out ageGender,
+                                            out mrNo,
+                                            out admNo,
+                                            out admDate);
+                                        stateClass = "status-orange";
+                                        stateLabel = "Discharge Start";
+                                        showForm = true;
+                                        enrichAdmission = admCode > 0 && userCode > 0;
+                                        if (!enrichAdmission)
+                                            enrichPending = true;
                                         break;
 
                                     case "UNOCCUPIED":
@@ -92,55 +113,151 @@ namespace ERPaperless.Services
                                         break;
 
                                     default:
-                                        // Covers Pending MR and any future statuses returned by the procedure.
+                                        // Pending MR and any other in-use status — still show admission fields when present.
                                         stateClass = "status-orange";
                                         stateLabel = bedStatusRaw.Length > 0 ? bedStatusRaw : "Pending MR";
                                         showForm   = true;
-                                        var erPatient = ERPatientRepository.GetActiveByBed(
-                                            bedCode, bedBranch, companyCode);
-                                        if (erPatient != null)
+                                        if (admCode > 0)
                                         {
-                                            patientId   = erPatient.intERPatientCode.ToString();
-                                            patientName = string.IsNullOrWhiteSpace(erPatient.strName)
-                                                ? $"BED#{bedCode}"
-                                                : erPatient.strName;
+                                            ApplyAdmissionPatientFields(
+                                                rdr,
+                                                out patientName,
+                                                out ageGender,
+                                                out mrNo,
+                                                out admNo,
+                                                out admDate);
+                                            enrichAdmission = userCode > 0;
                                         }
-                                        else if (userCode > 0)
+                                        else
                                         {
-                                            var pendingPatient = ERPatientRepository.GetOrCreatePendingPatient(
-                                                bedCode, bedBranch, companyCode, userCode, null);
-                                            if (pendingPatient != null)
-                                            {
-                                                patientId   = pendingPatient.intERPatientCode.ToString();
-                                                patientName = string.IsNullOrWhiteSpace(pendingPatient.strName)
-                                                    ? $"BED#{bedCode}"
-                                                    : pendingPatient.strName;
-                                            }
+                                            enrichPending = true;
                                         }
                                         break;
                                 }
 
-                                result.Add(new LocationCardViewModel
+                                drafts.Add(new BedRowDraft
                                 {
-                                    BedId              = bedCode,
-                                    BranchCode         = bedBranch,
-                                    AdmissionCode      = admCode,
-                                    PatientId          = patientId,
-                                    SlotName           = bedName,
-                                    IsChair            = bedName.IndexOf("chair",
-                                                             StringComparison.OrdinalIgnoreCase) >= 0,
-                                    PatientName        = patientName,
-                                    AgeGender          = ageGender,
-                                    MrNo               = mrNo,
-                                    AdmissionNo        = admNo,
-                                    AdmissionDate      = admDate,
-                                    StateClass         = stateClass,
-                                    StateLabel         = stateLabel,
-                                    ShowViewFormAction = showForm
+                                    EnrichAdmission = enrichAdmission,
+                                    EnrichPending = enrichPending,
+                                    Card = new LocationCardViewModel
+                                    {
+                                        BedId              = bedCode,
+                                        BranchCode         = bedBranch,
+                                        AdmissionCode      = admCode,
+                                        PatientId          = patientId,
+                                        SlotName           = bedName,
+                                        IsChair            = bedName.IndexOf("chair",
+                                                                 StringComparison.OrdinalIgnoreCase) >= 0,
+                                        PatientName        = patientName,
+                                        AgeGender          = ageGender,
+                                        MrNo               = mrNo,
+                                        AdmissionNo        = admNo,
+                                        AdmissionDate      = admDate,
+                                        StateClass         = stateClass,
+                                        StateLabel         = stateLabel,
+                                        ShowViewFormAction = showForm
+                                    }
                                 });
                             }
                         }
                     }
+                }
+
+                // Enrich triage / pending patient ids after the SQL reader is fully closed.
+                foreach (var draft in drafts)
+                {
+                    var bed = draft.Card;
+                    string triageColor = null;
+
+                    try
+                    {
+                        if (draft.EnrichAdmission)
+                        {
+                            var erAdmissionPatient = ERPatientRepository.GetOrCreateAdmissionPatient(
+                                bed.AdmissionCode, companyCode, userCode);
+                            if (erAdmissionPatient != null)
+                            {
+                                bed.PatientId = erAdmissionPatient.intERPatientCode.ToString();
+                                triageColor = erAdmissionPatient.strTriageColor;
+                                if (string.IsNullOrWhiteSpace(bed.PatientName) || bed.PatientName == "-")
+                                {
+                                    bed.PatientName = FirstNonEmpty(
+                                        erAdmissionPatient.strName,
+                                        bed.PatientName,
+                                        $"BED#{bed.BedId}");
+                                }
+                            }
+
+                            if (bed.AdmissionCode > 0
+                                && (string.IsNullOrWhiteSpace(bed.MrNo)
+                                    || bed.MrNo == "-"
+                                    || string.IsNullOrWhiteSpace(bed.AdmissionNo)
+                                    || bed.AdmissionNo == "-"
+                                    || !bed.AdmissionDate.HasValue
+                                    || string.IsNullOrWhiteSpace(bed.AgeGender)
+                                    || bed.AgeGender == "-"))
+                            {
+                                var admission = GetPatientByAdmissionCode(bed.AdmissionCode, companyCode);
+                                if (admission != null)
+                                    ApplyAdmissionCardOverlay(bed, admission);
+                            }
+                        }
+                        else if (draft.EnrichPending)
+                        {
+                            var erPatient = ERPatientRepository.GetActiveByBed(
+                                bed.BedId, bed.BranchCode, companyCode);
+                            if (erPatient != null)
+                            {
+                                bed.PatientId = erPatient.intERPatientCode.ToString();
+                                bed.PatientName = FirstNonEmpty(
+                                    erPatient.strName,
+                                    bed.PatientName,
+                                    $"BED#{bed.BedId}");
+                                triageColor = erPatient.strTriageColor;
+
+                                // Pending / Discharge Start beds may still have an admission —
+                                // backfill MR / admission details when the card is incomplete.
+                                if (erPatient.intERAdmissionCode.HasValue
+                                    && erPatient.intERAdmissionCode.Value > 0
+                                    && (bed.AdmissionCode <= 0
+                                        || string.IsNullOrWhiteSpace(bed.MrNo)
+                                        || bed.MrNo == "-"
+                                        || bed.MrNo == "PENDING"
+                                        || string.IsNullOrWhiteSpace(bed.AdmissionNo)
+                                        || bed.AdmissionNo == "-"
+                                        || !bed.AdmissionDate.HasValue
+                                        || string.IsNullOrWhiteSpace(bed.AgeGender)
+                                        || bed.AgeGender == "-"))
+                                {
+                                    bed.AdmissionCode = (int)erPatient.intERAdmissionCode.Value;
+                                    var admission = GetPatientByAdmissionCode(
+                                        bed.AdmissionCode, companyCode);
+                                    if (admission != null)
+                                        ApplyAdmissionCardOverlay(bed, admission);
+                                }
+                            }
+                            else if (userCode > 0)
+                            {
+                                var pendingPatient = ERPatientRepository.GetOrCreatePendingPatient(
+                                    bed.BedId, bed.BranchCode, companyCode, userCode, null);
+                                if (pendingPatient != null)
+                                {
+                                    bed.PatientId = pendingPatient.intERPatientCode.ToString();
+                                    bed.PatientName = FirstNonEmpty(
+                                        pendingPatient.strName,
+                                        bed.PatientName,
+                                        $"BED#{bed.BedId}");
+                                    triageColor = pendingPatient.strTriageColor;
+                                }
+                            }
+                        }
+                    }
+                    catch (Exception enrichEx)
+                    {
+                        ErrorLogging.Log(nameof(BedRepository), nameof(GetBeds) + ".Enrich", enrichEx);
+                    }
+
+                    bed.CardBackgroundClass = ERPatientRepository.TryGetTriageStateClass(triageColor);
                 }
             }
             catch (Exception ex)
@@ -148,7 +265,7 @@ namespace ERPaperless.Services
                 ErrorLogging.Log(nameof(BedRepository), nameof(GetBeds), ex);
             }
 
-            return result;
+            return drafts.Select(d => d.Card).ToList();
         }
 
         // ─────────────────────────────────────────────────────────────────────
@@ -198,20 +315,22 @@ namespace ERPaperless.Services
                         {
                             if (!rdr.Read()) return null;
 
-                            var mrNoRaw = rdr["strMrNo"]?.ToString()       ?? string.Empty;
-                            var age     = rdr["age"]?.ToString()           ?? string.Empty;
-                            var gender  = rdr["strGenderName"]?.ToString() ?? string.Empty;
+                            var mrNoRaw = ReadDbString(rdr, "strMrNo") ?? string.Empty;
+                            var age     = ReadDbString(rdr, "age") ?? string.Empty;
+                            var gender  = ReadDbString(rdr, "strGenderName") ?? string.Empty;
+                            var admCode = Convert.ToInt32(rdr["intERAdmissionCode"]);
 
                             return new LocationCardViewModel
                             {
                                 BedId         = Convert.ToInt32(rdr["intWardBedCode"]),
                                 BranchCode    = Convert.ToInt32(rdr["intBranchCode"]),
-                                PatientId     = rdr["intERAdmissionCode"].ToString(),
-                                SlotName      = rdr["strWardBedName"].ToString(),
-                                PatientName   = rdr["strDisplayName"]?.ToString()    ?? "-",
+                                AdmissionCode = admCode,
+                                PatientId     = admCode.ToString(),
+                                SlotName      = ReadDbString(rdr, "strWardBedName") ?? string.Empty,
+                                PatientName   = FirstNonEmpty(ReadDbString(rdr, "strDisplayName"), "-"),
                                 AgeGender     = BuildAgeGender(age, gender),
                                 MrNo          = string.IsNullOrWhiteSpace(mrNoRaw) ? "PENDING" : mrNoRaw,
-                                AdmissionNo   = rdr["strERAdmissionNo"]?.ToString() ?? "-",
+                                AdmissionNo   = FirstNonEmpty(ReadDbString(rdr, "strERAdmissionNo"), "-"),
                                 AdmissionDate = rdr["dtmERAdmission"] != DBNull.Value
                                                     ? Convert.ToDateTime(rdr["dtmERAdmission"])
                                                     : (DateTime?)null,
@@ -416,6 +535,103 @@ namespace ERPaperless.Services
         {
             var s = $"{age} / {gender}".Trim().Trim('/').Trim();
             return string.IsNullOrWhiteSpace(s) ? "-" : s;
+        }
+
+        private static void ApplyAdmissionPatientFields(
+            SqlDataReader rdr,
+            out string patientName,
+            out string ageGender,
+            out string mrNo,
+            out string admNo,
+            out DateTime? admDate)
+        {
+            var mrNoRaw = ReadDbString(rdr, "strMrNo") ?? string.Empty;
+            patientName = FirstNonEmpty(ReadDbString(rdr, "strDisplayName"), "-");
+            ageGender = BuildAgeGender(
+                ReadDbString(rdr, "age") ?? string.Empty,
+                ReadDbString(rdr, "strGenderName") ?? string.Empty);
+            mrNo = string.IsNullOrWhiteSpace(mrNoRaw) ? "PENDING" : mrNoRaw;
+            admNo = FirstNonEmpty(ReadDbString(rdr, "strERAdmissionNo"), "-");
+            admDate = null;
+            try
+            {
+                var ordinal = rdr.GetOrdinal("dtmERAdmission");
+                if (!rdr.IsDBNull(ordinal))
+                    admDate = Convert.ToDateTime(rdr.GetValue(ordinal));
+            }
+            catch
+            {
+                // Column missing from some proc variants — leave null.
+            }
+        }
+
+        private static void ApplyAdmissionCardOverlay(
+            LocationCardViewModel bed,
+            LocationCardViewModel admission)
+        {
+            if (bed == null || admission == null)
+                return;
+
+            if (admission.AdmissionCode > 0)
+                bed.AdmissionCode = admission.AdmissionCode;
+
+            bed.PatientName = FirstNonEmpty(bed.PatientName, admission.PatientName, "-");
+            bed.MrNo = FirstNonEmpty(
+                bed.MrNo != "PENDING" ? bed.MrNo : null,
+                admission.MrNo,
+                "PENDING");
+            bed.AdmissionNo = FirstNonEmpty(
+                bed.AdmissionNo != "-" ? bed.AdmissionNo : null,
+                admission.AdmissionNo,
+                "-");
+            bed.AgeGender = FirstNonEmpty(
+                bed.AgeGender != "-" ? bed.AgeGender : null,
+                admission.AgeGender,
+                "-");
+            if (!bed.AdmissionDate.HasValue && admission.AdmissionDate.HasValue)
+                bed.AdmissionDate = admission.AdmissionDate;
+            if (string.IsNullOrWhiteSpace(bed.SlotName) || bed.SlotName == "-")
+                bed.SlotName = FirstNonEmpty(admission.SlotName, bed.SlotName);
+        }
+
+        /// <summary>
+        /// Reads a string column safely. DBNull.Value.ToString() returns "" which
+        /// would skip null-coalescing fallbacks and blank patient info in the UI.
+        /// </summary>
+        private static string ReadDbString(SqlDataReader rdr, string columnName)
+        {
+            try
+            {
+                var ordinal = rdr.GetOrdinal(columnName);
+                if (rdr.IsDBNull(ordinal))
+                    return null;
+                var value = rdr.GetValue(ordinal)?.ToString();
+                return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        private static string FirstNonEmpty(params string[] values)
+        {
+            if (values == null || values.Length == 0)
+                return null;
+
+            foreach (var value in values)
+            {
+                if (!string.IsNullOrWhiteSpace(value) && value != "-")
+                    return value.Trim();
+            }
+
+            foreach (var value in values)
+            {
+                if (!string.IsNullOrWhiteSpace(value))
+                    return value.Trim();
+            }
+
+            return null;
         }
     }
 }

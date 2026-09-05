@@ -34,7 +34,8 @@ namespace ERPaperless.Application.Services
                 {
                     code = x.ItemCode,
                     name = x.ItemName,
-                    qty = x.Quantity
+                    qty = x.Quantity,
+                    dose = x.Quantity
                 })
                 .ToList();
 
@@ -73,6 +74,14 @@ namespace ERPaperless.Application.Services
             return ok
                 ? OperationResult.Success("Outcome form saved.")
                 : OperationResult.Fail(EROutcomeFormRepository.LastError ?? "Could not save outcome form.");
+        }
+
+        public OperationResult SaveIpdAdmissionOrder(SaveIpdAdmissionOrderInputViewModel model, int companyCode, int userCode)
+        {
+            var ok = ERIpdAdmissionOrderRepository.Save(model, companyCode, userCode);
+            return ok
+                ? OperationResult.Success("IPD Admission Order saved.")
+                : OperationResult.Fail(ERIpdAdmissionOrderRepository.LastError ?? "Could not save IPD Admission Order.");
         }
 
         public OutcomeAutoPopulateViewModel GetOutcomeAutoPopulateData(string patientId, long? admissionCode, int companyCode)
@@ -290,19 +299,21 @@ namespace ERPaperless.Application.Services
             return new ErFormViewModel
             {
                 PatientId = erPatient.intERPatientCode.ToString(),
-                PatientName = !string.IsNullOrWhiteSpace(erPatient.strName)
-                    ? erPatient.strName
-                    : admission?.PatientName ?? $"BED#{erPatient.intWardBedCode}",
-                MrNo = admission?.MrNo ?? "PENDING",
-                AdmissionNo = admission?.AdmissionNo ?? "-",
+                PatientName = ResolvePatientDisplayName(
+                    erPatient.strName,
+                    admission?.PatientName,
+                    erPatient.intWardBedCode),
+                MrNo = string.IsNullOrWhiteSpace(admission?.MrNo) ? "PENDING" : admission.MrNo,
+                AdmissionNo = string.IsNullOrWhiteSpace(admission?.AdmissionNo) ? "-" : admission.AdmissionNo,
                 BedNo = BedRepository.ResolveBedDisplayName(
                     admission,
                     erPatient.intWardBedCode,
                     erPatient.intBranchCode,
                     companyCode,
                     userCode),
-                AgeGender = admission?.AgeGender ?? "-",
+                AgeGender = string.IsNullOrWhiteSpace(admission?.AgeGender) ? "-" : admission.AgeGender,
                 AdmissionDate = erPatient.dtmAdmission,
+                TriageColor = erPatient.strTriageColor,
                 LatestVital = latest,
                 VitalHistory = history.OrderByDescending(v => v.RecordedOn).ToList(),
                 ChiefComplaints = chiefComplaintList
@@ -314,6 +325,7 @@ namespace ERPaperless.Application.Services
                 ReviewForm = reviewForm,
                 PastHistories = GetLovOptions(ERLovType.PastHistory),
                 GcsOptions = GetLovOptions(ERLovType.GcsScore),
+                ConsciousnessOptions = GetLovOptions(ERLovType.Conciousness),
                 PlanterOptions = GetLovOptions(ERLovType.Planters),
                 CvsOptions = GetLovOptions(ERLovType.Cvs),
                 RespiratoryOptions = GetLovOptions(ERLovType.Respiratory),
@@ -329,23 +341,47 @@ namespace ERPaperless.Application.Services
                 SurgicalPackageOptions = GetItemPackageOptions(1),
                 DrugRouteOptions = GetDrugRouteOptions(companyCode),
                 DocumentTypeOptions = ERLovRepository.GetDocumentTypesForERPortal(companyCode),
-                EmployeeOptions = ERLovRepository.GetEmployeesForERPortal(companyCode),
+                EmployeeOptions = ERLovRepository.GetNursingEmployeesForER(companyCode),
+                MoEmployeeOptions = ERLovRepository.GetMoEmployeesForER(companyCode),
                 ConsultantOptions = ERLovRepository.GetConsultantsForERPortal(companyCode),
                 RelationOptions = ERLovRepository.GetRelationsForERPortal(companyCode),
                 ReferralReasonOptions = ERLovRepository.GetReferralReasonsForERPortal(companyCode),
                 DischargeMedicineOptions = ERLovRepository.GetDischargeMedicineItemsForERPortal(companyCode),
                 DrugFrequencyOptions = ERLovRepository.GetDrugFrequencyForERPortal(companyCode),
+                AdmissionTypeOptions = ERLovRepository.GetAdmissionTypes(companyCode),
+                AdmissionCareLevelOptions = ERLovRepository.GetAdmissionCareLevels(companyCode),
+                IpdMedicineOptions = ERLovRepository.GetIpdPrescriptionMedicines(companyCode),
+                IpdInvestigationServiceOptions = ERLovRepository.GetIpdInvestigationServices(companyCode),
+                IpdRoutineServiceOptions = ERLovRepository.GetIpdRoutineServices(companyCode),
+                DoseUnitOptions = ERLovRepository.GetDoseUnitsForERPortal(companyCode),
                 ErItemOptions = GetErItemOptions(),
                 InvestigationTestOptions = ERServiceGroupRepository.GetAllGroupServiceNames(),
                 OutcomeForms = EROutcomeFormRepository.GetOutcomeFormState(
                     erPatient.intERPatientCode.ToString(),
                     erPatient.intERAdmissionCode.HasValue ? (int?)erPatient.intERAdmissionCode.Value : null,
                     companyCode),
+                IpdAdmissionOrder = ERIpdAdmissionOrderRepository.GetState(
+                    erPatient.intERPatientCode.ToString(),
+                    erPatient.intERAdmissionCode.HasValue ? (int?)erPatient.intERAdmissionCode.Value : null,
+                    companyCode,
+                    ResolvePatientDisplayName(
+                        erPatient.strName,
+                        admission?.PatientName,
+                        erPatient.intWardBedCode)),
                 AddVitalInput = new AddVitalInputViewModel
                 {
                     PatientId = erPatient.intERPatientCode.ToString()
                 }
             };
+        }
+
+        private static string ResolvePatientDisplayName(string primary, string secondary, int bedCode)
+        {
+            if (!string.IsNullOrWhiteSpace(primary) && primary != "-")
+                return primary.Trim();
+            if (!string.IsNullOrWhiteSpace(secondary) && secondary != "-")
+                return secondary.Trim();
+            return bedCode > 0 ? $"BED#{bedCode}" : "-";
         }
 
         private static List<ChiefComplaintItemViewModel> GetChiefComplaints()

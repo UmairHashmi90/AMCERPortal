@@ -344,5 +344,39 @@ namespace ERPaperless.Services
                 ? $"BED#{bedCode}"
                 : patientName.Trim();
         }
+
+        /// <summary>
+        /// Returns canonical triage color (Red/Orange/Yellow/Green/Blue) or null when invalid/empty.
+        /// </summary>
+        public static string NormalizeTriageColor(string triageColor)
+        {
+            if (string.IsNullOrWhiteSpace(triageColor)) return null;
+
+            switch (triageColor.Trim().ToLowerInvariant())
+            {
+                case "red": return "Red";
+                case "orange": return "Orange";
+                case "yellow": return "Yellow";
+                case "green": return "Green";
+                case "blue": return "Blue";
+                default: return null;
+            }
+        }
+
+        /// <summary>
+        /// Maps a stored triage color to a location-card CSS class. Returns null when not set / invalid.
+        /// </summary>
+        public static string TryGetTriageStateClass(string triageColor)
+        {
+            switch (NormalizeTriageColor(triageColor))
+            {
+                case "Red": return "status-red";
+                case "Orange": return "status-orange";
+                case "Yellow": return "status-yellow";
+                case "Green": return "status-green";
+                case "Blue": return "status-blue";
+                default: return null;
+            }
+        }
     }
 }

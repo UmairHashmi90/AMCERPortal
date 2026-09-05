@@ -31,6 +31,7 @@ namespace ERPaperless.Models
         public Nullable<decimal> numGlucoseR { get; set; }
         public Nullable<int> intPainScore { get; set; }
         public Nullable<int> intFallRisk { get; set; }
+        public Nullable<int> intConciousness { get; set; }
         public byte[] tmVersion { get; set; }
         public System.DateTime dtmCreated { get; set; }
         public Nullable<System.DateTime> dtmLastM { get; set; }

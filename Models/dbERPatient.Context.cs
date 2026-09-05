@@ -29,7 +29,6 @@ namespace ERPaperless.Models
         public virtual DbSet<tblERPatientDocument> tblERPatientDocuments { get; set; }
         public virtual DbSet<tblERPatientInvestigation> tblERPatientInvestigations { get; set; }
         public virtual DbSet<tblERPatientPastHistory> tblERPatientPastHistories { get; set; }
-        public virtual DbSet<tblERPatient> tblERPatients { get; set; }
         public virtual DbSet<tblDrugRoute> tblDrugRoutes { get; set; }
         public virtual DbSet<tblException> tblExceptions { get; set; }
         public virtual DbSet<tblERPatientPackageOrder> tblERPatientPackageOrders { get; set; }
@@ -39,8 +38,13 @@ namespace ERPaperless.Models
         public virtual DbSet<tblLAMA> tblLAMAs { get; set; }
         public virtual DbSet<tblPatientReferral> tblPatientReferrals { get; set; }
         public virtual DbSet<tblClinicalDocumentER> tblClinicalDocumentERs { get; set; }
-        public virtual DbSet<tblERPatientVital> tblERPatientVitals { get; set; }
         public virtual DbSet<tblERPatientDrugAllergy> tblERPatientDrugAllergies { get; set; }
         public virtual DbSet<tblERPatientReviewForm> tblERPatientReviewForms { get; set; }
+        public virtual DbSet<tblERPatient> tblERPatients { get; set; }
+        public virtual DbSet<tblERPatientVital> tblERPatientVitals { get; set; }
+        public virtual DbSet<tblIPDAdmOrder> tblIPDAdmOrders { get; set; }
+        public virtual DbSet<tblIPDAdmPrescriptionOrder> tblIPDAdmPrescriptionOrders { get; set; }
+        public virtual DbSet<tblIPDAdmServiceOrder> tblIPDAdmServiceOrders { get; set; }
+        public virtual DbSet<tblIPDAdmServiceInst> tblIPDAdmServiceInsts { get; set; }
     }
 }

@@ -13,6 +13,7 @@ namespace ERPaperless.Abstractions.Application
         OperationResult<ErReviewFormStateViewModel> SaveReviewForm(SaveErReviewFormInputViewModel model, int companyCode, int userCode, bool isMo, bool isNursing);
         OperationResult<ErReviewFormStateViewModel> SavePackageOrders(SavePackageOrdersInputViewModel model, int companyCode, int userCode);
         OperationResult SaveOutcomeForm(SaveOutcomeFormInputViewModel model, int companyCode, int userCode);
+        OperationResult SaveIpdAdmissionOrder(SaveIpdAdmissionOrderInputViewModel model, int companyCode, int userCode);
         OutcomeAutoPopulateViewModel GetOutcomeAutoPopulateData(string patientId, long? admissionCode, int companyCode);
         OperationResult<ErReviewFormStateViewModel> UploadDocument(string patientId, string documentType, string fileName, string contentType, byte[] bytes, int companyCode, int userCode);
         byte[] GetDocumentBytes(long documentId, string patientId, int companyCode);

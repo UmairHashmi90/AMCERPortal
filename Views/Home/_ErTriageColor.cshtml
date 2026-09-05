@@ -1,0 +1,44 @@
+@model ERPaperless.Models.ErFormViewModel
+@{
+    bool canEdit = ViewBag.CanEditVitals == true;
+    var selected = (Model.TriageColor ?? string.Empty).Trim();
+    var options = new[]
+    {
+        new { Value = "Red",    Title = "Red",    Wait = "Immediate",       Css = "triage-red" },
+        new { Value = "Orange", Title = "Orange", Wait = "Within 15 min",   Css = "triage-orange" },
+        new { Value = "Yellow", Title = "Yellow", Wait = "Within 30–60 min", Css = "triage-yellow" },
+        new { Value = "Green",  Title = "Green",  Wait = "Within 110–120 min", Css = "triage-green" },
+        new { Value = "Blue",   Title = "Blue",   Wait = "Within 180–240 min", Css = "triage-blue" }
+    };
+}
+
+<section class="panel-card triage-color-panel triage-color-panel-compact mb-0">
+    <h3>
+        Triage Color
+        @if (!canEdit)
+        {
+            <small class="text-muted fw-normal">(read-only)</small>
+        }
+    </h3>
+    <div class="triage-color-list" role="radiogroup" aria-label="Triage Color">
+        @foreach (var opt in options)
+        {
+            var isChecked = string.Equals(selected, opt.Value, StringComparison.OrdinalIgnoreCase);
+            <label class="triage-color-option @opt.Css @(isChecked ? "is-selected" : "")"
+                   title="@opt.Title — @opt.Wait">
+                <input type="radio"
+                       name="TriageColor"
+                       id="triageColor_@opt.Value"
+                       value="@opt.Value"
+                       class="form-check-input triage-color-input er-save-field"
+                       @(isChecked ? "checked=\"checked\"" : "")
+                       @(canEdit ? "" : "disabled=\"disabled\"") />
+                <span class="triage-color-swatch" aria-hidden="true"></span>
+                <span class="triage-color-copy">
+                    <span class="triage-color-title">@opt.Title</span>
+                    <span class="triage-color-wait">@opt.Wait</span>
+                </span>
+            </label>
+        }
+    </div>
+</section>

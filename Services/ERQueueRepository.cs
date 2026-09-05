@@ -241,14 +241,13 @@ namespace ERPaperless.Services
 
                     var paramNames = codes.Select((_, i) => "@u" + i).ToArray();
                     var sql = @"
-SELECT u.intUserCode, u.strUserName
+SELECT u.intUserCode,
+       COALESCE(NULLIF(LTRIM(RTRIM(u.strUserName)), ''), NULLIF(LTRIM(RTRIM(u.strLoginName)), ''), CONCAT('User ', u.intUserCode)) AS strUserName
 FROM dbo.tblUser u
-WHERE u.intUserCode IN (" + string.Join(",", paramNames) + @")
-  AND (u.intCompanyCode = @companyCode OR @companyCode = 0)";
+WHERE u.intUserCode IN (" + string.Join(",", paramNames) + @")";
 
                     using (var cmd = new SqlCommand(sql, conn))
                     {
-                        cmd.Parameters.Add("@companyCode", SqlDbType.Int).Value = companyCode;
                         for (var i = 0; i < codes.Count; i++)
                             cmd.Parameters.Add(paramNames[i], SqlDbType.Int).Value = codes[i];
 
@@ -259,7 +258,7 @@ WHERE u.intUserCode IN (" + string.Join(",", paramNames) + @")
                                 var code = Convert.ToInt32(rdr["intUserCode"]);
                                 var name = rdr["strUserName"]?.ToString();
                                 if (!string.IsNullOrWhiteSpace(name))
-                                    result[code] = name;
+                                    result[code] = name.Trim();
                             }
                         }
                     }

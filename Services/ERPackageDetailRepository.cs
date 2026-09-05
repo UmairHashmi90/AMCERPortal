@@ -52,7 +52,11 @@ namespace ERPaperless.Services
             {
                 ItemCode = ReadInt32(rdr, "intERItemCode"),
                 ItemName = ReadString(rdr, "strItemName", "ItemName"),
-                Quantity = ReadString(rdr, "QTY", "Qty", "numQuantity", "strQTY")
+                Quantity = ReadString(
+                    rdr,
+                    "QTY", "Qty", "Quantity", "Dose", "strDose", "numDose",
+                    "numQuantity", "strQTY", "strQty",
+                    "intQuantity", "numQty", "ItemQty", "PackageQty")
             };
         }
 

@@ -27,18 +27,19 @@ namespace ERPaperless.Application.Services
             return new PatientFormContextViewModel
             {
                 PatientId = erPatient.intERPatientCode.ToString(),
-                PatientName = !string.IsNullOrWhiteSpace(erPatient.strName)
-                    ? erPatient.strName
-                    : admission?.PatientName ?? $"BED#{erPatient.intWardBedCode}",
-                MrNo = admission?.MrNo ?? "PENDING",
-                AdmissionNo = admission?.AdmissionNo ?? "-",
+                PatientName = ResolvePatientDisplayName(
+                    erPatient.strName,
+                    admission?.PatientName,
+                    erPatient.intWardBedCode),
+                MrNo = string.IsNullOrWhiteSpace(admission?.MrNo) ? "PENDING" : admission.MrNo,
+                AdmissionNo = string.IsNullOrWhiteSpace(admission?.AdmissionNo) ? "-" : admission.AdmissionNo,
                 BedNo = BedRepository.ResolveBedDisplayName(
                     admission,
                     erPatient.intWardBedCode,
                     erPatient.intBranchCode,
                     companyCode,
                     userCode),
-                AgeGender = admission?.AgeGender ?? "-",
+                AgeGender = string.IsNullOrWhiteSpace(admission?.AgeGender) ? "-" : admission.AgeGender,
                 AdmissionDate = erPatient.dtmAdmission,
                 AdmissionCode = erPatient.intERAdmissionCode.HasValue
                     ? (int?)erPatient.intERAdmissionCode.Value
@@ -58,14 +59,26 @@ namespace ERPaperless.Application.Services
             return new PatientFormContextViewModel
             {
                 PatientId = erPatient?.intERPatientCode.ToString() ?? admissionCode.ToString(),
-                PatientName = admission.PatientName,
-                MrNo = admission.MrNo,
-                AdmissionNo = admission.AdmissionNo,
-                BedNo = admission.SlotName,
-                AgeGender = admission.AgeGender,
+                PatientName = ResolvePatientDisplayName(
+                    admission.PatientName,
+                    erPatient?.strName,
+                    admission.BedId),
+                MrNo = string.IsNullOrWhiteSpace(admission.MrNo) ? "PENDING" : admission.MrNo,
+                AdmissionNo = string.IsNullOrWhiteSpace(admission.AdmissionNo) ? "-" : admission.AdmissionNo,
+                BedNo = string.IsNullOrWhiteSpace(admission.SlotName) ? "-" : admission.SlotName,
+                AgeGender = string.IsNullOrWhiteSpace(admission.AgeGender) ? "-" : admission.AgeGender,
                 AdmissionDate = admission.AdmissionDate ?? erPatient?.dtmAdmission ?? System.DateTime.Now,
                 AdmissionCode = admissionCode
             };
+        }
+
+        private static string ResolvePatientDisplayName(string primary, string secondary, int bedCode)
+        {
+            if (!string.IsNullOrWhiteSpace(primary) && primary != "-")
+                return primary.Trim();
+            if (!string.IsNullOrWhiteSpace(secondary) && secondary != "-")
+                return secondary.Trim();
+            return bedCode > 0 ? $"BED#{bedCode}" : "-";
         }
     }
 }

@@ -38,6 +38,7 @@ namespace ERPaperless.Models
 
     public class DischargeMedicineStateViewModel
     {
+        public long Id { get; set; }
         public int? ItemCode { get; set; }
         public string DrugName { get; set; }
         public string Dose { get; set; }

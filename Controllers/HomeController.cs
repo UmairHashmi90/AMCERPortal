@@ -11,7 +11,14 @@ namespace ERPaperless.Controllers
         // ── Dashboard ────────────────────────────────────────────────────────
         public ActionResult Index()
         {
-            return View();
+            ViewBag.HideSidebar = true;
+
+            var model = new DashboardViewModel
+            {
+                Cards = DashboardRepository.GetDashboardCards(CurrentUserRole.CompanyCode)
+            };
+
+            return View(model);
         }
 
         // ── Patients / Beds Screen ───────────────────────────────────────────

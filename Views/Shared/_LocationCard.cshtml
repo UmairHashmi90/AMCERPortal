@@ -8,7 +8,7 @@
     var hideReportsAndPrescriptions = ViewBag.IsPharmacyOnly == true || ViewBag.IsBillingOnly == true || isNursingOnly;
 }
 
-<article class="location-card @Model.StateClass">
+<article class="location-card @Model.ResolvedCardBackgroundClass">
     <header class="location-head">
         <img src="@iconSrc" alt="@iconAlt" class="slot-type-icon" />
         <h4>@Model.SlotName</h4>

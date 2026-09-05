@@ -309,44 +309,10 @@
     </div>
 
     <div class="row g-3 er-plan-lov-row">
-        <div class="col-md-6">
-            <div class="findings-cell">
-                <div class="findings-cell-head">Condition Upon Release</div>
-                <div class="findings-cell-body">
-                    @Html.Partial("~/Views/Shared/_LovRadioList.cshtml", new ERPaperless.Models.LovRadioListViewModel
-                    {
-                        Label = "",
-                        LabelCss = "lov-radio-title",
-                        GroupName = "ConditionUponReleaseCode",
-                        GroupId = "conditionUponRelease",
-                        Options = Model.ConditionUponReleaseOptions,
-                        SelectedValue = rf.ConditionUponReleaseCode,
-                        Disabled = !isMO
-                    })
-                </div>
-            </div>
-        </div>
-        <div class="col-md-6">
-            <div class="findings-cell">
-                <div class="findings-cell-head">ADR</div>
-                <div class="findings-cell-body">
-                    @Html.Partial("~/Views/Shared/_LovRadioList.cshtml", new ERPaperless.Models.LovRadioListViewModel
-                    {
-                        Label = "",
-                        LabelCss = "lov-radio-title",
-                        GroupName = "AdrCode",
-                        GroupId = "adr",
-                        Options = Model.AdrOptions,
-                        SelectedValue = rf.AdrCode,
-                        Disabled = !isMO
-                    })
-                </div>
-            </div>
-        </div>
         <div class="col-12">
-            <label class="form-label">Treatment</label>
+            <label class="form-label">Other Treatment</label>
             <textarea id="TreatmentNotes" class="form-control" rows="3"
-                      placeholder="@(isMO ? "Enter treatment plan and orders..." : "Restricted to MO.")"
+                      placeholder="@(isMO ? "Enter other treatment plan and orders..." : "Restricted to MO.")"
                       @(isMO ? "" : "disabled=\"disabled\"")>@(rf.TreatmentNotes ?? "")</textarea>
         </div>
     </div>

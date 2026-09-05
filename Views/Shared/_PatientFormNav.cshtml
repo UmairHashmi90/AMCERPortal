@@ -26,8 +26,8 @@
     var showDischargeFinalize = isMOUser && active == "er";
 
     object patientRoute = string.IsNullOrWhiteSpace(returnTo)
-        ? (object)new { patientId = Model.PatientId }
-        : new { patientId = Model.PatientId, returnTo = returnTo };
+        ? (object)new { patientId = Model?.PatientId }
+        : new { patientId = Model?.PatientId, returnTo = returnTo };
 
     string backText;
     string backAction;
@@ -56,21 +56,28 @@
 <div class="patient-form-nav-wrap">
     <div class="patient-form-nav-head">
         <div>
-            <strong>@Model.PatientName</strong>
-            <span class="text-muted small ms-1">@Model.BedNo · @Model.MrNo</span>
+            <strong>@(string.IsNullOrWhiteSpace(Model?.PatientName) ? "-" : Model.PatientName)</strong>
+            <span class="text-muted small ms-1">@(Model?.BedNo ?? "-") · @(Model?.MrNo ?? "-")</span>
         </div>
         <div class="patient-form-mode-wrap">
             <span class="badge @(canWork ? "bg-success" : "bg-secondary") patient-form-mode-badge">@pageLabel</span>
             @if (showDischargeFinalize)
             {
-                <div class="form-check patient-form-discharge-finalize mb-0">
-                    <input class="form-check-input" type="checkbox" id="chkDischargeFinalize"
-                           @(isAdmissionDischarged ? "checked=\"checked\"" : "")
-                           @(isAdmissionDischarged ? "disabled=\"disabled\"" : "") />
-                    <label class="form-check-label fw-semibold" for="chkDischargeFinalize">Discharged Finalize</label>
+                <div class="d-flex flex-wrap align-items-center gap-3 patient-form-discharge-finalize mb-0">
+                    <div class="form-check mb-0">
+                        <input class="form-check-input" type="checkbox" id="chkDischargeSummaryNotRequired"
+                               @(isAdmissionDischarged ? "disabled=\"disabled\"" : "") />
+                        <label class="form-check-label" for="chkDischargeSummaryNotRequired">Discharge Summary not required</label>
+                    </div>
+                    <div class="form-check mb-0">
+                        <input class="form-check-input" type="checkbox" id="chkDischargeFinalize"
+                               @(isAdmissionDischarged ? "checked=\"checked\"" : "")
+                               @(isAdmissionDischarged ? "disabled=\"disabled\"" : "") />
+                        <label class="form-check-label fw-semibold" for="chkDischargeFinalize">Discharged Finalize</label>
+                    </div>
                     @if (isAdmissionDischarged)
                     {
-                        <small class="text-success ms-1">Already finalized. ER form is now read-only.</small>
+                        <small class="text-success">Discharge finalized. ER form is now read-only for all roles.</small>
                     }
                 </div>
             }
@@ -91,7 +98,7 @@
             @Html.ActionLink("Billing", "PatientForm", "Billing", patientRoute,
                 new { @class = "btn btn-sm patient-form-nav-btn" + (active == "billing" ? " btn-danger" : " btn-outline-danger") })
         }
-        @if (Model.HasAdmission && !hideReportsAndPrescriptions)
+        @if (Model != null && Model.HasAdmission && !hideReportsAndPrescriptions)
         {
             @Html.ActionLink("Reports", "Index", "Reports",
                 new { admissionCode = Model.AdmissionCode },

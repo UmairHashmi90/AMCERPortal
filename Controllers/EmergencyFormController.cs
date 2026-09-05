@@ -10,6 +10,7 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -50,29 +51,32 @@ namespace ERPaperless.Controllers
             }
 
             UsePatientWorkspaceLayout("er");
-            var isAdmissionDischarged = IsErAdmissionDischarged(patientContext.AdmissionCode, CurrentUserRole.CompanyCode);
+            var erPatient = ResolveErPatientForSave(patientContext.PatientId, CurrentUserRole.CompanyCode);
+            var isFormReadOnly = IsDischargeStarted(erPatient);
             ViewBag.IsMOUser = CurrentUserRole.MO;
             ViewBag.IsNursingUser = CurrentUserRole.Nursing;
-            ViewBag.IsMO = CurrentUserRole.MO && !isAdmissionDischarged;
-            ViewBag.IsNursing = CurrentUserRole.Nursing && !isAdmissionDischarged;
+            ViewBag.IsMO = CurrentUserRole.MO && !isFormReadOnly;
+            ViewBag.IsNursing = CurrentUserRole.Nursing && !isFormReadOnly;
             ViewBag.PatientFormContext = patientContext;
-            ViewBag.CanEditVitals = !isAdmissionDischarged && (CurrentUserRole.MO || CurrentUserRole.Nursing);
-            ViewBag.CanEditClinical = !isAdmissionDischarged && CurrentUserRole.MO;
-            ViewBag.CanEditSurgical = !isAdmissionDischarged && CurrentUserRole.Nursing;
-            ViewBag.CanEditNursingNotes = !isAdmissionDischarged && CurrentUserRole.Nursing;
-            ViewBag.CanEditNursingCarePlan = !isAdmissionDischarged && CurrentUserRole.MO;
-            ViewBag.CanUploadDocuments = !isAdmissionDischarged && (CurrentUserRole.MO || CurrentUserRole.Nursing);
-            ViewBag.CanWorkOnPage = !isAdmissionDischarged && (CurrentUserRole.MO || CurrentUserRole.Nursing);
-            ViewBag.IsAdmissionDischarged = isAdmissionDischarged;
-            ViewBag.PageModeLabel = isAdmissionDischarged
-                ? "Discharged (Read Only)"
+            ViewBag.CanEditVitals = !isFormReadOnly && (CurrentUserRole.MO || CurrentUserRole.Nursing);
+            ViewBag.CanEditClinical = !isFormReadOnly && CurrentUserRole.MO;
+            ViewBag.CanEditSurgical = !isFormReadOnly && CurrentUserRole.Nursing;
+            ViewBag.CanEditNursingNotes = !isFormReadOnly && CurrentUserRole.Nursing;
+            ViewBag.CanEditNursingCarePlan = !isFormReadOnly && CurrentUserRole.MO;
+            ViewBag.CanUploadDocuments = !isFormReadOnly && (CurrentUserRole.MO || CurrentUserRole.Nursing);
+            ViewBag.CanWorkOnPage = !isFormReadOnly && (CurrentUserRole.MO || CurrentUserRole.Nursing);
+            ViewBag.IsAdmissionDischarged = isFormReadOnly;
+            ViewBag.PageModeLabel = isFormReadOnly
+                ? "Discharge Finalized (Read Only)"
                 : CurrentUserRole.MO
                 ? "MO Work Mode"
                 : CurrentUserRole.Nursing
                         ? "Nursing Work Mode"
                     : "View Only";
-            var dischargeEligibility = EvaluateDischargeEligibility(patientContext.PatientId, patientContext.AdmissionCode);
-            ViewBag.CanDischargeNow = dischargeEligibility.CanDischarge;
+            var dischargeEligibility = isFormReadOnly
+                ? DischargeEligibilityResult.Fail("Discharge is already finalized. Form is read-only.")
+                : EvaluateDischargeEligibility(patientContext.PatientId, patientContext.AdmissionCode);
+            ViewBag.CanDischargeNow = !isFormReadOnly && dischargeEligibility.CanDischarge;
             ViewBag.DischargeBlockedReason = dischargeEligibility.Message;
             var printableOutcomes = GetPrintableOutcomeFlags(patientContext.AdmissionCode, CurrentUserRole.CompanyCode);
             ViewBag.CanPrintDischargeSummary = printableOutcomes.CanPrintDischarge;
@@ -91,6 +95,7 @@ namespace ERPaperless.Controllers
                 return RedirectToAction("Patients", "Home");
             }
 
+            ApplyDefaultMoFromLoggedInUser(model);
             return View("~/Views/Home/ErForm.cshtml", model);
         }
 
@@ -116,7 +121,7 @@ namespace ERPaperless.Controllers
 
             if (IsPatientAdmissionDischarged(model.PatientId, null, CurrentUserRole.CompanyCode))
             {
-                const string message = "ER form is discharged and now read-only.";
+                const string message = "ER form is discharge finalized and now read-only.";
                 if (WantsJson()) return Json(new { ok = false, message });
                 TempData["VitalSaveError"] = message;
                 return RedirectToAction("ErForm", new { patientId = model.PatientId });
@@ -152,11 +157,13 @@ namespace ERPaperless.Controllers
                 Weight          = model.Weight,
                 MetricBMI       = model.MetricBMI,
                 Spo2            = model.Spo2,
+                Spo2Remark      = model.Spo2Remark,
                 GlucoseF        = model.GlucoseF,
                 GlucoseR        = model.GlucoseR,
                 Temperature     = model.Temperature,
                 FallRisk        = model.FallRisk,
-                PainScore       = model.PainScore
+                PainScore       = model.PainScore,
+                ConsciousnessCode = model.ConsciousnessCode
             });
             var resultMessage = addResult.Message;
 
@@ -190,7 +197,7 @@ namespace ERPaperless.Controllers
 
             if (IsPatientAdmissionDischarged(patientId, null, CurrentUserRole.CompanyCode))
             {
-                TempData["VitalSaveError"] = "ER form is discharged and now read-only.";
+                TempData["VitalSaveError"] = "ER form is discharge finalized and now read-only.";
                 return RedirectToAction("ErForm", new { patientId });
             }
 
@@ -246,32 +253,56 @@ namespace ERPaperless.Controllers
             if (model == null || string.IsNullOrWhiteSpace(model.PatientId))
                 return JsonSaveError("Patient record is missing.");
 
-            var reviewContext = GetDischargeContext(model.PatientId, null, CurrentUserRole.CompanyCode);
-            if (reviewContext == null)
+            // Pending-MR patients have no ER admission yet — do not require admission for normal save.
+            var erPatientForSave = ResolveErPatientForSave(model.PatientId, CurrentUserRole.CompanyCode);
+            if (erPatientForSave == null)
                 return JsonSaveError("Patient context not found.");
-            if (reviewContext.IsAdmissionDischarged)
-                return JsonSaveError("ER form is discharged and now read-only.");
+            if (IsDischargeStarted(erPatientForSave))
+                return JsonSaveError("ER form is discharge finalized and now read-only.");
 
             if (model.DischargeFinalize)
             {
                 if (!CurrentUserRole.MO)
                     return JsonSaveError("Only MO can finalize discharge.");
 
-                var finalizeSelectionError = ValidateDischargeFinalizeSelections(model);
-                if (!string.IsNullOrWhiteSpace(finalizeSelectionError))
-                    return JsonSaveError(finalizeSelectionError);
-
-                using (var db = dbAMCEntities.Create())
+                if (!model.DischargeSummaryNotRequired)
                 {
-                    var preContext = ResolveDischargeContext(db, model.PatientId, null, CurrentUserRole.CompanyCode);
-                    if (preContext == null)
-                        return JsonSaveError("Patient context not found.");
-                    if (preContext.IsAdmissionDischarged)
-                        return JsonSaveError("Patient is already discharged.");
+                    var issues = new List<string>();
+                    var finalizeSelectionError = ValidateDischargeFinalizeSelections(model);
+                    if (!string.IsNullOrWhiteSpace(finalizeSelectionError))
+                        issues.Add(finalizeSelectionError);
 
-                    var finalizeGate = EvaluateFinalizeDischargeRequirements(db, preContext, CurrentUserRole.CompanyCode);
-                    if (!finalizeGate.CanDischarge)
-                        return JsonSaveError(finalizeGate.Message);
+                    using (var db = dbAMCEntities.Create())
+                    {
+                        var preContext = ResolveDischargeContext(db, model.PatientId, null, CurrentUserRole.CompanyCode);
+                        if (preContext == null)
+                            return JsonSaveError("Admission/MR is required before Discharged Finalize.");
+                        if (IsDischargeStarted(preContext.ErPatient))
+                            return JsonSaveError("Discharge is already finalized. Form is read-only.");
+
+                        var finalizeGate = EvaluateFinalizeDischargeRequirements(db, preContext, CurrentUserRole.CompanyCode);
+                        if (!finalizeGate.CanDischarge && !string.IsNullOrWhiteSpace(finalizeGate.Message))
+                            issues.Add(finalizeGate.Message);
+                    }
+
+                    if (issues.Count > 0)
+                        return JsonSaveError(string.Join(" ", issues));
+                }
+                else
+                {
+                    // Discharge Summary not required: skip form/outcome checks, but still block on pending items.
+                    using (var db = dbAMCEntities.Create())
+                    {
+                        var preContext = ResolveDischargeContext(db, model.PatientId, null, CurrentUserRole.CompanyCode);
+                        if (preContext == null)
+                            return JsonSaveError("Admission/MR is required before Discharged Finalize.");
+                        if (IsDischargeStarted(preContext.ErPatient))
+                            return JsonSaveError("Discharge is already finalized. Form is read-only.");
+
+                        var pendingGate = EvaluatePendingItemsForFinalize(db, preContext, CurrentUserRole.CompanyCode);
+                        if (!pendingGate.CanDischarge)
+                            return JsonSaveError(pendingGate.Message);
+                    }
                 }
             }
 
@@ -291,32 +322,129 @@ namespace ERPaperless.Controllers
                 {
                     var context = ResolveDischargeContext(db, model.PatientId, null, CurrentUserRole.CompanyCode);
                     if (context == null)
-                        return JsonSaveError("Patient context not found.");
-                    if (context.IsAdmissionDischarged)
-                        return JsonSaveError("Patient is already discharged.");
+                        return JsonSaveError("Admission/MR is required before Discharged Finalize.");
+                    if (IsDischargeStarted(context.ErPatient))
+                        return JsonSaveError("Discharge is already finalized. Form is read-only.");
 
-                    // Re-check after save in case status changed concurrently.
-                    var pending = EvaluateFinalizeDischargeRequirements(db, context, CurrentUserRole.CompanyCode);
+                    // Always re-check pending Pharmacy / Investigation / Surgical items.
+                    // Full form + outcome checks only when Discharge Summary is required.
+                    var pending = model.DischargeSummaryNotRequired
+                        ? EvaluatePendingItemsForFinalize(db, context, CurrentUserRole.CompanyCode)
+                        : EvaluateFinalizeDischargeRequirements(db, context, CurrentUserRole.CompanyCode);
                     if (!pending.CanDischarge)
                         return JsonSaveError(pending.Message);
 
-                    if (!UpdateErAdmissionDischargedForPortal(context.AdmissionCode, CurrentUserRole.UserCode, CurrentUserRole.CompanyCode))
-                        return JsonSaveError("Could not update discharge status.");
-
                     var now = DateTime.Now;
-                    var pdfBytes = BuildErFormPdfBytes(db, context, now);
-                    if (pdfBytes == null || pdfBytes.Length == 0)
-                        return JsonSaveError("Discharge finalized but could not generate ER Form PDF.");
 
-                    var saveDocOk = SaveClinicalDocumentEr(
-                        db,
-                        context,
-                        pdfBytes,
-                        CurrentUserRole.CompanyCode,
+                    // Discharge Finalize: mark discharge start on ER patient + set bed status 8.
+                    if (!MarkErPatientDischargeStart(db, context.ErPatient, CurrentUserRole.UserCode, now))
+                        return JsonSaveError("Could not update discharge start on patient.");
+
+                    if (!UpdateWardBedStatusForDischarge(
+                        context.ErPatient.intWardBedCode,
                         CurrentUserRole.UserCode,
-                        now);
-                    if (!saveDocOk)
-                        return JsonSaveError("Discharge finalized but ER document could not be archived in tblClinicalDocumentER.");
+                        CurrentUserRole.CompanyCode,
+                        wardBedStatusCode: 8))
+                    {
+                        return JsonSaveError("Could not update bed status.");
+                    }
+
+                    byte[] pdfBytes = null;
+                    byte[] excelBytes = null;
+                    string excelFileName = null;
+                    string excelDocumentName = null;
+                    try
+                    {
+                        pdfBytes = BuildErFormPdfBytes(db, context, now);
+                    }
+                    catch (Exception pdfEx)
+                    {
+                        ErrorLogging.Log(nameof(EmergencyFormController), nameof(BuildErFormPdfBytes), pdfEx);
+                    }
+
+                    try
+                    {
+                        var erFormModel = _erFormService.BuildErFormModel(
+                            model.PatientId,
+                            CurrentUserRole.CompanyCode,
+                            CurrentUserRole.UserCode);
+                        if (erFormModel != null)
+                        {
+                            // In-memory Excel only (never written to disk/folder).
+                            excelBytes = ErFormExcelExporter.Build(erFormModel, now);
+                            var safeMr = string.IsNullOrWhiteSpace(erFormModel.MrNo) ? "PENDING" : erFormModel.MrNo.Trim();
+                            var safeVisit = string.IsNullOrWhiteSpace(erFormModel.AdmissionNo)
+                                ? context.AdmissionCode.ToString(CultureInfo.InvariantCulture)
+                                : erFormModel.AdmissionNo.Trim();
+                            foreach (var ch in Path.GetInvalidFileNameChars())
+                            {
+                                safeMr = safeMr.Replace(ch, '_');
+                                safeVisit = safeVisit.Replace(ch, '_');
+                            }
+                            var stamp = now.ToString("yyyyMMdd-HHmmss", CultureInfo.InvariantCulture);
+                            excelDocumentName = "ERForm-" + safeMr + "-" + safeVisit + "-" + stamp;
+                            excelFileName = excelDocumentName + ".xls";
+                        }
+                    }
+                    catch (Exception excelEx)
+                    {
+                        ErrorLogging.Log(nameof(EmergencyFormController), nameof(ErFormExcelExporter.Build), excelEx);
+                    }
+
+                    var pdfArchived = false;
+                    if (pdfBytes != null && pdfBytes.Length > 0)
+                    {
+                        pdfArchived = SaveClinicalDocumentEr(
+                            db,
+                            context,
+                            pdfBytes,
+                            ".pdf",
+                            CurrentUserRole.CompanyCode,
+                            CurrentUserRole.UserCode,
+                            now);
+                    }
+
+                    var excelArchived = false;
+                    if (excelBytes != null && excelBytes.Length > 0)
+                    {
+                        // GZip-compress in memory, store compressed bytes in vbrDocument only.
+                        var compressedExcel = CompressGZip(excelBytes);
+                        excelArchived = SaveClinicalDocumentEr(
+                            db,
+                            context,
+                            compressedExcel ?? excelBytes,
+                            ".xls",
+                            CurrentUserRole.CompanyCode,
+                            CurrentUserRole.UserCode,
+                            now,
+                            excelDocumentName ?? excelFileName);
+                    }
+
+                    var stateAfterFinalize = saveResult.Data;
+                    var archiveBits = new List<string>();
+                    if (excelArchived) archiveBits.Add("Excel");
+                    if (pdfArchived) archiveBits.Add("PDF");
+                    var archiveMsg = archiveBits.Count > 0
+                        ? (" ER Form " + string.Join(" + ", archiveBits) + " archived.")
+                        : " Discharge finalized (document archive skipped or failed).";
+
+                    return Json(new
+                    {
+                        ok = true,
+                        discharged = true,
+                        message = "Form saved successfully." + archiveMsg,
+                        savedOn = stateAfterFinalize.SavedOn?.ToString("dd-MMM-yyyy HH:mm"),
+                        investigations = stateAfterFinalize.Investigations.Select(x => new
+                        {
+                            id = x.Id,
+                            testName = x.TestName,
+                            remarks = x.Remarks,
+                            isCancelled = x.IsCancelled,
+                            isAcknowledged = x.IsAcknowledged,
+                            ackByName = x.AckByName,
+                            ackDate = x.AckDate?.ToString("dd-MMM-yyyy")
+                        })
+                    });
                 }
             }
 
@@ -324,9 +452,8 @@ namespace ERPaperless.Controllers
             return Json(new
             {
                 ok = true,
-                message = model.DischargeFinalize
-                    ? "Form saved successfully. ER Form PDF archived."
-                    : "Form saved successfully.",
+                discharged = false,
+                message = "Form saved successfully.",
                 savedOn = state.SavedOn?.ToString("dd-MMM-yyyy HH:mm"),
                 investigations = state.Investigations.Select(x => new
                 {
@@ -345,22 +472,28 @@ namespace ERPaperless.Controllers
         {
             if (model == null || !model.DischargeFinalize)
                 return string.Empty;
+            if (model.DischargeSummaryNotRequired)
+                return string.Empty;
 
-            if (!model.GcsCode.HasValue || model.GcsCode.Value <= 0) return "GCS is required before Discharged Finalize.";
-            if (!model.PlanterCode.HasValue || model.PlanterCode.Value <= 0) return "Planter response is required before Discharged Finalize.";
-            if (!model.CvsCode.HasValue || model.CvsCode.Value <= 0) return "CVS selection is required before Discharged Finalize.";
-            if (!model.RespiratoryCode.HasValue || model.RespiratoryCode.Value <= 0) return "Respiratory selection is required before Discharged Finalize.";
-            if (!model.BowelSoundCode.HasValue || model.BowelSoundCode.Value <= 0) return "Bowel sound selection is required before Discharged Finalize.";
-            if (!model.AbdomenCode.HasValue || model.AbdomenCode.Value <= 0) return "Abdomen selection is required before Discharged Finalize.";
-            if (!model.AdmissionCategoryCode.HasValue || model.AdmissionCategoryCode.Value <= 0) return "Admission category is required before Discharged Finalize.";
-            if (!model.ReceivedFromCode.HasValue || model.ReceivedFromCode.Value <= 0) return "Received from is required before Discharged Finalize.";
-            if (!model.OutcomeCode.HasValue || model.OutcomeCode.Value <= 0) return "Outcome selection is required before Discharged Finalize.";
-            if (!model.ConditionUponReleaseCode.HasValue || model.ConditionUponReleaseCode.Value <= 0) return "Condition upon release is required before Discharged Finalize.";
-            if (!model.AdrCode.HasValue || model.AdrCode.Value <= 0) return "ADR selection is required before Discharged Finalize.";
-            if (model.ChiefComplaints == null || model.ChiefComplaints.Count == 0) return "At least one chief complaint tick is required before Discharged Finalize.";
-            if (model.PastHistoryCodes == null || model.PastHistoryCodes.Count == 0) return "At least one past history tick is required before Discharged Finalize.";
+            var issues = new List<string>();
+            if (!model.GcsCode.HasValue || model.GcsCode.Value <= 0) issues.Add("GCS is required.");
+            if (!model.PlanterCode.HasValue || model.PlanterCode.Value <= 0) issues.Add("Planter response is required.");
+            if (!model.CvsCode.HasValue || model.CvsCode.Value <= 0) issues.Add("CVS selection is required.");
+            if (!model.RespiratoryCode.HasValue || model.RespiratoryCode.Value <= 0) issues.Add("Respiratory selection is required.");
+            if (!model.BowelSoundCode.HasValue || model.BowelSoundCode.Value <= 0) issues.Add("Bowel sound selection is required.");
+            if (!model.AbdomenCode.HasValue || model.AbdomenCode.Value <= 0) issues.Add("Abdomen selection is required.");
+            if (!model.AdmissionCategoryCode.HasValue || model.AdmissionCategoryCode.Value <= 0) issues.Add("Admission category is required.");
+            if (!model.ReceivedFromCode.HasValue || model.ReceivedFromCode.Value <= 0) issues.Add("Received from is required.");
+            if (!model.OutcomeCode.HasValue || model.OutcomeCode.Value <= 0) issues.Add("Outcome selection is required.");
+            if (!model.ConditionUponReleaseCode.HasValue || model.ConditionUponReleaseCode.Value <= 0) issues.Add("Condition upon release is required.");
+            if (!model.AdrCode.HasValue || model.AdrCode.Value <= 0) issues.Add("ADR selection is required.");
+            if (model.ChiefComplaints == null || model.ChiefComplaints.Count == 0) issues.Add("At least one chief complaint tick is required.");
+            if (model.PastHistoryCodes == null || model.PastHistoryCodes.Count == 0) issues.Add("At least one past history tick is required.");
 
-            return string.Empty;
+            if (issues.Count == 0)
+                return string.Empty;
+
+            return "Complete these before Discharged Finalize: " + string.Join(" ", issues);
         }
 
         [RequireERRole("MO", "Nursing")]
@@ -387,7 +520,7 @@ namespace ERPaperless.Controllers
                 return JsonSaveError("Patient record is missing.");
 
             if (IsPatientAdmissionDischarged(model.PatientId, null, CurrentUserRole.CompanyCode))
-                return JsonSaveError("ER form is discharged and now read-only.");
+                return JsonSaveError("ER form is discharge finalized and now read-only.");
 
             if (CurrentUserRole.Nursing && !CurrentUserRole.MO && model.PackageTypeCode != 2)
                 return JsonSaveError("Nursing can save surgical package only.");
@@ -466,7 +599,7 @@ namespace ERPaperless.Controllers
                 return JsonSaveError("Patient record is missing.");
 
             if (IsPatientAdmissionDischarged(model.PatientId, model.AdmissionCode, CurrentUserRole.CompanyCode))
-                return JsonSaveError("ER form is discharged and now read-only.");
+                return JsonSaveError("ER form is discharge finalized and now read-only.");
 
             var formLabel = "Outcome form";
             var normalizedType = (model.FormType ?? string.Empty).Trim().ToLowerInvariant();
@@ -518,6 +651,66 @@ namespace ERPaperless.Controllers
             });
         }
 
+        [RequireERRole("MO")]
+        [HttpPost]
+        public ActionResult SaveIpdAdmissionOrder()
+        {
+            if (!CurrentUserRole.MO)
+                return JsonSaveError("Only MO can save IPD Admission Order.");
+
+            SaveIpdAdmissionOrderInputViewModel model;
+            try
+            {
+                Request.InputStream.Position = 0;
+                using (var reader = new StreamReader(Request.InputStream))
+                    model = JsonConvert.DeserializeObject<SaveIpdAdmissionOrderInputViewModel>(reader.ReadToEnd());
+            }
+            catch (Exception ex)
+            {
+                ErrorLogging.Log(nameof(EmergencyFormController), nameof(SaveIpdAdmissionOrder), ex);
+                return JsonSaveError("Invalid save request.");
+            }
+
+            if (model == null || string.IsNullOrWhiteSpace(model.PatientId))
+                return JsonSaveError("Patient record is missing.");
+
+            if (IsPatientAdmissionDischarged(model.PatientId, model.AdmissionCode, CurrentUserRole.CompanyCode))
+                return JsonSaveError("ER form is discharge finalized and now read-only.");
+
+            var saveResult = _erFormService.SaveIpdAdmissionOrder(
+                model,
+                CurrentUserRole.CompanyCode,
+                CurrentUserRole.UserCode);
+
+            if (!saveResult.Ok)
+            {
+                var rawMessage = saveResult.Message ?? string.Empty;
+                if (rawMessage.StartsWith("CONFIRM_REPLACE_OUTCOME|", StringComparison.OrdinalIgnoreCase))
+                {
+                    var confirmMessage = rawMessage.Substring("CONFIRM_REPLACE_OUTCOME|".Length);
+                    return Json(new
+                    {
+                        ok = false,
+                        requiresConfirmation = true,
+                        confirmationType = "replace_outcome",
+                        message = string.IsNullOrWhiteSpace(confirmMessage)
+                            ? "Another outcome form already exists. Do you want to close it and continue?"
+                            : confirmMessage
+                    });
+                }
+
+                return JsonSaveError(string.IsNullOrWhiteSpace(saveResult.Message)
+                    ? "Error occurred in IPD Admission Order."
+                    : ("Error occurred in IPD Admission Order: " + saveResult.Message));
+            }
+
+            return Json(new
+            {
+                ok = true,
+                message = "IPD Admission Order save successfully."
+            });
+        }
+
         [RequireERRole("MO", "Nursing")]
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -530,7 +723,7 @@ namespace ERPaperless.Controllers
                 return JsonSaveError("Please choose a file to upload.");
 
             if (IsPatientAdmissionDischarged(patientId, null, CurrentUserRole.CompanyCode))
-                return JsonSaveError("ER form is discharged and now read-only.");
+                return JsonSaveError("ER form is discharge finalized and now read-only.");
 
             if (string.IsNullOrWhiteSpace(documentType))
                 return JsonSaveError("Please select a document type.");
@@ -597,6 +790,53 @@ namespace ERPaperless.Controllers
             }
         }
 
+        [HttpGet]
+        public ActionResult DownloadErFormExcel(string patientId)
+        {
+            if (string.IsNullOrWhiteSpace(patientId))
+                return HttpNotFound();
+
+            var erPatient = ResolveErPatientForSave(patientId, CurrentUserRole.CompanyCode);
+            if (erPatient == null || !erPatient.intERAdmissionCode.HasValue || erPatient.intERAdmissionCode.Value <= 0)
+                return HttpNotFound();
+
+            // Only allow download after discharge finalize.
+            if (!IsDischargeStarted(erPatient))
+                return new HttpStatusCodeResult(403, "Excel download is available only after discharge finalize.");
+
+            var admissionCode = (int)erPatient.intERAdmissionCode.Value;
+            try
+            {
+                using (var db = dbAMCEntities.Create())
+                {
+                    var entity = db.tblClinicalDocumentERs
+                        .Where(x => x.intCompanyCode == CurrentUserRole.CompanyCode
+                                    && x.intERAdmissionCode == admissionCode
+                                    && x.intClinicalDocumentTemplateCode == 9
+                                    && x.strDocumentExtension == ".xls"
+                                    && x.intRecordStatusCode != 8
+                                    && x.vbrDocument != null)
+                        .OrderByDescending(x => x.intClinicalDocumentERCode)
+                        .FirstOrDefault();
+
+                    if (entity == null || entity.vbrDocument == null || entity.vbrDocument.Length == 0)
+                        return HttpNotFound();
+
+                    var bytes = TryDecompressGZip(entity.vbrDocument) ?? entity.vbrDocument;
+                    var fileName = string.IsNullOrWhiteSpace(entity.strDocumentName)
+                        ? ("ERForm-" + admissionCode + ".xls")
+                        : (entity.strDocumentName.Trim() + ".xls");
+
+                    return File(bytes, "application/vnd.ms-excel", fileName);
+                }
+            }
+            catch (Exception ex)
+            {
+                ErrorLogging.Log(nameof(EmergencyFormController), nameof(DownloadErFormExcel), ex);
+                return HttpNotFound();
+            }
+        }
+
         [RequireERRole("MO", "Nursing")]
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -605,7 +845,7 @@ namespace ERPaperless.Controllers
             if (!CurrentUserRole.MO && !CurrentUserRole.Nursing)
                 return Json(new { ok = false, message = "Only MO or Nursing can remove documents." });
             if (IsPatientAdmissionDischarged(patientId, null, CurrentUserRole.CompanyCode))
-                return Json(new { ok = false, message = "ER form is discharged and now read-only." });
+                return Json(new { ok = false, message = "ER form is discharge finalized and now read-only." });
             var deleteResult = _erFormService.DeleteDocument(
                 documentId,
                 patientId,
@@ -621,15 +861,47 @@ namespace ERPaperless.Controllers
 
         [RequireERRole("MO")]
         [HttpGet]
-        public ActionResult GetDischargeEligibility(string patientId, long? admissionCode)
+        public ActionResult GetDischargeEligibility(string patientId, long? admissionCode, bool? dischargeSummaryNotRequired)
         {
-            var result = EvaluateDischargeEligibility(patientId, admissionCode);
-            return Json(new
+            using (var db = dbAMCEntities.Create())
             {
-                ok = true,
-                canDischarge = result.CanDischarge,
-                message = result.Message ?? string.Empty
-            }, JsonRequestBehavior.AllowGet);
+                var context = ResolveDischargeContext(db, patientId, admissionCode, CurrentUserRole.CompanyCode);
+                if (context == null)
+                {
+                    return Json(new
+                    {
+                        ok = true,
+                        canDischarge = false,
+                        message = "Patient context not found.",
+                        bypassed = false
+                    }, JsonRequestBehavior.AllowGet);
+                }
+
+                if (IsDischargeStarted(context.ErPatient))
+                {
+                    return Json(new
+                    {
+                        ok = true,
+                        canDischarge = false,
+                        message = "Discharge is already finalized. Form is read-only.",
+                        bypassed = false
+                    }, JsonRequestBehavior.AllowGet);
+                }
+
+                // Discharge Summary not required → pending Pharmacy/Investigation/Surgical only.
+                var result = dischargeSummaryNotRequired == true
+                    ? EvaluatePendingItemsForFinalize(db, context, CurrentUserRole.CompanyCode)
+                    : EvaluateFinalizeDischargeRequirements(db, context, CurrentUserRole.CompanyCode);
+
+                return Json(new
+                {
+                    ok = true,
+                    canDischarge = result.CanDischarge,
+                    message = result.Message ?? string.Empty,
+                    bypassed = false,
+                    pendingItemsOnly = dischargeSummaryNotRequired == true
+                }, JsonRequestBehavior.AllowGet);
+            }
         }
 
         [RequireERRole("MO")]
@@ -675,6 +947,7 @@ namespace ERPaperless.Controllers
                         db,
                         context,
                         pdfBytes,
+                        ".pdf",
                         CurrentUserRole.CompanyCode,
                         CurrentUserRole.UserCode,
                         now);
@@ -836,13 +1109,85 @@ namespace ERPaperless.Controllers
             }
         }
 
+        private void ApplyDefaultMoFromLoggedInUser(ErFormViewModel model)
+        {
+            if (model?.OutcomeForms == null || CurrentUserRole == null) return;
+
+            var empCode = CurrentUserRole.EmployeeCode > 0
+                ? CurrentUserRole.EmployeeCode
+                : CurrentUserRole.UserCode;
+
+            ApplyDefaultFromOptions(
+                model.MoEmployeeOptions,
+                empCode,
+                CurrentUserRole.UserCode,
+                CurrentUserRole.UserName,
+                code =>
+                {
+                    if (model.OutcomeForms.Referral != null
+                        && (!model.OutcomeForms.Referral.MoOnDutyCode.HasValue
+                            || model.OutcomeForms.Referral.MoOnDutyCode.Value <= 0))
+                        model.OutcomeForms.Referral.MoOnDutyCode = code;
+                    if (model.OutcomeForms.Lama != null
+                        && (!model.OutcomeForms.Lama.DutyMoCode.HasValue
+                            || model.OutcomeForms.Lama.DutyMoCode.Value <= 0))
+                        model.OutcomeForms.Lama.DutyMoCode = code;
+                    if (model.OutcomeForms.Death != null
+                        && (!model.OutcomeForms.Death.DutyMoCode.HasValue
+                            || model.OutcomeForms.Death.DutyMoCode.Value <= 0))
+                        model.OutcomeForms.Death.DutyMoCode = code;
+                });
+
+            ApplyDefaultFromOptions(
+                model.EmployeeOptions,
+                empCode,
+                CurrentUserRole.UserCode,
+                CurrentUserRole.UserName,
+                code =>
+                {
+                    if (model.OutcomeForms.Lama != null && !model.OutcomeForms.Lama.DutyNurseCode.HasValue)
+                        model.OutcomeForms.Lama.DutyNurseCode = code;
+                    if (model.OutcomeForms.Death != null && !model.OutcomeForms.Death.DutyNurseCode.HasValue)
+                        model.OutcomeForms.Death.DutyNurseCode = code;
+                });
+        }
+
+        private static void ApplyDefaultFromOptions(
+            IEnumerable<ERLovOptionViewModel> options,
+            int employeeCode,
+            int userCode,
+            string userName,
+            Action<int> apply)
+        {
+            if (apply == null) return;
+
+            var list = (options ?? Enumerable.Empty<ERLovOptionViewModel>())
+                .Where(x => x != null && x.Id > 0)
+                .ToList();
+            if (list.Count == 0) return;
+
+            var match = list.FirstOrDefault(x => employeeCode > 0 && x.Id == employeeCode)
+                ?? list.FirstOrDefault(x => userCode > 0 && x.Id == userCode);
+
+            if (match == null && !string.IsNullOrWhiteSpace(userName))
+            {
+                var normalized = userName.Trim();
+                match = list.FirstOrDefault(x =>
+                    string.Equals((x.Name ?? string.Empty).Trim(), normalized, StringComparison.OrdinalIgnoreCase));
+            }
+
+            if (match != null)
+                apply(match.Id);
+        }
+
         private static DischargeEligibilityResult EvaluateDischargeEligibility(
             dbAMCEntities db,
             DischargeContext context,
             int companyCode)
         {
             if (context == null) return DischargeEligibilityResult.Fail("Patient context not found.");
-            if (context.ErPatient.bolIsDischarge == true) return DischargeEligibilityResult.Fail("Patient is already discharged.");
+            if (IsDischargeStarted(context.ErPatient))
+                return DischargeEligibilityResult.Fail("Discharge is already finalized. Form is read-only.");
 
             return EvaluateFinalizeDischargeRequirements(db, context, companyCode);
         }
@@ -854,34 +1199,11 @@ namespace ERPaperless.Controllers
         {
             if (context == null) return DischargeEligibilityResult.Fail("Patient context not found.");
 
+            var pending = EvaluatePendingItemsForFinalize(db, context, companyCode);
+            if (!pending.CanDischarge)
+                return pending;
+
             var issues = new List<string>();
-
-            var hasPendingInvestigations = db.tblERPatientInvestigations.Any(x =>
-                x.intERPatientCode == context.ErPatientCode
-                && x.intCompanyCode == companyCode
-                && x.intRecordStatusCode != 8
-                && !x.bolIsAcknowledged
-                && !x.bolIsCancelled);
-            if (hasPendingInvestigations) issues.Add("Investigations are pending.");
-
-            var hasPendingMedicine = db.tblERPatientPackageOrders.Any(x =>
-                x.intERPatientCode == context.ErPatientCode
-                && x.intCompanyCode == companyCode
-                && x.intRecordStatusCode != 8
-                && x.intPackageTypeCode == 1
-                && !x.bolIsAcknowledged
-                && !x.bolDiscontinue);
-            if (hasPendingMedicine) issues.Add("Medicine items are pending.");
-
-            var hasPendingSurgical = db.tblERPatientPackageOrders.Any(x =>
-                x.intERPatientCode == context.ErPatientCode
-                && x.intCompanyCode == companyCode
-                && x.intRecordStatusCode != 8
-                && x.intPackageTypeCode == 2
-                && !x.bolIsAcknowledged
-                && !x.bolDiscontinue);
-            if (hasPendingSurgical) issues.Add("Surgical items are pending.");
-
             var admissionCode = context.AdmissionCode;
             var hasAnyOutcome =
                 db.tblDischargeSummaries.Any(x =>
@@ -944,7 +1266,48 @@ namespace ERPaperless.Controllers
             DischargeContext context,
             int companyCode)
         {
-            return EvaluateFinalizeDischargeRequirements(db, context, companyCode);
+            if (context == null) return DischargeEligibilityResult.Fail("Patient context not found.");
+
+            var issues = new List<string>();
+
+            // Investigation: Completed (acknowledged/charged) or Cancelled/Discontinued.
+            var hasPendingInvestigations = db.tblERPatientInvestigations.Any(x =>
+                x.intERPatientCode == context.ErPatientCode
+                && x.intCompanyCode == companyCode
+                && x.intRecordStatusCode == 1
+                && !x.bolIsAcknowledged
+                && !x.bolIsCancelled);
+            if (hasPendingInvestigations)
+                issues.Add("Investigations are pending (mark Completed/Charged or Cancelled/Discontinued).");
+
+            // Pharmacy medicines: Charged/Completed or Discontinued/Cancelled.
+            var hasPendingMedicine = db.tblERPatientPackageOrders.Any(x =>
+                x.intERPatientCode == context.ErPatientCode
+                && x.intCompanyCode == companyCode
+                && x.intRecordStatusCode == 1
+                && x.intPackageTypeCode == 1
+                && !x.bolIsAcknowledged
+                && !x.bolDiscontinue);
+            if (hasPendingMedicine)
+                issues.Add("Pharmacy medicines are pending (mark Completed/Charged or Cancelled/Discontinued).");
+
+            // Surgical: Completed/Charged or Discontinued/Cancelled.
+            var hasPendingSurgical = db.tblERPatientPackageOrders.Any(x =>
+                x.intERPatientCode == context.ErPatientCode
+                && x.intCompanyCode == companyCode
+                && x.intRecordStatusCode == 1
+                && x.intPackageTypeCode == 2
+                && !x.bolIsAcknowledged
+                && !x.bolDiscontinue);
+            if (hasPendingSurgical)
+                issues.Add("Surgical items are pending (mark Completed/Charged or Cancelled/Discontinued).");
+
+            if (issues.Count == 0)
+                return DischargeEligibilityResult.Success();
+
+            return DischargeEligibilityResult.Fail(
+                "Discharge cannot be finalized/closed until all Pharmacy, Investigation, and Surgical items are Completed/Charged or Cancelled/Discontinued. "
+                + string.Join(" ", issues));
         }
 
         private static DischargeContext ResolveDischargeContext(
@@ -1087,75 +1450,304 @@ WHERE intERAdmissionCode = @admissionCode
             document.Add(new Paragraph(" ", valueFont));
         }
 
+        private static byte[] CompressGZip(byte[] source)
+        {
+            if (source == null || source.Length == 0)
+                return source;
+
+            try
+            {
+                using (var output = new MemoryStream())
+                {
+                    using (var gzip = new System.IO.Compression.GZipStream(output, System.IO.Compression.CompressionLevel.Optimal, true))
+                    {
+                        gzip.Write(source, 0, source.Length);
+                    }
+                    return output.ToArray();
+                }
+            }
+            catch (Exception ex)
+            {
+                ErrorLogging.Log(nameof(EmergencyFormController), nameof(CompressGZip), ex);
+                return source;
+            }
+        }
+
+        private static byte[] TryDecompressGZip(byte[] source)
+        {
+            if (source == null || source.Length < 2)
+                return source;
+
+            // GZip magic header 1F 8B
+            if (source[0] != 0x1F || source[1] != 0x8B)
+                return source;
+
+            try
+            {
+                using (var input = new MemoryStream(source))
+                using (var gzip = new System.IO.Compression.GZipStream(input, System.IO.Compression.CompressionMode.Decompress))
+                using (var output = new MemoryStream())
+                {
+                    gzip.CopyTo(output);
+                    return output.ToArray();
+                }
+            }
+            catch (Exception ex)
+            {
+                ErrorLogging.Log(nameof(EmergencyFormController), nameof(TryDecompressGZip), ex);
+                return source;
+            }
+        }
+
         private static bool SaveClinicalDocumentEr(
             dbAMCEntities db,
             DischargeContext context,
-            byte[] pdfBytes,
+            byte[] documentBytes,
+            string extension,
             int companyCode,
             int userCode,
-            DateTime now)
+            DateTime now,
+            string documentNameOverride = null)
         {
-            if (db == null || context == null || pdfBytes == null || pdfBytes.Length == 0)
+            if (db == null || context == null || documentBytes == null || documentBytes.Length == 0)
                 return false;
 
-            var entity = db.tblClinicalDocumentERs
-                .Where(x => x.intCompanyCode == companyCode
-                            && x.intERAdmissionCode == context.AdmissionCode
-                            && x.intClinicalDocumentTemplateCode == 9
-                            && x.intRecordStatusCode != 8)
-                .OrderByDescending(x => x.intClinicalDocumentERCode)
-                .FirstOrDefault();
+            var docExt = string.IsNullOrWhiteSpace(extension) ? ".pdf" : extension.Trim();
+            if (!docExt.StartsWith(".", StringComparison.Ordinal))
+                docExt = "." + docExt;
 
-            if (entity != null)
+            try
             {
-                entity.dtmClinicalDocumentER = now;
-                entity.intPatientCode = context.PatientCode;
-                entity.strDocumentName = "ERForm-" + context.AdmissionCode;
-                entity.strDocumentExtension = ".pdf";
-                entity.vbrDocument = pdfBytes;
-                entity.bolIsFinal = true;
-                entity.dtmLastM = now;
-                entity.intAlteredByCode = userCode;
-                entity.intRecordStatusCode = 1;
-                entity.intBranchCode = context.BranchCode;
-            }
-            else
-            {
-                var nextCode = db.tblClinicalDocumentERs
-                    .Where(x => x.intCompanyCode == companyCode)
-                    .Select(x => (long?)x.intClinicalDocumentERCode)
-                    .Max();
+                var documentName = !string.IsNullOrWhiteSpace(documentNameOverride)
+                    ? documentNameOverride.Trim()
+                    : ("ERForm-" + context.AdmissionCode);
+                // Strip known file suffixes; extension is stored in strDocumentExtension.
+                if (documentName.EndsWith(".xls.gz", StringComparison.OrdinalIgnoreCase))
+                    documentName = documentName.Substring(0, documentName.Length - 7);
+                else if (documentName.EndsWith(".xlsx.gz", StringComparison.OrdinalIgnoreCase))
+                    documentName = documentName.Substring(0, documentName.Length - 8);
+                else if (documentName.EndsWith(".xlsx", StringComparison.OrdinalIgnoreCase))
+                    documentName = documentName.Substring(0, documentName.Length - 5);
+                else if (documentName.EndsWith(".xls", StringComparison.OrdinalIgnoreCase))
+                    documentName = documentName.Substring(0, documentName.Length - 4);
+                else if (documentName.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
+                    documentName = documentName.Substring(0, documentName.Length - 4);
+                else if (documentName.EndsWith(docExt, StringComparison.OrdinalIgnoreCase))
+                    documentName = documentName.Substring(0, documentName.Length - docExt.Length);
+                if (documentName.Length > 50)
+                    documentName = documentName.Substring(0, 50);
 
-                entity = new tblClinicalDocumentER
+                var entity = db.tblClinicalDocumentERs
+                    .Where(x => x.intCompanyCode == companyCode
+                                && x.intERAdmissionCode == context.AdmissionCode
+                                && x.intClinicalDocumentTemplateCode == 9
+                                && x.strDocumentExtension == docExt
+                                && x.intRecordStatusCode != 8)
+                    .OrderByDescending(x => x.intClinicalDocumentERCode)
+                    .FirstOrDefault();
+
+                if (entity != null)
                 {
-                    intClinicalDocumentERCode = (nextCode ?? 0L) + 1L,
-                    dtmClinicalDocumentER = now,
-                    intClinicalDocumentERID = Guid.NewGuid(),
-                    intClinicalDocumentTemplateCode = 9,
-                    intFileTypeCode = null,
-                    intERAdmissionCode = context.AdmissionCode,
-                    intPatientCode = context.PatientCode,
-                    strDocumentName = "ERForm-" + context.AdmissionCode,
-                    strDocumentExtension = ".pdf",
-                    vbrDocument = pdfBytes,
-                    bolIsFinal = true,
-                    dtmCreated = now,
-                    dtmLastM = now,
-                    intOwnerCode = userCode,
-                    intCreatedByCode = userCode,
-                    intAlteredByCode = userCode,
-                    intRecordStatusCode = 1,
-                    intBranchCode = context.BranchCode,
-                    intCompanyCode = companyCode
-                };
+                    entity.dtmClinicalDocumentER = now;
+                    entity.intPatientCode = context.PatientCode;
+                    entity.strDocumentName = documentName;
+                    entity.strDocumentExtension = docExt;
+                    entity.vbrDocument = documentBytes;
+                    entity.bolIsFinal = true;
+                    entity.dtmLastM = now;
+                    entity.intAlteredByCode = userCode;
+                    entity.intRecordStatusCode = 1;
+                    entity.intBranchCode = context.BranchCode;
+                }
+                else
+                {
+                    var nextCode = db.tblClinicalDocumentERs
+                        .Where(x => x.intCompanyCode == companyCode)
+                        .Select(x => (long?)x.intClinicalDocumentERCode)
+                        .Max();
 
-                db.tblClinicalDocumentERs.Add(entity);
+                    entity = new tblClinicalDocumentER
+                    {
+                        intClinicalDocumentERCode = (nextCode ?? 0L) + 1L,
+                        dtmClinicalDocumentER = now,
+                        intClinicalDocumentERID = Guid.NewGuid(),
+                        intClinicalDocumentTemplateCode = 9,
+                        intFileTypeCode = null,
+                        intERAdmissionCode = context.AdmissionCode,
+                        intPatientCode = context.PatientCode,
+                        strDocumentName = documentName,
+                        strDocumentExtension = docExt,
+                        vbrDocument = documentBytes,
+                        bolIsFinal = true,
+                        dtmCreated = now,
+                        dtmLastM = now,
+                        intOwnerCode = userCode,
+                        intCreatedByCode = userCode,
+                        intAlteredByCode = userCode,
+                        intRecordStatusCode = 1,
+                        intBranchCode = context.BranchCode,
+                        intCompanyCode = companyCode
+                    };
+
+                    db.tblClinicalDocumentERs.Add(entity);
+                }
+
+                db.SaveChanges();
+                return true;
             }
-
-            return db.SaveChanges() > 0;
+            catch (Exception ex)
+            {
+                ErrorLogging.Log(nameof(EmergencyFormController), nameof(SaveClinicalDocumentEr), ex);
+                return SaveClinicalDocumentErSql(context, documentBytes, docExt, companyCode, userCode, now, documentNameOverride);
+            }
         }
 
-        private static bool UpdateWardBedStatusForDischarge(int wardBedCode, int userCode, int companyCode)
+        private static bool SaveClinicalDocumentErSql(
+            DischargeContext context,
+            byte[] documentBytes,
+            string extension,
+            int companyCode,
+            int userCode,
+            DateTime now,
+            string documentNameOverride = null)
+        {
+            if (context == null || documentBytes == null || documentBytes.Length == 0)
+                return false;
+
+            var docExt = string.IsNullOrWhiteSpace(extension) ? ".pdf" : extension.Trim();
+            if (!docExt.StartsWith(".", StringComparison.Ordinal))
+                docExt = "." + docExt;
+
+            try
+            {
+                var documentName = !string.IsNullOrWhiteSpace(documentNameOverride)
+                    ? documentNameOverride.Trim()
+                    : ("ERForm-" + context.AdmissionCode);
+                if (documentName.EndsWith(".xls.gz", StringComparison.OrdinalIgnoreCase))
+                    documentName = documentName.Substring(0, documentName.Length - 7);
+                else if (documentName.EndsWith(".xlsx.gz", StringComparison.OrdinalIgnoreCase))
+                    documentName = documentName.Substring(0, documentName.Length - 8);
+                else if (documentName.EndsWith(".xlsx", StringComparison.OrdinalIgnoreCase))
+                    documentName = documentName.Substring(0, documentName.Length - 5);
+                else if (documentName.EndsWith(".xls", StringComparison.OrdinalIgnoreCase))
+                    documentName = documentName.Substring(0, documentName.Length - 4);
+                else if (documentName.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
+                    documentName = documentName.Substring(0, documentName.Length - 4);
+                else if (documentName.EndsWith(docExt, StringComparison.OrdinalIgnoreCase))
+                    documentName = documentName.Substring(0, documentName.Length - docExt.Length);
+                if (documentName.Length > 50)
+                    documentName = documentName.Substring(0, 50);
+
+                using (var conn = DBHelper.GetConnection())
+                {
+                    conn.Open();
+
+                    long existingCode = 0;
+                    using (var findCmd = new SqlCommand(@"
+SELECT TOP 1 intClinicalDocumentERCode
+FROM tblClinicalDocumentER
+WHERE intCompanyCode = @companyCode
+  AND intERAdmissionCode = @admissionCode
+  AND intClinicalDocumentTemplateCode = 9
+  AND strDocumentExtension = @docExt
+  AND intRecordStatusCode <> 8
+ORDER BY intClinicalDocumentERCode DESC", conn))
+                    {
+                        findCmd.Parameters.Add("@companyCode", SqlDbType.Int).Value = companyCode;
+                        findCmd.Parameters.Add("@admissionCode", SqlDbType.BigInt).Value = context.AdmissionCode;
+                        findCmd.Parameters.Add("@docExt", SqlDbType.NVarChar, 10).Value = docExt;
+                        var result = findCmd.ExecuteScalar();
+                        if (result != null && result != DBNull.Value)
+                            existingCode = Convert.ToInt64(result);
+                    }
+
+                    if (existingCode > 0)
+                    {
+                        using (var upd = new SqlCommand(@"
+UPDATE tblClinicalDocumentER
+SET dtmClinicalDocumentER = @docDate,
+    intPatientCode = @patientCode,
+    strDocumentName = @docName,
+    strDocumentExtension = @docExt,
+    vbrDocument = @docBytes,
+    bolIsFinal = 1,
+    dtmLastM = @now,
+    intAlteredByCode = @userCode,
+    intRecordStatusCode = 1,
+    intBranchCode = @branchCode
+WHERE intClinicalDocumentERCode = @code
+  AND intCompanyCode = @companyCode", conn))
+                        {
+                            upd.Parameters.Add("@docDate", SqlDbType.DateTime).Value = now;
+                            upd.Parameters.Add("@patientCode", SqlDbType.BigInt).Value = context.PatientCode;
+                            upd.Parameters.Add("@docName", SqlDbType.NVarChar, 50).Value = documentName;
+                            upd.Parameters.Add("@docExt", SqlDbType.NVarChar, 10).Value = docExt;
+                            upd.Parameters.Add("@docBytes", SqlDbType.VarBinary, -1).Value = documentBytes;
+                            upd.Parameters.Add("@now", SqlDbType.DateTime).Value = now;
+                            upd.Parameters.Add("@userCode", SqlDbType.Int).Value = userCode;
+                            upd.Parameters.Add("@branchCode", SqlDbType.Int).Value = context.BranchCode;
+                            upd.Parameters.Add("@code", SqlDbType.BigInt).Value = existingCode;
+                            upd.Parameters.Add("@companyCode", SqlDbType.Int).Value = companyCode;
+                            return upd.ExecuteNonQuery() > 0;
+                        }
+                    }
+
+                    long nextCode;
+                    using (var maxCmd = new SqlCommand(@"
+SELECT ISNULL(MAX(intClinicalDocumentERCode), 0) + 1
+FROM tblClinicalDocumentER
+WHERE intCompanyCode = @companyCode", conn))
+                    {
+                        maxCmd.Parameters.Add("@companyCode", SqlDbType.Int).Value = companyCode;
+                        nextCode = Convert.ToInt64(maxCmd.ExecuteScalar());
+                    }
+
+                    using (var ins = new SqlCommand(@"
+INSERT INTO tblClinicalDocumentER
+(
+    intClinicalDocumentERCode, dtmClinicalDocumentER, intClinicalDocumentERID,
+    intClinicalDocumentTemplateCode, intFileTypeCode, intERAdmissionCode, intPatientCode,
+    strDocumentName, strDocumentExtension, vbrDocument, bolIsFinal,
+    dtmCreated, dtmLastM, intOwnerCode, intCreatedByCode, intAlteredByCode,
+    intRecordStatusCode, intBranchCode, intCompanyCode
+)
+VALUES
+(
+    @code, @docDate, @docId,
+    9, NULL, @admissionCode, @patientCode,
+    @docName, @docExt, @docBytes, 1,
+    @now, @now, @userCode, @userCode, @userCode,
+    1, @branchCode, @companyCode
+)", conn))
+                    {
+                        ins.Parameters.Add("@code", SqlDbType.BigInt).Value = nextCode;
+                        ins.Parameters.Add("@docDate", SqlDbType.DateTime).Value = now;
+                        ins.Parameters.Add("@docId", SqlDbType.UniqueIdentifier).Value = Guid.NewGuid();
+                        ins.Parameters.Add("@admissionCode", SqlDbType.BigInt).Value = context.AdmissionCode;
+                        ins.Parameters.Add("@patientCode", SqlDbType.BigInt).Value = context.PatientCode;
+                        ins.Parameters.Add("@docName", SqlDbType.NVarChar, 50).Value = documentName;
+                        ins.Parameters.Add("@docExt", SqlDbType.NVarChar, 10).Value = docExt;
+                        ins.Parameters.Add("@docBytes", SqlDbType.VarBinary, -1).Value = documentBytes;
+                        ins.Parameters.Add("@now", SqlDbType.DateTime).Value = now;
+                        ins.Parameters.Add("@userCode", SqlDbType.Int).Value = userCode;
+                        ins.Parameters.Add("@branchCode", SqlDbType.Int).Value = context.BranchCode;
+                        ins.Parameters.Add("@companyCode", SqlDbType.Int).Value = companyCode;
+                        return ins.ExecuteNonQuery() > 0;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                ErrorLogging.Log(nameof(EmergencyFormController), nameof(SaveClinicalDocumentErSql), ex);
+                return false;
+            }
+        }
+
+        private static bool UpdateWardBedStatusForDischarge(
+            int wardBedCode,
+            int userCode,
+            int companyCode,
+            int wardBedStatusCode = 8)
         {
             if (wardBedCode <= 0 || userCode <= 0 || companyCode <= 0)
                 return false;
@@ -1166,12 +1758,13 @@ WHERE intERAdmissionCode = @admissionCode
                 using (var cmd = new SqlCommand("procUpdateWardBedStatusForERPortal", conn))
                 {
                     cmd.CommandType = CommandType.StoredProcedure;
-                    cmd.Parameters.Add("@intWardBedStatusCode", SqlDbType.Int).Value = 1;
+                    cmd.Parameters.Add("@intWardBedStatusCode", SqlDbType.Int).Value = wardBedStatusCode;
                     cmd.Parameters.Add("@intWardBedCode", SqlDbType.Int).Value = wardBedCode;
                     cmd.Parameters.Add("@intUserCode", SqlDbType.Int).Value = userCode;
                     cmd.Parameters.Add("@intCompanyCode", SqlDbType.Int).Value = companyCode;
                     conn.Open();
-                    return cmd.ExecuteNonQuery() > 0;
+                    cmd.ExecuteNonQuery();
+                    return true;
                 }
             }
             catch (Exception ex)
@@ -1189,15 +1782,36 @@ WHERE intERAdmissionCode = @admissionCode
             try
             {
                 using (var conn = DBHelper.GetConnection())
-                using (var cmd = new SqlCommand("procUpdateERPatientDischargedForERPortal", conn))
                 {
-                    cmd.CommandType = CommandType.StoredProcedure;
-                    cmd.Parameters.Add("@bolIsDischarge", SqlDbType.Bit).Value = true;
-                    cmd.Parameters.Add("@intERAdmissionCode", SqlDbType.BigInt).Value = admissionCode;
-                    cmd.Parameters.Add("@intUserCode", SqlDbType.Int).Value = userCode;
-                    cmd.Parameters.Add("@intCompanyCode", SqlDbType.Int).Value = companyCode;
                     conn.Open();
-                    return cmd.ExecuteNonQuery() > 0;
+
+                    // Existing portal proc (may update ER patient discharge flags).
+                    using (var cmd = new SqlCommand("procUpdateERPatientDischargedForERPortal", conn))
+                    {
+                        cmd.CommandType = CommandType.StoredProcedure;
+                        cmd.Parameters.Add("@bolIsDischarge", SqlDbType.Bit).Value = true;
+                        cmd.Parameters.Add("@intERAdmissionCode", SqlDbType.BigInt).Value = admissionCode;
+                        cmd.Parameters.Add("@intUserCode", SqlDbType.Int).Value = userCode;
+                        cmd.Parameters.Add("@intCompanyCode", SqlDbType.Int).Value = companyCode;
+                        cmd.ExecuteNonQuery();
+                    }
+
+                    // Ensure admission-level flag used by ER form read-only mode.
+                    using (var upd = new SqlCommand(@"
+UPDATE tblERAdmission
+SET bolIsDischarged = 1,
+    dtmLastM = GETDATE(),
+    intAlteredByCode = @userCode
+WHERE intERAdmissionCode = @admissionCode
+  AND intCompanyCode = @companyCode", conn))
+                    {
+                        upd.Parameters.Add("@userCode", SqlDbType.Int).Value = userCode;
+                        upd.Parameters.Add("@admissionCode", SqlDbType.BigInt).Value = admissionCode;
+                        upd.Parameters.Add("@companyCode", SqlDbType.Int).Value = companyCode;
+                        upd.ExecuteNonQuery();
+                    }
+
+                    return true;
                 }
             }
             catch (Exception ex)
@@ -1207,12 +1821,82 @@ WHERE intERAdmissionCode = @admissionCode
             }
         }
 
+        private static tblERPatient ResolveErPatientForSave(string patientId, int companyCode)
+        {
+            long erPatientCode;
+            if (!long.TryParse((patientId ?? string.Empty).Trim(), out erPatientCode) || erPatientCode <= 0)
+                return null;
+
+            try
+            {
+                using (var db = dbAMCEntities.Create())
+                {
+                    return db.tblERPatients.FirstOrDefault(x =>
+                        x.intERPatientCode == erPatientCode
+                        && x.intCompanyCode == companyCode
+                        && x.intRecordStatusCode != 8);
+                }
+            }
+            catch (Exception ex)
+            {
+                ErrorLogging.Log(nameof(EmergencyFormController), nameof(ResolveErPatientForSave), ex);
+                return null;
+            }
+        }
+
         private bool IsPatientAdmissionDischarged(string patientId, long? admissionCode, int companyCode)
         {
             using (var db = dbAMCEntities.Create())
             {
+                long erPatientCode;
+                if (!long.TryParse((patientId ?? string.Empty).Trim(), out erPatientCode) || erPatientCode <= 0)
+                    return false;
+
+                var erPatient = db.tblERPatients.FirstOrDefault(x =>
+                    x.intERPatientCode == erPatientCode
+                    && x.intCompanyCode == companyCode
+                    && x.intRecordStatusCode != 8);
+
+                // Primary gate: discharge finalize start flag on tblERPatient.
+                if (IsDischargeStarted(erPatient))
+                    return true;
+
+                // Pending MR (no admission) remains editable unless discharge start is set.
                 var context = ResolveDischargeContext(db, patientId, admissionCode, companyCode);
-                return context != null && context.IsAdmissionDischarged;
+                if (context == null)
+                    return false;
+
+                return IsDischargeStarted(context.ErPatient);
+            }
+        }
+
+        private static bool IsDischargeStarted(tblERPatient erPatient)
+        {
+            return erPatient != null && erPatient.bolIsDischargeStart == true;
+        }
+
+        private static bool MarkErPatientDischargeStart(
+            dbAMCEntities db,
+            tblERPatient erPatient,
+            int userCode,
+            DateTime now)
+        {
+            if (db == null || erPatient == null)
+                return false;
+
+            try
+            {
+                erPatient.bolIsDischargeStart = true;
+                erPatient.dtmDischargeStart = now;
+                erPatient.dtmLastM = now;
+                erPatient.intAlteredByCode = userCode;
+                db.SaveChanges();
+                return true;
+            }
+            catch (Exception ex)
+            {
+                ErrorLogging.Log(nameof(EmergencyFormController), nameof(MarkErPatientDischargeStart), ex);
+                return false;
             }
         }
 

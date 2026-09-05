@@ -54,6 +54,15 @@ namespace ERPaperless.Controllers
                 HttpContext,
                 User?.Identity?.Name);
 
+            // Existing sessions may not have Consultant/Employee links yet.
+            if (CurrentUserRole != null
+                && CurrentUserRole.UserCode > 0
+                && !CurrentUserRole.IdentityLinksResolved)
+            {
+                UserRepository.EnrichIdentityLinks(CurrentUserRole);
+                _currentUserContext.SetCurrentUser(Session, CurrentUserRole);
+            }
+
             // ── Push to ViewBag so every view / partial can read it ──────────
             ViewBag.UserRole       = CurrentUserRole;
             ViewBag.CanEdit        = CurrentUserRole.MO || CurrentUserRole.Nursing;
@@ -74,6 +83,9 @@ namespace ERPaperless.Controllers
             ViewBag.RoleLabel      = CurrentUserRole.RoleLabel;
             ViewBag.RoleBadge      = CurrentUserRole.RoleBadgeClass;
             ViewBag.UserFullName   = CurrentUserRole.UserName;
+            ViewBag.UserCode       = CurrentUserRole.UserCode;
+            ViewBag.EmployeeCode   = CurrentUserRole.EmployeeCode;
+            ViewBag.ConsultantCode = CurrentUserRole.ConsultantCode;
             ViewBag.CompanyCode    = CurrentUserRole.CompanyCode;
             ViewBag.BranchCode     = ErBranchCode;
         }

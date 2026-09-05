@@ -4,7 +4,7 @@ namespace ERPaperless.Models
     {
         public int ItemCode { get; set; }
         public string ItemName { get; set; }
-        /// <summary>Surgical package quantity from proc (QTY). Empty for medicine.</summary>
+        /// <summary>Package quantity/dose from proc (QTY).</summary>
         public string Quantity { get; set; }
     }
 }

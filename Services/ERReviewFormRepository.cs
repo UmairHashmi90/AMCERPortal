@@ -48,8 +48,10 @@ namespace ERPaperless.Services
                                     && x.intRecordStatusCode == 1)
                         .OrderBy(x => x.intSortOrder)
                         .ThenBy(x => x.intERPatientInvestigationCode)
+                        .ToList()
                         .Select(MapInvestigation)
                         .ToList();
+                    EnrichInvestigationUserNames(state.Investigations, target.CompanyCode);
 
                     var packageOrders = db.tblERPatientPackageOrders
                         .Where(x => x.intERPatientCode == target.ERPatientCode
@@ -69,6 +71,9 @@ namespace ERPaperless.Services
                         .Where(x => x.intPackageTypeCode == 2)
                         .Select(MapPackageOrder)
                         .ToList();
+
+                    EnrichPackageOrderDisplayFields(state.MedicineOrders, target.CompanyCode);
+                    EnrichPackageOrderDisplayFields(state.SurgicalOrders, target.CompanyCode);
 
                     var documents = db.tblERPatientDocuments
                         .Where(x => x.intERPatientCode == target.ERPatientCode
@@ -257,6 +262,8 @@ namespace ERPaperless.Services
                     }
 
                     ApplyHeader(input, header, isMO, isNursing, userCode, now);
+
+                    ApplyTriageColor(db, target, input.TriageColor, userCode, now);
 
                     if (isMO)
                     {
@@ -536,6 +543,25 @@ namespace ERPaperless.Services
                 LastError = ex.GetBaseException().Message;
                 return false;
             }
+        }
+
+        private static void ApplyTriageColor(
+            dbAMCEntities db,
+            PatientTarget target,
+            string triageColor,
+            int userCode,
+            DateTime now)
+        {
+            var patient = db.tblERPatients.FirstOrDefault(p =>
+                p.intERPatientCode == target.ERPatientCode
+                && p.intCompanyCode == target.CompanyCode
+                && p.intRecordStatusCode == 1);
+
+            if (patient == null) return;
+
+            patient.strTriageColor = ERPatientRepository.NormalizeTriageColor(triageColor);
+            patient.dtmLastM = now;
+            patient.intAlteredByCode = userCode;
         }
 
         private static void ApplyHeader(
@@ -1105,15 +1131,16 @@ namespace ERPaperless.Services
                     conn.Open();
 
                     var paramNames = codes.Select((_, i) => "@u" + i).ToArray();
+                    // Look up by user code only. Company filter caused missed names when
+                    // tblUser.intCompanyCode differs from the ER session company.
                     var sql = @"
-SELECT u.intUserCode, u.strUserName
+SELECT u.intUserCode,
+       COALESCE(NULLIF(LTRIM(RTRIM(u.strUserName)), ''), NULLIF(LTRIM(RTRIM(u.strLoginName)), ''), CONCAT('User ', u.intUserCode)) AS strUserName
 FROM dbo.tblUser u
-WHERE u.intUserCode IN (" + string.Join(",", paramNames) + @")
-  AND (u.intCompanyCode = @companyCode OR @companyCode = 0)";
+WHERE u.intUserCode IN (" + string.Join(",", paramNames) + @")";
 
                     using (var cmd = new SqlCommand(sql, conn))
                     {
-                        cmd.Parameters.Add("@companyCode", SqlDbType.Int).Value = companyCode;
                         for (var i = 0; i < codes.Count; i++)
                             cmd.Parameters.Add(paramNames[i], SqlDbType.Int).Value = codes[i];
 
@@ -1124,7 +1151,7 @@ WHERE u.intUserCode IN (" + string.Join(",", paramNames) + @")
                                 var code = Convert.ToInt32(rdr["intUserCode"]);
                                 var name = rdr["strUserName"]?.ToString();
                                 if (!string.IsNullOrWhiteSpace(name))
-                                    result[code] = name;
+                                    result[code] = name.Trim();
                             }
                         }
                     }
@@ -1187,11 +1214,17 @@ WHERE u.intUserCode IN (" + string.Join(",", paramNames) + @")
                     if (entity.bolDiscontinue)
                     {
                         LastError = "This item is discontinued and cannot be charged.";
-                        return MapPackageOrder(entity);
+                        var discontinued = MapPackageOrder(entity);
+                        EnrichPackageOrderDisplayFields(new List<PackageOrderRowViewModel> { discontinued }, companyCode);
+                        return discontinued;
                     }
 
                     if (entity.bolIsAcknowledged)
-                        return MapPackageOrder(entity);
+                    {
+                        var alreadyCharged = MapPackageOrder(entity);
+                        EnrichPackageOrderDisplayFields(new List<PackageOrderRowViewModel> { alreadyCharged }, companyCode);
+                        return alreadyCharged;
+                    }
 
                     var now = DateTime.Now;
                     entity.bolIsAcknowledged = true;
@@ -1203,7 +1236,9 @@ WHERE u.intUserCode IN (" + string.Join(",", paramNames) + @")
                     db.SaveChanges();
 
                     var mapped = MapPackageOrder(entity);
-                    mapped.AckByName = pharmacyUserName;
+                    EnrichPackageOrderDisplayFields(new List<PackageOrderRowViewModel> { mapped }, companyCode);
+                    if (string.IsNullOrWhiteSpace(mapped.AckByName) && !string.IsNullOrWhiteSpace(pharmacyUserName))
+                        mapped.AckByName = pharmacyUserName;
                     return mapped;
                 }
             }
@@ -1417,11 +1452,17 @@ WHERE u.intUserCode IN (" + string.Join(",", paramNames) + @")
                     if (entity.bolIsCancelled)
                     {
                         LastError = "This test is cancelled and cannot be acknowledged.";
-                        return MapInvestigation(entity);
+                        var cancelled = MapInvestigation(entity);
+                        EnrichInvestigationUserNames(new List<InvestigationRowViewModel> { cancelled }, companyCode);
+                        return cancelled;
                     }
 
                     if (entity.bolIsAcknowledged)
-                        return MapInvestigation(entity);
+                    {
+                        var alreadyAcked = MapInvestigation(entity);
+                        EnrichInvestigationUserNames(new List<InvestigationRowViewModel> { alreadyAcked }, companyCode);
+                        return alreadyAcked;
+                    }
 
                     var now = DateTime.Now;
                     entity.bolIsAcknowledged = true;
@@ -1433,7 +1474,9 @@ WHERE u.intUserCode IN (" + string.Join(",", paramNames) + @")
                     db.SaveChanges();
 
                     var mapped = MapInvestigation(entity);
-                    mapped.AckByName = billingUserName;
+                    EnrichInvestigationUserNames(new List<InvestigationRowViewModel> { mapped }, companyCode);
+                    if (string.IsNullOrWhiteSpace(mapped.AckByName) && !string.IsNullOrWhiteSpace(billingUserName))
+                        mapped.AckByName = billingUserName;
                     return mapped;
                 }
             }

@@ -3,8 +3,8 @@ SET ANSI_NULLS ON;
 GO
 
 -- EXEC procGrdERPackageDetails @intPackageCode = 1
--- Medicine: QTY column is empty (MO enters Dose in the form)
--- Surgical: QTY column = tblERPackageDetail.numQuantity (read-only in ER form)
+-- Medicine: QTY = tblERPackageDetail.numQuantity (maps to Dose in ER form)
+-- Surgical: QTY = tblERPackageDetail.numQuantity (maps to QTY in ER form)
 
 CREATE OR ALTER PROCEDURE [dbo].[procGrdERPackageDetails]
     @intPackageCode INT = NULL
@@ -15,11 +15,7 @@ BEGIN
     SELECT
         i.intERItemCode,
         i.strItemName,
-        CASE
-            WHEN p.bolsSurgicalPackage = 1
-                THEN CONVERT(VARCHAR(50), d.numQuantity)
-            ELSE ''
-        END AS QTY
+        CONVERT(VARCHAR(50), d.numQuantity) AS QTY
     FROM dbo.tblERPackageDetail d
     INNER JOIN dbo.tblERPackages p
         ON p.intERPackageCode = d.intERPackageCode

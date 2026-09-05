@@ -26,10 +26,7 @@ namespace ERPaperless.Services
             {
                 using (var db = dbAMCEntities.Create())
                 {
-                    var referral = db.tblPatientReferrals
-                        .Where(x => x.intERAdmissionCode == target.ERAdmissionCode
-                                    && x.intCompanyCode == companyCode
-                                    && x.intRecordStatusCode != 8)
+                    var referral = QueryReferrals(db, target, companyCode, activeOnly: true)
                         .OrderByDescending(x => x.intPatientReferralCode)
                         .FirstOrDefault();
                     if (referral != null)
@@ -48,10 +45,7 @@ namespace ERPaperless.Services
                         };
                     }
 
-                    var discharge = db.tblDischargeSummaries
-                        .Where(x => x.intERAdmissionCode == target.ERAdmissionCode
-                                    && x.intCompanyCode == companyCode
-                                    && x.intRecordStatusCode != 8)
+                    var discharge = QueryDischarges(db, target, companyCode, activeOnly: true)
                         .OrderByDescending(x => x.intDischargeSummaryCode)
                         .FirstOrDefault();
                     if (discharge != null)
@@ -68,30 +62,29 @@ namespace ERPaperless.Services
                         };
                     }
 
-                    var medicines = db.tblERDischargeMedicines
-                        .Where(x => x.intERAdmissionCode == target.ERAdmissionCode
-                                    && x.intCompanyCode == companyCode
-                                    && x.intRecordStatusCode != 8)
-                        .OrderByDescending(x => x.intERDischargeMedicineCode)
+                    var frequencyLookup = ERLovRepository.GetDrugFrequencyForERPortal(companyCode)
+                        .GroupBy(x => x.Id)
+                        .ToDictionary(g => g.Key, g => g.First().Name);
+
+                    var medicines = QueryDischargeMedicines(db, target, companyCode, activeOnly: true)
+                        .OrderBy(x => x.intERDischargeMedicineCode)
                         .ToList();
                     foreach (var med in medicines)
                     {
-                        var parsed = ParseInstruction(med.strInstruction);
+                        var fields = ResolveDischargeMedicineFields(med.strInstruction, med.intDrugFrequencyCode, frequencyLookup);
                         state.Discharge.Medicines.Add(new DischargeMedicineStateViewModel
                         {
+                            Id = med.intERDischargeMedicineCode,
                             ItemCode = med.intItemCode.HasValue ? (int?)Convert.ToInt32(med.intItemCode.Value) : null,
                             DrugName = med.strDrugName,
                             Dose = med.strDosage,
-                            Frequency = parsed.frequency,
+                            Frequency = fields.frequency,
                             Days = med.intDays,
-                            Instruction = parsed.instruction
+                            Instruction = fields.instruction
                         });
                     }
 
-                    var death = db.tblDeathCertificates
-                        .Where(x => x.intERAdmissionCode == target.ERAdmissionCode
-                                    && x.intCompanyCode == companyCode
-                                    && x.intRecordStatusCode != 8)
+                    var death = QueryDeaths(db, target, companyCode, activeOnly: true)
                         .OrderByDescending(x => x.intDeathCertificateCode)
                         .FirstOrDefault();
                     if (death != null)
@@ -109,15 +102,16 @@ namespace ERPaperless.Services
                             RelativeCnicPassport = death.strRelativeCNIC,
                             RelationCode = death.intRelationCode,
                             HandOverAt = death.dtmHandedOver,
-                            DutyNurseCode = death.intNurseOnDutyCode,
-                            DutyMoCode = death.intMOOnDutyCode
+                            DutyNurseCode = death.intNurseOnDutyCode.HasValue && death.intNurseOnDutyCode.Value > 0
+                                ? death.intNurseOnDutyCode
+                                : null,
+                            DutyMoCode = death.intMOOnDutyCode.HasValue && death.intMOOnDutyCode.Value > 0
+                                ? death.intMOOnDutyCode
+                                : null
                         };
                     }
 
-                    var lama = db.tblLAMAs
-                        .Where(x => x.intERAdmissionCode == target.ERAdmissionCode
-                                    && x.intCompanyCode == companyCode
-                                    && x.intRecordStatusCode != 8)
+                    var lama = QueryLamas(db, target, companyCode, activeOnly: true)
                         .OrderByDescending(x => x.intLAMACode)
                         .FirstOrDefault();
                     if (lama != null)
@@ -165,7 +159,9 @@ namespace ERPaperless.Services
             var target = ResolveTarget(input.PatientId, input.AdmissionCode, companyCode);
             if (!target.IsValid)
             {
-                LastError = "Could not resolve admission reference.";
+                LastError = target.IsPendingMr
+                    ? "MRNO is pending."
+                    : "Could not resolve patient record. Open the ER form again and retry.";
                 return false;
             }
 
@@ -235,10 +231,7 @@ namespace ERPaperless.Services
             int userCode,
             DateTime now)
         {
-            var entity = db.tblPatientReferrals
-                .Where(x => x.intERAdmissionCode == target.ERAdmissionCode
-                            && x.intCompanyCode == companyCode
-                            && x.intRecordStatusCode != 8)
+            var entity = QueryReferrals(db, target, companyCode, activeOnly: true)
                 .OrderByDescending(x => x.intPatientReferralCode)
                 .FirstOrDefault();
 
@@ -287,15 +280,16 @@ namespace ERPaperless.Services
             int userCode,
             DateTime now)
         {
-            var entity = db.tblDischargeSummaries
-                .Where(x => x.intERAdmissionCode == target.ERAdmissionCode
-                            && x.intCompanyCode == companyCode
-                            && x.intRecordStatusCode != 8)
+            var entity = QueryDischarges(db, target, companyCode, activeOnly: true)
                 .OrderByDescending(x => x.intDischargeSummaryCode)
                 .FirstOrDefault();
 
             if (entity != null && entity.bolIsFinal)
                 throw new InvalidOperationException("Discharge form is finalized and cannot be updated.");
+
+            if (input.IsFinal && HasPendingOrdersBlockingDischarge(db, target.ERPatientCode, companyCode))
+                throw new InvalidOperationException(
+                    "Discharge Summary cannot be finalized until all Pharmacy, Investigation, and Surgical items are Completed or Discontinued/Cancelled.");
 
             if (entity == null)
             {
@@ -328,32 +322,29 @@ namespace ERPaperless.Services
             entity.strFollowUpInstructions = TextOrEmpty(input.DischargeFollowUpInstructions);
             entity.strDischargeMedication = BuildDischargeMedicationSummary(input.DischargeMedicines);
             entity.bolIsFinal = input.IsFinal;
-          
 
-            var existingMeds = db.tblERDischargeMedicines
-                .Where(x => x.intERAdmissionCode == target.ERAdmissionCode
-                            && x.intCompanyCode == companyCode
-                            && x.intRecordStatusCode == 1)
+            SyncDischargeMedicines(db, target, input.DischargeMedicines, companyCode, userCode, now);
+        }
+
+        private static void SyncDischargeMedicines(
+            dbAMCEntities db,
+            OutcomeTarget target,
+            List<SaveDischargeMedicineItemInputViewModel> medicines,
+            int companyCode,
+            int userCode,
+            DateTime now)
+        {
+            var incoming = (medicines ?? new List<SaveDischargeMedicineItemInputViewModel>())
+                .Where(med =>
+                    !string.IsNullOrWhiteSpace(med.DrugName)
+                    || !string.IsNullOrWhiteSpace(med.Dose)
+                    || !string.IsNullOrWhiteSpace(med.Frequency)
+                    || med.Days.HasValue
+                    || !string.IsNullOrWhiteSpace(med.Instruction))
                 .ToList();
 
-            foreach (var old in existingMeds)
+            foreach (var med in incoming)
             {
-                old.intRecordStatusCode = 8;
-                old.dtmLastM = now;
-                old.intAlteredByCode = userCode;
-            }
-
-            var nextMedicineCode = GetNextErDischargeMedicineCode(db, companyCode);
-            foreach (var med in (input.DischargeMedicines ?? new List<SaveDischargeMedicineItemInputViewModel>()))
-            {
-                var hasData = !string.IsNullOrWhiteSpace(med.DrugName)
-                              || !string.IsNullOrWhiteSpace(med.Dose)
-                              || !string.IsNullOrWhiteSpace(med.Frequency)
-                              || med.Days.HasValue
-                              || !string.IsNullOrWhiteSpace(med.Instruction);
-                if (!hasData)
-                    continue;
-
                 if (string.IsNullOrWhiteSpace(med.DrugName))
                     throw new InvalidOperationException("Medicine name is required in discharge medicine.");
                 if (string.IsNullOrWhiteSpace(med.Dose))
@@ -362,26 +353,90 @@ namespace ERPaperless.Services
                     throw new InvalidOperationException("Frequency is required in discharge medicine.");
                 if (!med.Days.HasValue || med.Days.Value <= 0)
                     throw new InvalidOperationException("Days is required in discharge medicine.");
+            }
 
+            var existingMeds = QueryDischargeMedicines(db, target, companyCode, activeOnly: true)
+                .ToList();
+
+            var keptIds = new HashSet<long>();
+            var nextMedicineCode = GetNextErDischargeMedicineCode(db, companyCode);
+
+            foreach (var med in incoming)
+            {
+                tblERDischargeMedicine entity = null;
+                if (med.Id.HasValue && med.Id.Value > 0)
+                {
+                    entity = existingMeds.FirstOrDefault(x => x.intERDischargeMedicineCode == med.Id.Value);
+                }
+
+                if (entity != null)
+                {
+                    // Update existing active medicine row.
+                    entity.intItemCode = med.ItemCode;
+                    entity.strDrugName = NullIfWhiteSpace(med.DrugName);
+                    entity.strDosage = NullIfWhiteSpace(med.Dose);
+                    entity.intDrugFrequencyCode = ResolveDrugFrequencyCode(med.Frequency, companyCode);
+                    entity.intDays = med.Days;
+                    entity.strInstruction = NullIfWhiteSpace(med.Instruction);
+                    entity.dtmLastM = now;
+                    entity.intAlteredByCode = userCode;
+                    entity.intRecordStatusCode = 1;
+                    keptIds.Add(entity.intERDischargeMedicineCode);
+                    continue;
+                }
+
+                // Add new medicine row.
+                var newCode = nextMedicineCode++;
                 db.tblERDischargeMedicines.Add(new tblERDischargeMedicine
                 {
-                    intERDischargeMedicineCode = nextMedicineCode++,
+                    intERDischargeMedicineCode = newCode,
                     intPatientCode = target.PatientCode,
                     intERAdmissionCode = target.ERAdmissionCode,
                     intItemCode = med.ItemCode,
                     strDrugName = NullIfWhiteSpace(med.DrugName),
                     strDosage = NullIfWhiteSpace(med.Dose),
-                    intDrugFrequencyCode = null,
+                    intDrugFrequencyCode = ResolveDrugFrequencyCode(med.Frequency, companyCode),
                     intDays = med.Days,
-                    strInstruction = BuildInstruction(med.Frequency, med.Instruction),
+                    strInstruction = NullIfWhiteSpace(med.Instruction),
                     dtmCreated = now,
+                    dtmLastM = now,
                     intOwnerCode = userCode,
                     intCreatedByCode = userCode,
+                    intAlteredByCode = userCode,
                     intRecordStatusCode = 1,
                     intBranchCode = target.BranchCode,
                     intCompanyCode = companyCode
                 });
+                keptIds.Add(newCode);
             }
+
+            // Soft-delete medicines removed from the grid.
+            foreach (var old in existingMeds.Where(x => !keptIds.Contains(x.intERDischargeMedicineCode)))
+            {
+                old.intRecordStatusCode = 8;
+                old.dtmLastM = now;
+                old.intAlteredByCode = userCode;
+            }
+        }
+
+        private static bool HasPendingOrdersBlockingDischarge(dbAMCEntities db, long erPatientCode, int companyCode)
+        {
+            var hasPendingInvestigations = db.tblERPatientInvestigations.Any(x =>
+                x.intERPatientCode == erPatientCode
+                && x.intCompanyCode == companyCode
+                && x.intRecordStatusCode == 1
+                && !x.bolIsAcknowledged
+                && !x.bolIsCancelled);
+
+            var hasPendingPharmacyOrSurgical = db.tblERPatientPackageOrders.Any(x =>
+                x.intERPatientCode == erPatientCode
+                && x.intCompanyCode == companyCode
+                && x.intRecordStatusCode == 1
+                && (x.intPackageTypeCode == 1 || x.intPackageTypeCode == 2)
+                && !x.bolIsAcknowledged
+                && !x.bolDiscontinue);
+
+            return hasPendingInvestigations || hasPendingPharmacyOrSurgical;
         }
 
         private static void EnsureExclusiveOutcome(
@@ -397,29 +452,26 @@ namespace ERPaperless.Services
             var currentLabel = GetOutcomeFormLabel(current);
             var conflicts = new List<string>();
 
-            var hasReferral = current != "REFERRAL" && db.tblPatientReferrals.Any(x =>
-                x.intERAdmissionCode == target.ERAdmissionCode
-                && x.intCompanyCode == companyCode
-                && x.intRecordStatusCode != 8);
+            var hasReferral = current != "REFERRAL" && QueryReferrals(db, target, companyCode, activeOnly: true).Any();
             if (hasReferral) conflicts.Add("Patient Referral");
 
-            var hasDischarge = current != "DISCHARGE" && db.tblDischargeSummaries.Any(x =>
-                x.intERAdmissionCode == target.ERAdmissionCode
-                && x.intCompanyCode == companyCode
-                && x.intRecordStatusCode != 8);
+            var hasDischarge = current != "DISCHARGE" && QueryDischarges(db, target, companyCode, activeOnly: true).Any();
             if (hasDischarge) conflicts.Add("Discharge Summary");
 
-            var hasDeath = current != "DEATH" && db.tblDeathCertificates.Any(x =>
-                x.intERAdmissionCode == target.ERAdmissionCode
-                && x.intCompanyCode == companyCode
-                && x.intRecordStatusCode != 8);
+            var hasDeath = current != "DEATH" && QueryDeaths(db, target, companyCode, activeOnly: true).Any();
             if (hasDeath) conflicts.Add("Death Certificate");
 
-            var hasLama = current != "LAMA" && db.tblLAMAs.Any(x =>
-                x.intERAdmissionCode == target.ERAdmissionCode
-                && x.intCompanyCode == companyCode
-                && x.intRecordStatusCode != 8);
+            var hasLama = current != "LAMA" && QueryLamas(db, target, companyCode, activeOnly: true).Any();
             if (hasLama) conflicts.Add("LAMA");
+
+            var hasAdmissionOrder = current != "ADMISSION"
+                && ERIpdAdmissionOrderRepository.HasActiveOrder(
+                    db,
+                    target.ERAdmissionCode,
+                    target.PatientCode,
+                    target.BranchCode,
+                    companyCode);
+            if (hasAdmissionOrder) conflicts.Add("IPD Admission Order");
 
             if (conflicts.Count == 0)
                 return;
@@ -434,7 +486,7 @@ namespace ERPaperless.Services
                     "Do you want to permanently delete " + existingText + " and continue with " + currentLabel + "?");
             }
 
-            DeleteOtherOutcomeForms(db, target, current, companyCode);
+            DeleteOtherOutcomeForms(db, target, current, companyCode, userCode);
             ClearErAdmissionOutcomeFlags(db, target.ERAdmissionCode, companyCode, userCode);
         }
 
@@ -442,53 +494,50 @@ namespace ERPaperless.Services
             dbAMCEntities db,
             OutcomeTarget target,
             string currentFormType,
-            int companyCode)
+            int companyCode,
+            int userCode)
         {
             if (currentFormType != "REFERRAL")
             {
-                var referrals = db.tblPatientReferrals
-                    .Where(x => x.intERAdmissionCode == target.ERAdmissionCode
-                                && x.intCompanyCode == companyCode)
-                    .ToList();
+                var referrals = QueryReferrals(db, target, companyCode, activeOnly: false).ToList();
                 if (referrals.Count > 0)
                     db.tblPatientReferrals.RemoveRange(referrals);
             }
 
             if (currentFormType != "DISCHARGE")
             {
-                var medicines = db.tblERDischargeMedicines
-                    .Where(x => x.intERAdmissionCode == target.ERAdmissionCode
-                                && x.intCompanyCode == companyCode)
-                    .ToList();
+                var medicines = QueryDischargeMedicines(db, target, companyCode, activeOnly: false).ToList();
                 if (medicines.Count > 0)
                     db.tblERDischargeMedicines.RemoveRange(medicines);
 
-                var discharges = db.tblDischargeSummaries
-                    .Where(x => x.intERAdmissionCode == target.ERAdmissionCode
-                                && x.intCompanyCode == companyCode)
-                    .ToList();
+                var discharges = QueryDischarges(db, target, companyCode, activeOnly: false).ToList();
                 if (discharges.Count > 0)
                     db.tblDischargeSummaries.RemoveRange(discharges);
             }
 
             if (currentFormType != "DEATH")
             {
-                var deaths = db.tblDeathCertificates
-                    .Where(x => x.intERAdmissionCode == target.ERAdmissionCode
-                                && x.intCompanyCode == companyCode)
-                    .ToList();
+                var deaths = QueryDeaths(db, target, companyCode, activeOnly: false).ToList();
                 if (deaths.Count > 0)
                     db.tblDeathCertificates.RemoveRange(deaths);
             }
 
             if (currentFormType != "LAMA")
             {
-                var lamas = db.tblLAMAs
-                    .Where(x => x.intERAdmissionCode == target.ERAdmissionCode
-                                && x.intCompanyCode == companyCode)
-                    .ToList();
+                var lamas = QueryLamas(db, target, companyCode, activeOnly: false).ToList();
                 if (lamas.Count > 0)
                     db.tblLAMAs.RemoveRange(lamas);
+            }
+
+            if (currentFormType != "ADMISSION")
+            {
+                ERIpdAdmissionOrderRepository.SoftDeleteActiveOrders(
+                    db,
+                    target.ERAdmissionCode,
+                    target.PatientCode,
+                    target.BranchCode,
+                    companyCode,
+                    userCode);
             }
         }
 
@@ -498,6 +547,9 @@ namespace ERPaperless.Services
             int companyCode,
             int userCode)
         {
+            if (admissionCode <= 0)
+                return;
+
             // Columns are non-nullable bits; clear by setting false (never NULL).
             db.Database.ExecuteSqlCommand(
                 "EXEC procUpdateERAdmissionForERPortal @bolIsDeathCertificate, @bolIsPatientReferral, @bolIsDichargeSummary, @bolIsLAMA, @intERAdmissionCode, @intUserCode, @intCompanyCode",
@@ -518,7 +570,8 @@ namespace ERPaperless.Services
                 case "DISCHARGE": return "Discharge Summary";
                 case "DEATH": return "Death Certificate";
                 case "LAMA": return "LAMA";
-                default: return "Outcome Form";
+                case "ADMISSION": return "IPD Admission Order";
+                default: return "Outcome form";
             }
         }
 
@@ -530,10 +583,7 @@ namespace ERPaperless.Services
             int userCode,
             DateTime now)
         {
-            var entity = db.tblDeathCertificates
-                .Where(x => x.intERAdmissionCode == target.ERAdmissionCode
-                            && x.intCompanyCode == companyCode
-                            && x.intRecordStatusCode != 8)
+            var entity = QueryDeaths(db, target, companyCode, activeOnly: true)
                 .OrderByDescending(x => x.intDeathCertificateCode)
                 .FirstOrDefault();
 
@@ -586,10 +636,7 @@ namespace ERPaperless.Services
             int userCode,
             DateTime now)
         {
-            var entity = db.tblLAMAs
-                .Where(x => x.intERAdmissionCode == target.ERAdmissionCode
-                            && x.intCompanyCode == companyCode
-                            && x.intRecordStatusCode != 8)
+            var entity = QueryLamas(db, target, companyCode, activeOnly: true)
                 .OrderByDescending(x => x.intLAMACode)
                 .FirstOrDefault();
 
@@ -691,32 +738,88 @@ namespace ERPaperless.Services
                 erPatient = ERPatientRepository.GetByCode(erPatientCode, companyCode);
             }
 
+            if (erPatient == null)
+                return OutcomeTarget.Invalid;
+
             var resolvedAdmissionCode = admissionCode.HasValue && admissionCode.Value > 0
                 ? admissionCode.Value
-                : (erPatient != null && erPatient.intERAdmissionCode.HasValue && erPatient.intERAdmissionCode.Value > 0
+                : (erPatient.intERAdmissionCode.HasValue && erPatient.intERAdmissionCode.Value > 0
                     ? (int)erPatient.intERAdmissionCode.Value
                     : 0);
+
             if (resolvedAdmissionCode <= 0)
-                return OutcomeTarget.Invalid;
+            {
+                return new OutcomeTarget
+                {
+                    ERPatientCode = erPatient.intERPatientCode,
+                    IsPendingMr = true
+                };
+            }
 
             var admissionInfo = ResolveAdmissionInfo(resolvedAdmissionCode, companyCode);
             var patientCode = admissionInfo.PatientCode > 0
                 ? admissionInfo.PatientCode
-                : (erPatient != null ? erPatient.intERPatientCode : 0);
+                : erPatient.intERPatientCode;
             var branchCode = admissionInfo.BranchCode > 0
                 ? admissionInfo.BranchCode
-                : (erPatient != null ? erPatient.intBranchCode : 0);
+                : erPatient.intBranchCode;
+
             if (patientCode <= 0 || branchCode <= 0)
                 return OutcomeTarget.Invalid;
 
             return new OutcomeTarget
             {
-                ERPatientCode = erPatient != null ? erPatient.intERPatientCode : erPatientCode,
+                ERPatientCode = erPatient.intERPatientCode,
                 ERAdmissionCode = resolvedAdmissionCode,
                 PatientCode = patientCode,
                 BranchCode = branchCode,
                 CompanyCode = companyCode
             };
+        }
+
+        private static IQueryable<tblPatientReferral> QueryReferrals(dbAMCEntities db, OutcomeTarget target, int companyCode, bool activeOnly)
+        {
+            var q = db.tblPatientReferrals.Where(x =>
+                x.intERAdmissionCode == target.ERAdmissionCode
+                && x.intCompanyCode == companyCode);
+            if (activeOnly) q = q.Where(x => x.intRecordStatusCode != 8);
+            return q;
+        }
+
+        private static IQueryable<tblDischargeSummary> QueryDischarges(dbAMCEntities db, OutcomeTarget target, int companyCode, bool activeOnly)
+        {
+            var q = db.tblDischargeSummaries.Where(x =>
+                x.intERAdmissionCode == target.ERAdmissionCode
+                && x.intCompanyCode == companyCode);
+            if (activeOnly) q = q.Where(x => x.intRecordStatusCode != 8);
+            return q;
+        }
+
+        private static IQueryable<tblERDischargeMedicine> QueryDischargeMedicines(dbAMCEntities db, OutcomeTarget target, int companyCode, bool activeOnly)
+        {
+            var q = db.tblERDischargeMedicines.Where(x =>
+                x.intERAdmissionCode == target.ERAdmissionCode
+                && x.intCompanyCode == companyCode);
+            if (activeOnly) q = q.Where(x => x.intRecordStatusCode != 8);
+            return q;
+        }
+
+        private static IQueryable<tblDeathCertificate> QueryDeaths(dbAMCEntities db, OutcomeTarget target, int companyCode, bool activeOnly)
+        {
+            var q = db.tblDeathCertificates.Where(x =>
+                x.intERAdmissionCode == target.ERAdmissionCode
+                && x.intCompanyCode == companyCode);
+            if (activeOnly) q = q.Where(x => x.intRecordStatusCode != 8);
+            return q;
+        }
+
+        private static IQueryable<tblLAMA> QueryLamas(dbAMCEntities db, OutcomeTarget target, int companyCode, bool activeOnly)
+        {
+            var q = db.tblLAMAs.Where(x =>
+                x.intERAdmissionCode == target.ERAdmissionCode
+                && x.intCompanyCode == companyCode);
+            if (activeOnly) q = q.Where(x => x.intRecordStatusCode != 8);
+            return q;
         }
 
         private static (long PatientCode, int BranchCode) ResolveAdmissionInfo(long erAdmissionCode, int companyCode)
@@ -833,15 +936,39 @@ WHERE intCompanyCode = @companyCode
             return lines.Count == 0 ? string.Empty : string.Join(" | ", lines);
         }
 
-        private static string BuildInstruction(string frequency, string instruction)
+        private static int? ResolveDrugFrequencyCode(string frequencyName, int companyCode)
         {
-            var f = NullIfWhiteSpace(frequency);
-            var i = NullIfWhiteSpace(instruction);
-            if (string.IsNullOrWhiteSpace(f))
-                return i;
-            if (string.IsNullOrWhiteSpace(i))
-                return "Frequency: " + f;
-            return "Frequency: " + f + " | " + i;
+            if (string.IsNullOrWhiteSpace(frequencyName))
+                return null;
+
+            var match = ERLovRepository.GetDrugFrequencyForERPortal(companyCode)
+                .FirstOrDefault(x => string.Equals((x.Name ?? string.Empty).Trim(), frequencyName.Trim(), StringComparison.OrdinalIgnoreCase));
+            return match != null && match.Id > 0 ? (int?)match.Id : null;
+        }
+
+        private static (string frequency, string instruction) ResolveDischargeMedicineFields(
+            string storedInstruction,
+            int? frequencyCode,
+            IDictionary<int, string> frequencyLookup)
+        {
+            var parsed = ParseInstruction(storedInstruction);
+            if (!string.IsNullOrWhiteSpace(parsed.frequency))
+            {
+                // Legacy rows stored "Frequency: xxx | instruction"
+                return (parsed.frequency, parsed.instruction ?? string.Empty);
+            }
+
+            var frequency = string.Empty;
+            if (frequencyCode.HasValue
+                && frequencyLookup != null
+                && frequencyLookup.TryGetValue(frequencyCode.Value, out var freqName)
+                && !string.IsNullOrWhiteSpace(freqName))
+            {
+                frequency = freqName.Trim();
+            }
+
+            // New format: strInstruction holds typed instruction text only.
+            return (frequency, (storedInstruction ?? string.Empty).Trim());
         }
 
         private static (string frequency, string instruction) ParseInstruction(string value)
@@ -958,6 +1085,9 @@ WHERE intCompanyCode = @companyCode
             int userCode)
         {
             var admissionCode = target.ERAdmissionCode;
+            if (admissionCode <= 0)
+                return;
+
             var normalized = Normalize(formType);
 
             // These admission columns are non-nullable; set the active form flag and force others to false.
@@ -986,7 +1116,13 @@ WHERE intCompanyCode = @companyCode
             public long PatientCode { get; set; }
             public int BranchCode { get; set; }
             public int CompanyCode { get; set; }
-            public bool IsValid => ERPatientCode > 0 && ERAdmissionCode > 0 && PatientCode > 0 && BranchCode > 0 && CompanyCode > 0;
+            public bool IsPendingMr { get; set; }
+            public bool IsValid => !IsPendingMr
+                && ERPatientCode > 0
+                && ERAdmissionCode > 0
+                && PatientCode > 0
+                && BranchCode > 0
+                && CompanyCode > 0;
         }
     }
 }

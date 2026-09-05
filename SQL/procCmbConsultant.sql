@@ -4,6 +4,7 @@ SET QUOTED_IDENTIFIER ON;
 GO
 
 -- EXEC procCmbConsultant 1
+-- Used by ER Form outcome modals (Death / IPD Admission Order consultants).
 CREATE OR ALTER PROCEDURE [dbo].[procCmbConsultant]
     @intCompanyCode INT = NULL
 AS
