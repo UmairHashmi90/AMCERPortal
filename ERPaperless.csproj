@@ -383,6 +383,7 @@
   <ItemGroup>
     <Content Include="Assets\Images\bed.png" />
     <Content Include="Assets\Images\chair.png" />
+    <Content Include="Assets\Images\logo.png" />
     <Content Include="Assets\Images\mainamc.jpg" />
     <Content Include="Assets\Images\smlogo.png" />
     <Content Include="Content\bootstrap-grid.css" />

@@ -74,11 +74,11 @@
 }
 
 .brand-panel h1 {
-    margin: 0.22rem 0 0;
-    font-size: 2.08rem;
+    margin: 2.22rem 0 0;
+    font-size: 1.5rem;
     line-height: 1.02;
     font-weight: 700;
-    text-transform: lowercase;
+    text-transform: full-size-kana;
 }
 
 .logo-circle {
@@ -87,13 +87,18 @@
     border-radius: 50%;
     margin: 0 auto 0.72rem;
     background: #ffffff;
-    color: #e1111c;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-weight: 700;
-    letter-spacing: 0.04em;
+    overflow: hidden;
     box-shadow: 0 10px 25px rgba(0, 0, 0, 0.22);
+}
+
+.logo-circle img {
+    width: 78%;
+    height: 78%;
+    object-fit: contain;
+    display: block;
 }
 
 .brand-name { 

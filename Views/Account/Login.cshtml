@@ -1,7 +1,7 @@
 @model ERPaperless.Models.LoginViewModel
 @{
     Layout = null;
-    ViewBag.Title = "Emergency Portal Login";
+    ViewBag.Title = "AMC Portal Login";
 }
 <!DOCTYPE html>
 <html>
@@ -22,14 +22,14 @@
             <aside class="brand-panel">
                 <div class="brand-panel-inner">
                     <div class="brand-top">
-                        <p class="hello-text">Hello,</p>
-                        <h1>welcome to!</h1>
+                        @*<p class="hello-text">Hello,</p>*@
+                        <h1>AMC Emergency Portal</h1>
+                        <div class="brand-middle">
+                            <div class="logo-circle">
+                                <img src="@Url.Content("~/Assets/Images/logo.png")" alt="AMC" />
+                            </div>
+                        </div>
                     </div>
-                    <div class="brand-middle">
-                        <div class="logo-circle">ER</div>
-                        <p class="brand-name">ER Paperless</p>
-                    </div>
-                    
                 </div>
                 <div class="panel-corner-cut" aria-hidden="true"></div>
             </aside>

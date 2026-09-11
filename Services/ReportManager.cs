@@ -675,7 +675,13 @@ ORDER BY pod2.intPatientOrderDetailCode DESC;";
                 {
                     using (var stamper = new PdfStamper(reader, output))
                     {
-                        var info = reader.Info ?? new System.Collections.Hashtable();
+                        var info = new Dictionary<string, string>();
+                        var existing = reader.Info;
+                        if (existing != null)
+                        {
+                            foreach (var entry in existing)
+                                info[entry.Key] = entry.Value;
+                        }
                         info["Title"] = title;
                         stamper.MoreInfo = info;
                     }

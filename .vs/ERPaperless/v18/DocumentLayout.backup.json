@@ -3,19 +3,35 @@
   "WorkspaceRootPath": "D:\\AMC PROJECTS\\ER Module\\ERPaperless\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{4E1D6B37-5BC5-4D70-BE92-972E11E1BA83}|ERPaperless.csproj|D:\\AMC PROJECTS\\ER Module\\ERPaperless\\services\\reportmanager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "AbsoluteMoniker": "D:0:0:{4E1D6B37-5BC5-4D70-BE92-972E11E1BA83}|ERPaperless.csproj|d:\\amc projects\\er module\\erpaperless\\content\\login.css||{A5401142-F49D-43DB-90B1-F57BA349E55C}",
+      "RelativeMoniker": "D:0:0:{4E1D6B37-5BC5-4D70-BE92-972E11E1BA83}|ERPaperless.csproj|solutionrelative:content\\login.css||{A5401142-F49D-43DB-90B1-F57BA349E55C}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{4E1D6B37-5BC5-4D70-BE92-972E11E1BA83}|ERPaperless.csproj|D:\\AMC PROJECTS\\ER Module\\ERPaperless\\views\\account\\login.cshtml||{40D31677-CBC0-4297-A9EF-89D907823A98}",
+      "RelativeMoniker": "D:0:0:{4E1D6B37-5BC5-4D70-BE92-972E11E1BA83}|ERPaperless.csproj|solutionrelative:views\\account\\login.cshtml||{40D31677-CBC0-4297-A9EF-89D907823A98}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{4E1D6B37-5BC5-4D70-BE92-972E11E1BA83}|ERPaperless.csproj|d:\\amc projects\\er module\\erpaperless\\views\\shared\\_layout.cshtml||{40D31677-CBC0-4297-A9EF-89D907823A98}",
+      "RelativeMoniker": "D:0:0:{4E1D6B37-5BC5-4D70-BE92-972E11E1BA83}|ERPaperless.csproj|solutionrelative:views\\shared\\_layout.cshtml||{40D31677-CBC0-4297-A9EF-89D907823A98}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{4E1D6B37-5BC5-4D70-BE92-972E11E1BA83}|ERPaperless.csproj|d:\\amc projects\\er module\\erpaperless\\services\\reportmanager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{4E1D6B37-5BC5-4D70-BE92-972E11E1BA83}|ERPaperless.csproj|solutionrelative:services\\reportmanager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{4E1D6B37-5BC5-4D70-BE92-972E11E1BA83}|ERPaperless.csproj|d:\\amc projects\\er module\\erpaperless\\controllers\\homecontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "AbsoluteMoniker": "D:0:0:{4E1D6B37-5BC5-4D70-BE92-972E11E1BA83}|ERPaperless.csproj|d:\\amc projects\\er module\\erpaperless\\controllers\\reportscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{4E1D6B37-5BC5-4D70-BE92-972E11E1BA83}|ERPaperless.csproj|solutionrelative:controllers\\reportscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{4E1D6B37-5BC5-4D70-BE92-972E11E1BA83}|ERPaperless.csproj|D:\\AMC PROJECTS\\ER Module\\ERPaperless\\controllers\\homecontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{4E1D6B37-5BC5-4D70-BE92-972E11E1BA83}|ERPaperless.csproj|solutionrelative:controllers\\homecontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{4E1D6B37-5BC5-4D70-BE92-972E11E1BA83}|ERPaperless.csproj|d:\\amc projects\\er module\\erpaperless\\services\\erpatientrepository.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "AbsoluteMoniker": "D:0:0:{4E1D6B37-5BC5-4D70-BE92-972E11E1BA83}|ERPaperless.csproj|D:\\AMC PROJECTS\\ER Module\\ERPaperless\\services\\erpatientrepository.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{4E1D6B37-5BC5-4D70-BE92-972E11E1BA83}|ERPaperless.csproj|solutionrelative:services\\erpatientrepository.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{4E1D6B37-5BC5-4D70-BE92-972E11E1BA83}|ERPaperless.csproj|d:\\amc projects\\er module\\erpaperless\\services\\erreviewformrepository.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "AbsoluteMoniker": "D:0:0:{4E1D6B37-5BC5-4D70-BE92-972E11E1BA83}|ERPaperless.csproj|D:\\AMC PROJECTS\\ER Module\\ERPaperless\\services\\erreviewformrepository.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{4E1D6B37-5BC5-4D70-BE92-972E11E1BA83}|ERPaperless.csproj|solutionrelative:services\\erreviewformrepository.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
@@ -71,10 +87,6 @@
       "RelativeMoniker": "D:0:0:{4E1D6B37-5BC5-4D70-BE92-972E11E1BA83}|ERPaperless.csproj|solutionrelative:controllers\\accountcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{4E1D6B37-5BC5-4D70-BE92-972E11E1BA83}|ERPaperless.csproj|D:\\AMC PROJECTS\\ER Module\\ERPaperless\\views\\account\\login.cshtml||{40D31677-CBC0-4297-A9EF-89D907823A98}",
-      "RelativeMoniker": "D:0:0:{4E1D6B37-5BC5-4D70-BE92-972E11E1BA83}|ERPaperless.csproj|solutionrelative:views\\account\\login.cshtml||{40D31677-CBC0-4297-A9EF-89D907823A98}"
-    },
-    {
       "AbsoluteMoniker": "D:0:0:{4E1D6B37-5BC5-4D70-BE92-972E11E1BA83}|ERPaperless.csproj|D:\\AMC PROJECTS\\ER Module\\ERPaperless\\content\\site.css||{A5401142-F49D-43DB-90B1-F57BA349E55C}",
       "RelativeMoniker": "D:0:0:{4E1D6B37-5BC5-4D70-BE92-972E11E1BA83}|ERPaperless.csproj|solutionrelative:content\\site.css||{A5401142-F49D-43DB-90B1-F57BA349E55C}"
     },
@@ -102,11 +114,50 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 7,
+          "SelectedChildIndex": 0,
           "Children": [
             {
               "$type": "Document",
-              "DocumentIndex": 1,
+              "DocumentIndex": 0,
+              "Title": "login.css",
+              "DocumentMoniker": "D:\\AMC PROJECTS\\ER Module\\ERPaperless\\Content\\login.css",
+              "RelativeDocumentMoniker": "Content\\login.css",
+              "ToolTip": "D:\\AMC PROJECTS\\ER Module\\ERPaperless\\Content\\login.css",
+              "RelativeToolTip": "Content\\login.css",
+              "ViewState": "AgIAAEcAAAAAAAAAAAAIwEwAAAANAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003000|",
+              "WhenOpened": "2026-09-11T05:44:28.188Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "_Layout.cshtml",
+              "DocumentMoniker": "D:\\AMC PROJECTS\\ER Module\\ERPaperless\\Views\\Shared\\_Layout.cshtml",
+              "RelativeDocumentMoniker": "Views\\Shared\\_Layout.cshtml",
+              "ToolTip": "D:\\AMC PROJECTS\\ER Module\\ERPaperless\\Views\\Shared\\_Layout.cshtml",
+              "RelativeToolTip": "Views\\Shared\\_Layout.cshtml",
+              "ViewState": "AgIAAA8AAAAAAAAAAAAAAAUAAAAoAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000759|",
+              "WhenOpened": "2026-09-11T05:37:05.043Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 4,
+              "Title": "ReportsController.cs",
+              "DocumentMoniker": "D:\\AMC PROJECTS\\ER Module\\ERPaperless\\Controllers\\ReportsController.cs",
+              "RelativeDocumentMoniker": "Controllers\\ReportsController.cs",
+              "ToolTip": "D:\\AMC PROJECTS\\ER Module\\ERPaperless\\Controllers\\ReportsController.cs",
+              "RelativeToolTip": "Controllers\\ReportsController.cs",
+              "ViewState": "AgIAAHsAAAAAAAAAAAAuwAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-09-11T05:30:40.06Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 5,
               "Title": "HomeController.cs",
               "DocumentMoniker": "D:\\AMC PROJECTS\\ER Module\\ERPaperless\\Controllers\\HomeController.cs",
               "RelativeDocumentMoniker": "Controllers\\HomeController.cs",
@@ -114,12 +165,11 @@
               "RelativeToolTip": "Controllers\\HomeController.cs",
               "ViewState": "AgIAAFMAAAAAAAAAAAA3wFUAAAAuAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-09-10T12:14:56.606Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-09-10T12:14:56.606Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 2,
+              "DocumentIndex": 6,
               "Title": "ERPatientRepository.cs",
               "DocumentMoniker": "D:\\AMC PROJECTS\\ER Module\\ERPaperless\\Services\\ERPatientRepository.cs",
               "RelativeDocumentMoniker": "Services\\ERPatientRepository.cs",
@@ -127,12 +177,11 @@
               "RelativeToolTip": "Services\\ERPatientRepository.cs",
               "ViewState": "AgIAANYBAAAAAAAAAAA0wJcBAAAlAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-09-10T11:51:22.81Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-09-10T11:51:22.81Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 3,
+              "DocumentIndex": 7,
               "Title": "ERReviewFormRepository.cs",
               "DocumentMoniker": "D:\\AMC PROJECTS\\ER Module\\ERPaperless\\Services\\ERReviewFormRepository.cs",
               "RelativeDocumentMoniker": "Services\\ERReviewFormRepository.cs",
@@ -140,12 +189,11 @@
               "RelativeToolTip": "Services\\ERReviewFormRepository.cs",
               "ViewState": "AgIAAAMFAAAAAAAAAAA2wBEFAAAkAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-09-10T11:31:56.302Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-09-10T11:31:56.302Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 4,
+              "DocumentIndex": 8,
               "Title": "BillingController.cs",
               "DocumentMoniker": "D:\\AMC PROJECTS\\ER Module\\ERPaperless\\Controllers\\BillingController.cs",
               "RelativeDocumentMoniker": "Controllers\\BillingController.cs",
@@ -157,7 +205,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 5,
+              "DocumentIndex": 9,
               "Title": "Index.cshtml",
               "DocumentMoniker": "D:\\AMC PROJECTS\\ER Module\\ERPaperless\\Views\\Billing\\Index.cshtml",
               "RelativeDocumentMoniker": "Views\\Billing\\Index.cshtml",
@@ -169,7 +217,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 7,
+              "DocumentIndex": 11,
               "Title": "BedRepository.cs",
               "DocumentMoniker": "D:\\AMC PROJECTS\\ER Module\\ERPaperless\\Services\\BedRepository.cs",
               "RelativeDocumentMoniker": "Services\\BedRepository.cs",
@@ -181,7 +229,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 9,
+              "DocumentIndex": 13,
               "Title": "EmergencyFormController.cs",
               "DocumentMoniker": "D:\\AMC PROJECTS\\ER Module\\ERPaperless\\Controllers\\EmergencyFormController.cs",
               "RelativeDocumentMoniker": "Controllers\\EmergencyFormController.cs",
@@ -193,20 +241,20 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 0,
+              "DocumentIndex": 3,
               "Title": "ReportManager.cs",
               "DocumentMoniker": "D:\\AMC PROJECTS\\ER Module\\ERPaperless\\Services\\ReportManager.cs",
               "RelativeDocumentMoniker": "Services\\ReportManager.cs",
               "ToolTip": "D:\\AMC PROJECTS\\ER Module\\ERPaperless\\Services\\ReportManager.cs",
               "RelativeToolTip": "Services\\ReportManager.cs",
-              "ViewState": "AgIAAHYCAAAAAAAAAIAwwHoCAAAyAAAAAAAAAA==",
+              "ViewState": "AgIAAJwCAAAAAAAAAAAjwK4CAAAVAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2026-09-10T10:13:53.444Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 11,
+              "DocumentIndex": 15,
               "Title": "ReportsPortalService.cs",
               "DocumentMoniker": "D:\\AMC PROJECTS\\ER Module\\ERPaperless\\Application\\Services\\ReportsPortalService.cs",
               "RelativeDocumentMoniker": "Application\\Services\\ReportsPortalService.cs",
@@ -218,7 +266,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 13,
+              "DocumentIndex": 17,
               "Title": "VitalRepository.cs",
               "DocumentMoniker": "D:\\AMC PROJECTS\\ER Module\\ERPaperless\\Services\\VitalRepository.cs",
               "RelativeDocumentMoniker": "Services\\VitalRepository.cs",
@@ -230,7 +278,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 10,
+              "DocumentIndex": 14,
               "Title": "ErFormService.cs",
               "DocumentMoniker": "D:\\AMC PROJECTS\\ER Module\\ERPaperless\\Application\\Services\\ErFormService.cs",
               "RelativeDocumentMoniker": "Application\\Services\\ErFormService.cs",
@@ -242,7 +290,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 16,
+              "DocumentIndex": 20,
               "Title": "AccountController.cs",
               "DocumentMoniker": "D:\\AMC PROJECTS\\ER Module\\ERPaperless\\Controllers\\AccountController.cs",
               "RelativeDocumentMoniker": "Controllers\\AccountController.cs",
@@ -254,19 +302,20 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 17,
+              "DocumentIndex": 1,
               "Title": "Login.cshtml",
               "DocumentMoniker": "D:\\AMC PROJECTS\\ER Module\\ERPaperless\\Views\\Account\\Login.cshtml",
               "RelativeDocumentMoniker": "Views\\Account\\Login.cshtml",
               "ToolTip": "D:\\AMC PROJECTS\\ER Module\\ERPaperless\\Views\\Account\\Login.cshtml",
               "RelativeToolTip": "Views\\Account\\Login.cshtml",
-              "ViewState": "AgIAACQAAAAAAAAAAAAAACwAAAAAAAAAAAAAAA==",
+              "ViewState": "AgIAAAMAAAAAAAAAAAAAACAAAAAUAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000759|",
-              "WhenOpened": "2026-09-05T09:29:51.411Z"
+              "WhenOpened": "2026-09-05T09:29:51.411Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 15,
+              "DocumentIndex": 19,
               "Title": "Web.config",
               "DocumentMoniker": "D:\\AMC PROJECTS\\ER Module\\ERPaperless\\Web.config",
               "RelativeDocumentMoniker": "Web.config",
@@ -279,7 +328,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 18,
+              "DocumentIndex": 21,
               "Title": "Site.css",
               "DocumentMoniker": "D:\\AMC PROJECTS\\ER Module\\ERPaperless\\Content\\Site.css",
               "RelativeDocumentMoniker": "Content\\Site.css",
@@ -291,7 +340,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 19,
+              "DocumentIndex": 22,
               "Title": "_ErPatientHeader.cshtml",
               "DocumentMoniker": "D:\\AMC PROJECTS\\ER Module\\ERPaperless\\Views\\Home\\_ErPatientHeader.cshtml",
               "RelativeDocumentMoniker": "Views\\Home\\_ErPatientHeader.cshtml",
@@ -303,7 +352,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 20,
+              "DocumentIndex": 23,
               "Title": "ErForm.cshtml",
               "DocumentMoniker": "D:\\AMC PROJECTS\\ER Module\\ERPaperless\\Views\\Home\\ErForm.cshtml",
               "RelativeDocumentMoniker": "Views\\Home\\ErForm.cshtml",
@@ -315,7 +364,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 8,
+              "DocumentIndex": 12,
               "Title": "Patients.cshtml",
               "DocumentMoniker": "D:\\AMC PROJECTS\\ER Module\\ERPaperless\\Views\\Home\\Patients.cshtml",
               "RelativeDocumentMoniker": "Views\\Home\\Patients.cshtml",
@@ -327,7 +376,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 21,
+              "DocumentIndex": 24,
               "Title": "Index.cshtml",
               "DocumentMoniker": "D:\\AMC PROJECTS\\ER Module\\ERPaperless\\Views\\Home\\Index.cshtml",
               "RelativeDocumentMoniker": "Views\\Home\\Index.cshtml",
@@ -339,7 +388,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 22,
+              "DocumentIndex": 25,
               "Title": "_ErOutcomeModals.cshtml",
               "DocumentMoniker": "D:\\AMC PROJECTS\\ER Module\\ERPaperless\\Views\\Home\\_ErOutcomeModals.cshtml",
               "RelativeDocumentMoniker": "Views\\Home\\_ErOutcomeModals.cshtml",
@@ -351,7 +400,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 12,
+              "DocumentIndex": 16,
               "Title": "ERLovRepository.cs",
               "DocumentMoniker": "D:\\AMC PROJECTS\\ER Module\\ERPaperless\\Services\\ERLovRepository.cs",
               "RelativeDocumentMoniker": "Services\\ERLovRepository.cs",
@@ -363,7 +412,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 14,
+              "DocumentIndex": 18,
               "Title": "ERLovType.cs",
               "DocumentMoniker": "D:\\AMC PROJECTS\\ER Module\\ERPaperless\\Models\\ERLovType.cs",
               "RelativeDocumentMoniker": "Models\\ERLovType.cs",
@@ -375,15 +424,14 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 6,
+              "DocumentIndex": 10,
               "Title": "dbERPatient.edmx [Diagram1]",
               "DocumentMoniker": "D:\\AMC PROJECTS\\ER Module\\ERPaperless\\Models\\dbERPatient.edmx",
               "RelativeDocumentMoniker": "Models\\dbERPatient.edmx",
               "ToolTip": "D:\\AMC PROJECTS\\ER Module\\ERPaperless\\Models\\dbERPatient.edmx [Diagram1]",
               "RelativeToolTip": "Models\\dbERPatient.edmx [Diagram1]",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001116|",
-              "WhenOpened": "2026-08-25T04:46:50.831Z",
-              "EditorCaption": " [Diagram1]"
+              "WhenOpened": "2026-08-25T04:46:50.831Z"
             }
           ]
         }
