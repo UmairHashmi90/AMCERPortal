@@ -30,8 +30,6 @@ namespace ERPaperless.Controllers
         [OutputCache(NoStore = true, Duration = 0, VaryByParam = "*")]
         public ActionResult Login(string returnUrl)
         {
-            // Stale FormsAuth cookie + empty session: force a clean anonymous login page
-            // so the antiforgery token is issued for "" and matches the POST check.
             if (Request.IsAuthenticated)
             {
                 var sessionUser = _currentUserContext.GetCurrentUser(HttpContext);

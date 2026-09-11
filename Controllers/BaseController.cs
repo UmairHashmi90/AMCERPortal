@@ -12,11 +12,6 @@ using System.Web.Security;
 
 namespace ERPaperless.Controllers
 {
-    /// <summary>
-    /// All authenticated controllers inherit from this base.
-    /// Loads ERUserRoleModel from Session (or re-queries DB on first request
-    /// after login / session timeout) and publishes role flags to ViewBag.
-    /// </summary>
     [Authorize]
     public abstract class BaseController : Controller
     {
@@ -32,10 +27,7 @@ namespace ERPaperless.Controllers
             _patientWorkspaceService = patientWorkspaceService ?? new PatientWorkspaceService();
         }
 
-        /// <summary>
-        /// Branch code read from Web.config key "ER:BranchCode".
-        /// Default = 1 if not set.
-        /// </summary>
+     
         protected int ErBranchCode
         {
             get
@@ -53,8 +45,6 @@ namespace ERPaperless.Controllers
 
             PreventBrowserCache();
 
-            // Session is populated by AccountController at login time after
-            // procGetRoleRightForERPortal is called with user + company code.
             CurrentUserRole = _currentUserContext.GetCurrentUser(
                 HttpContext,
                 User?.Identity?.Name);
@@ -73,8 +63,7 @@ namespace ERPaperless.Controllers
                 return;
             }
 
-            // Existing sessions may not have Consultant/Employee links yet.
-            if (CurrentUserRole != null
+             if (CurrentUserRole != null
                 && CurrentUserRole.UserCode > 0
                 && !CurrentUserRole.IdentityLinksResolved)
             {
@@ -82,7 +71,6 @@ namespace ERPaperless.Controllers
                 _currentUserContext.SetCurrentUser(Session, CurrentUserRole);
             }
 
-            // ── Push to ViewBag so every view / partial can read it ──────────
             ViewBag.UserRole       = CurrentUserRole;
             ViewBag.CanEdit        = CurrentUserRole.MO || CurrentUserRole.Nursing;
             ViewBag.CanAssignBed   = CurrentUserRole.MO || CurrentUserRole.Nursing;
