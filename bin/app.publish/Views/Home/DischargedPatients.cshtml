@@ -1,0 +1,107 @@
+@model ERPaperless.Models.DischargedPatientsPageViewModel
+@using System
+@using System.Collections.Generic
+@{
+    ViewBag.Title = "Discharged Patients";
+    var patients = Model?.Patients ?? new List<ERPaperless.Models.LocationCardViewModel>();
+    var search = Model?.Search ?? string.Empty;
+    var page = Model != null ? Model.Page : 1;
+    var totalPages = Model != null ? Model.TotalPages : 1;
+    var totalCount = Model != null ? Model.TotalCount : 0;
+
+    var pageStart = Math.Max(1, page - 2);
+    var pageEnd = Math.Min(totalPages, pageStart + 4);
+    if (pageEnd - pageStart < 4)
+    {
+        pageStart = Math.Max(1, pageEnd - 4);
+    }
+}
+
+@if (TempData["AccessError"] != null)
+{
+    <div class="alert alert-warning alert-dismissible">
+        <button type="button" class="close" data-dismiss="alert">&times;</button>
+        <strong>Access Denied:</strong> @TempData["AccessError"]
+    </div>
+}
+
+<section class="page-section">
+
+    <div class="toolbar-row patients-toolbar">
+        @using (Html.BeginForm("DischargedPatients", "Home", FormMethod.Get, new { @class = "discharged-search-form" }))
+        {
+            <input type="text"
+                   class="form-control quick-input"
+                   id="bedSearch"
+                   name="q"
+                   value="@search"
+                   placeholder="Search by PMR, Name, or Admission No"
+                   autocomplete="off" />
+            <button type="submit" class="btn btn-sm btn-danger">Search</button>
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                @Html.ActionLink("Clear", "DischargedPatients", "Home", null,
+                    new { @class = "btn btn-sm btn-outline-secondary" })
+            }
+        }
+        <div class="patients-module-actions">
+            @Html.ActionLink("Patients", "Patients", "Home", null,
+                     new { @class = "btn btn-sm patient-form-nav-btn btn-outline-secondary" })
+        </div>
+        <div class="legend-inline">
+            <span class="status-chip status-gray">Discharged</span>
+        </div>
+    </div>
+
+    <div class="discharged-page-meta">
+        @if (totalCount == 0)
+        {
+            <span>No discharged ER patients found@(string.IsNullOrWhiteSpace(search) ? "." : " for this search.")</span>
+        }
+        else
+        {
+            <span>Showing @Model.FromItem–@Model.ToItem of @totalCount</span>
+        }
+    </div>
+
+    <div class="location-grid" id="locationGrid">
+        @foreach (var bed in patients)
+        {
+            @Html.Partial("_LocationCard", bed)
+        }
+    </div>
+
+    @if (totalPages > 1)
+    {
+        <nav class="discharged-pager" aria-label="Discharged patients pages">
+            <ul class="pagination pagination-sm mb-0">
+                <li class="page-item @(Model.HasPrevious ? "" : "disabled")">
+                    @if (Model.HasPrevious)
+                    {
+                        <a class="page-link" href="@Url.Action("DischargedPatients", "Home", new { q = search, page = page - 1 })">Previous</a>
+                    }
+                    else
+                    {
+                        <span class="page-link">Previous</span>
+                    }
+                </li>
+                @for (var i = pageStart; i <= pageEnd; i++)
+                {
+                    <li class="page-item @(i == page ? "active" : "")">
+                        <a class="page-link" href="@Url.Action("DischargedPatients", "Home", new { q = search, page = i })">@i</a>
+                    </li>
+                }
+                <li class="page-item @(Model.HasNext ? "" : "disabled")">
+                    @if (Model.HasNext)
+                    {
+                        <a class="page-link" href="@Url.Action("DischargedPatients", "Home", new { q = search, page = page + 1 })">Next</a>
+                    }
+                    else
+                    {
+                        <span class="page-link">Next</span>
+                    }
+                </li>
+            </ul>
+        </nav>
+    }
+</section>

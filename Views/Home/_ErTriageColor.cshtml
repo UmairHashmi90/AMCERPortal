@@ -14,13 +14,13 @@
 
 <section class="panel-card triage-color-panel triage-color-panel-compact mb-0">
     <h3>
-        Triage Color
+        Triage Category
         @if (!canEdit)
         {
             <small class="text-muted fw-normal">(read-only)</small>
         }
     </h3>
-    <div class="triage-color-list" role="radiogroup" aria-label="Triage Color">
+    <div class="triage-color-list" role="radiogroup" aria-label="Triage Category">
         @foreach (var opt in options)
         {
             var isChecked = string.Equals(selected, opt.Value, StringComparison.OrdinalIgnoreCase);

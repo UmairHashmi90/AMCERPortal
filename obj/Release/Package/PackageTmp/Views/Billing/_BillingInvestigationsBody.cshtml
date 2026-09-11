@@ -43,6 +43,26 @@ else
             data-deleted="@(isDeleted ? "1" : "0")"
             data-filter-status="@inv.WorkQueueFilterStatus"
             data-search="@searchText">
+            <td class="text-center billing-inv-ack-cell">
+                @if (isDeleted || inv.IsCancelled)
+                {
+                    <span class="text-danger small">N/A</span>
+                }
+                else if (inv.IsBillingAcknowledged)
+                {
+                    <span class="text-success small">&#10003;</span>
+                }
+                else if (canWork)
+                {
+                    <input type="checkbox"
+                           class="form-check-input billing-inv-ack-checkbox mt-1"
+                           title="Acknowledge for billing" />
+                }
+                else
+                {
+                    <span class="text-muted">-</span>
+                }
+            </td>
             <td>@n</td>
             @if (showPatient)
             {
@@ -71,26 +91,6 @@ else
                 else
                 {
                     <span class="text-warning">Pending</span>
-                }
-            </td>
-            <td class="text-center billing-inv-ack-cell">
-                @if (isDeleted || inv.IsCancelled)
-                {
-                    <span class="text-danger small">N/A</span>
-                }
-                else if (inv.IsBillingAcknowledged)
-                {
-                    <span class="text-success small">&#10003;</span>
-                }
-                else if (canWork)
-                {
-                    <input type="checkbox"
-                           class="form-check-input billing-inv-ack-checkbox mt-1"
-                           title="Acknowledge for billing" />
-                }
-                else
-                {
-                    <span class="text-muted">-</span>
                 }
             </td>
             <td class="billing-inv-ack-by small">

@@ -1,5 +1,32 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Schema Namespace="dbAMCModel.Store" Provider="System.Data.SqlClient" ProviderManifestToken="2012" Alias="Self" xmlns:store="http://schemas.microsoft.com/ado/2007/12/edm/EntityStoreSchemaGenerator" xmlns:customannotation="http://schemas.microsoft.com/ado/2013/11/edm/customannotation" xmlns="http://schemas.microsoft.com/ado/2009/11/edm/ssdl">
+  <EntityType Name="tblClinicalDocument">
+    <Key>
+      <PropertyRef Name="intClinicalDocumentCode" />
+      <PropertyRef Name="intCompanyCode" />
+    </Key>
+    <Property Name="intClinicalDocumentCode" Type="bigint" Nullable="false" />
+    <Property Name="dtmClinicalDocument" Type="datetime" Nullable="false" />
+    <Property Name="intClinicalDocumentID" Type="uniqueidentifier" Nullable="false" />
+    <Property Name="intClinicalDocumentTemplateCode" Type="int" Nullable="false" />
+    <Property Name="intFileTypeCode" Type="int" />
+    <Property Name="intIPDAdmissionCode" Type="bigint" />
+    <Property Name="intERAdmissionCode" Type="bigint" />
+    <Property Name="intPatientCode" Type="bigint" />
+    <Property Name="strDocumentName" Type="nvarchar" MaxLength="50" />
+    <Property Name="strDocumentExtension" Type="nvarchar" MaxLength="10" Nullable="false" />
+    <Property Name="vbrDocument" Type="varbinary(max)" />
+    <Property Name="bolIsFinal" Type="bit" Nullable="false" />
+    <Property Name="tmVersion" Type="timestamp" StoreGeneratedPattern="Computed" Nullable="false" />
+    <Property Name="dtmCreated" Type="datetime" Nullable="false" />
+    <Property Name="dtmLastM" Type="datetime" />
+    <Property Name="intOwnerCode" Type="int" Nullable="false" />
+    <Property Name="intCreatedByCode" Type="int" Nullable="false" />
+    <Property Name="intAlteredByCode" Type="int" />
+    <Property Name="intRecordStatusCode" Type="int" Nullable="false" />
+    <Property Name="intBranchCode" Type="int" Nullable="false" />
+    <Property Name="intCompanyCode" Type="int" Nullable="false" />
+  </EntityType>
   <EntityType Name="tblClinicalDocumentER">
     <Key>
       <PropertyRef Name="intClinicalDocumentERCode" />
@@ -146,8 +173,12 @@
     <Property Name="intERAdmissionCode" Type="bigint" />
     <Property Name="dtmAdmission" Type="datetime" Nullable="false" />
     <Property Name="strName" Type="varchar" MaxLength="200" />
+    <Property Name="bolIsDischargeStart" Type="bit" />
+    <Property Name="dtmDischargeStart" Type="datetime" />
     <Property Name="bolIsDischarge" Type="bit" />
     <Property Name="dtmDischarge" Type="datetime" />
+    <Property Name="strTriageColor" Type="nvarchar" MaxLength="20" />
+    <Property Name="strHOPI" Type="nvarchar" MaxLength="500" />
     <Property Name="tmVersion" Type="timestamp" StoreGeneratedPattern="Computed" Nullable="false" />
     <Property Name="dtmCreated" Type="datetime" Nullable="false" />
     <Property Name="dtmLastM" Type="datetime" />
@@ -363,10 +394,12 @@
     <Property Name="numWeight" Type="numeric" Precision="10" Scale="2" />
     <Property Name="intMetricBMI" Type="int" />
     <Property Name="intSPO2" Type="int" />
+    <Property Name="strSPo2" Type="nvarchar" MaxLength="500" />
     <Property Name="numGlucoseF" Type="numeric" Precision="10" Scale="2" />
     <Property Name="numGlucoseR" Type="numeric" Precision="10" Scale="2" />
     <Property Name="intPainScore" Type="int" />
     <Property Name="intFallRisk" Type="int" />
+    <Property Name="intConciousness" Type="int" />
     <Property Name="tmVersion" Type="timestamp" StoreGeneratedPattern="Computed" Nullable="false" />
     <Property Name="dtmCreated" Type="datetime" Nullable="false" />
     <Property Name="dtmLastM" Type="datetime" />
@@ -391,6 +424,104 @@
     <Property Name="intUserCode" Type="int" Nullable="false" />
     <Property Name="strSystemName" Type="nvarchar" MaxLength="50" Nullable="false" />
     <Property Name="strSystemIP" Type="nvarchar" MaxLength="50" Nullable="false" />
+    <Property Name="intCompanyCode" Type="int" Nullable="false" />
+  </EntityType>
+  <EntityType Name="tblIPDAdmOrder">
+    <Key>
+      <PropertyRef Name="intIPDAdmOrderCode" />
+      <PropertyRef Name="intBranchCode" />
+      <PropertyRef Name="intCompanyCode" />
+    </Key>
+    <Property Name="intIPDAdmOrderCode" Type="bigint" Nullable="false" />
+    <Property Name="intIPDAdmOrderStatusCode" Type="int" />
+    <Property Name="strIPDAdmOrderNo" Type="nvarchar" MaxLength="15" Nullable="false" />
+    <Property Name="dtmIPDAdmOrder" Type="datetime" Nullable="false" />
+    <Property Name="dtAdmissionRequest" Type="datetime" Nullable="false" />
+    <Property Name="intERAdmissionCode" Type="bigint" />
+    <Property Name="intPatientCode" Type="bigint" Nullable="false" />
+    <Property Name="intAdmConsultantCode" Type="bigint" />
+    <Property Name="intReffConsultantCode" Type="bigint" />
+    <Property Name="intAdmissionTypeCode" Type="int" />
+    <Property Name="intAdmissionCareLevelCode" Type="int" />
+    <Property Name="strDiagnosis" Type="nvarchar" MaxLength="1024" />
+    <Property Name="strDietInstruction" Type="nvarchar" MaxLength="1024" />
+    <Property Name="strComments" Type="nvarchar" MaxLength="1024" />
+    <Property Name="strCancelRemarks" Type="nvarchar" MaxLength="1024" />
+    <Property Name="tmVersion" Type="timestamp" StoreGeneratedPattern="Computed" Nullable="false" />
+    <Property Name="dtmCreated" Type="datetime" Nullable="false" />
+    <Property Name="dtmLastM" Type="datetime" />
+    <Property Name="intOwnerCode" Type="int" Nullable="false" />
+    <Property Name="intCreatedByCode" Type="int" Nullable="false" />
+    <Property Name="intAlteredByCode" Type="int" />
+    <Property Name="intRecordStatusCode" Type="int" Nullable="false" />
+    <Property Name="intBranchCode" Type="int" Nullable="false" />
+    <Property Name="intCompanyCode" Type="int" Nullable="false" />
+  </EntityType>
+  <EntityType Name="tblIPDAdmPrescriptionOrder">
+    <Key>
+      <PropertyRef Name="intIPDAdmPrescriptionOrderCode" />
+      <PropertyRef Name="intBranchCode" />
+      <PropertyRef Name="intCompanyCode" />
+    </Key>
+    <Property Name="intIPDAdmPrescriptionOrderCode" Type="bigint" Nullable="false" />
+    <Property Name="intIPDAdmOrderCode" Type="bigint" Nullable="false" />
+    <Property Name="intConsultantCode" Type="bigint" />
+    <Property Name="intItemCode" Type="bigint" />
+    <Property Name="numPrescribedDose" Type="numeric" Precision="10" Scale="2" />
+    <Property Name="intPrescribedUnitCode" Type="int" />
+    <Property Name="intDrugFrequencyCode" Type="int" />
+    <Property Name="intDrugRouteCode" Type="int" />
+    <Property Name="intDays" Type="int" />
+    <Property Name="strInstruction" Type="nvarchar" MaxLength="250" />
+    <Property Name="tmVersion" Type="timestamp" StoreGeneratedPattern="Computed" Nullable="false" />
+    <Property Name="dtmCreated" Type="datetime" Nullable="false" />
+    <Property Name="dtmLastM" Type="datetime" />
+    <Property Name="intOwnerCode" Type="int" Nullable="false" />
+    <Property Name="intCreatedByCode" Type="int" Nullable="false" />
+    <Property Name="intAlteredByCode" Type="int" />
+    <Property Name="intRecordStatusCode" Type="int" Nullable="false" />
+    <Property Name="intBranchCode" Type="int" Nullable="false" />
+    <Property Name="intCompanyCode" Type="int" Nullable="false" />
+  </EntityType>
+  <EntityType Name="tblIPDAdmServiceInst">
+    <Key>
+      <PropertyRef Name="intIPDAdmServiceInstCode" />
+      <PropertyRef Name="intBranchCode" />
+      <PropertyRef Name="intCompanyCode" />
+    </Key>
+    <Property Name="intIPDAdmServiceInstCode" Type="bigint" Nullable="false" />
+    <Property Name="intIPDAdmOrderCode" Type="bigint" Nullable="false" />
+    <Property Name="intConsultantCode" Type="bigint" />
+    <Property Name="intServiceCode" Type="bigint" />
+    <Property Name="strInstruction" Type="nvarchar" MaxLength="250" />
+    <Property Name="tmVersion" Type="timestamp" StoreGeneratedPattern="Computed" Nullable="false" />
+    <Property Name="dtmCreated" Type="datetime" Nullable="false" />
+    <Property Name="dtmLastM" Type="datetime" />
+    <Property Name="intOwnerCode" Type="int" Nullable="false" />
+    <Property Name="intCreatedByCode" Type="int" Nullable="false" />
+    <Property Name="intAlteredByCode" Type="int" />
+    <Property Name="intRecordStatusCode" Type="int" Nullable="false" />
+    <Property Name="intBranchCode" Type="int" Nullable="false" />
+    <Property Name="intCompanyCode" Type="int" Nullable="false" />
+  </EntityType>
+  <EntityType Name="tblIPDAdmServiceOrder">
+    <Key>
+      <PropertyRef Name="intIPDAdmServiceOrderCode" />
+      <PropertyRef Name="intBranchCode" />
+      <PropertyRef Name="intCompanyCode" />
+    </Key>
+    <Property Name="intIPDAdmServiceOrderCode" Type="bigint" Nullable="false" />
+    <Property Name="intIPDAdmOrderCode" Type="bigint" Nullable="false" />
+    <Property Name="intConsultantCode" Type="bigint" />
+    <Property Name="intServiceCode" Type="bigint" />
+    <Property Name="tmVersion" Type="timestamp" StoreGeneratedPattern="Computed" Nullable="false" />
+    <Property Name="dtmCreated" Type="datetime" Nullable="false" />
+    <Property Name="dtmLastM" Type="datetime" />
+    <Property Name="intOwnerCode" Type="int" Nullable="false" />
+    <Property Name="intCreatedByCode" Type="int" Nullable="false" />
+    <Property Name="intAlteredByCode" Type="int" />
+    <Property Name="intRecordStatusCode" Type="int" Nullable="false" />
+    <Property Name="intBranchCode" Type="int" Nullable="false" />
     <Property Name="intCompanyCode" Type="int" Nullable="false" />
   </EntityType>
   <EntityType Name="tblLAMA">
@@ -580,7 +711,70 @@
       </Dependent>
     </ReferentialConstraint>
   </Association>
+  <Association Name="FK_tblIPDAdmPrescriptionOrder_tblDrugRoute">
+    <End Role="tblDrugRoute" Type="Self.tblDrugRoute" Multiplicity="0..1" />
+    <End Role="tblIPDAdmPrescriptionOrder" Type="Self.tblIPDAdmPrescriptionOrder" Multiplicity="*" />
+    <ReferentialConstraint>
+      <Principal Role="tblDrugRoute">
+        <PropertyRef Name="intDrugRouteCode" />
+        <PropertyRef Name="intCompanyCode" />
+      </Principal>
+      <Dependent Role="tblIPDAdmPrescriptionOrder">
+        <PropertyRef Name="intDrugRouteCode" />
+        <PropertyRef Name="intCompanyCode" />
+      </Dependent>
+    </ReferentialConstraint>
+  </Association>
+  <Association Name="FK_tblIPDAdmPrescriptionOrder_tblIPDAdmOrder">
+    <End Role="tblIPDAdmOrder" Type="Self.tblIPDAdmOrder" Multiplicity="1" />
+    <End Role="tblIPDAdmPrescriptionOrder" Type="Self.tblIPDAdmPrescriptionOrder" Multiplicity="*" />
+    <ReferentialConstraint>
+      <Principal Role="tblIPDAdmOrder">
+        <PropertyRef Name="intIPDAdmOrderCode" />
+        <PropertyRef Name="intBranchCode" />
+        <PropertyRef Name="intCompanyCode" />
+      </Principal>
+      <Dependent Role="tblIPDAdmPrescriptionOrder">
+        <PropertyRef Name="intIPDAdmOrderCode" />
+        <PropertyRef Name="intBranchCode" />
+        <PropertyRef Name="intCompanyCode" />
+      </Dependent>
+    </ReferentialConstraint>
+  </Association>
+  <Association Name="FK_tblIPDAdmServiceInst_tblIPDAdmOrder">
+    <End Role="tblIPDAdmOrder" Type="Self.tblIPDAdmOrder" Multiplicity="1" />
+    <End Role="tblIPDAdmServiceInst" Type="Self.tblIPDAdmServiceInst" Multiplicity="*" />
+    <ReferentialConstraint>
+      <Principal Role="tblIPDAdmOrder">
+        <PropertyRef Name="intIPDAdmOrderCode" />
+        <PropertyRef Name="intBranchCode" />
+        <PropertyRef Name="intCompanyCode" />
+      </Principal>
+      <Dependent Role="tblIPDAdmServiceInst">
+        <PropertyRef Name="intIPDAdmOrderCode" />
+        <PropertyRef Name="intBranchCode" />
+        <PropertyRef Name="intCompanyCode" />
+      </Dependent>
+    </ReferentialConstraint>
+  </Association>
+  <Association Name="FK_tblIPDAdmServiceOrder_tblIPDAdmOrder">
+    <End Role="tblIPDAdmOrder" Type="Self.tblIPDAdmOrder" Multiplicity="1" />
+    <End Role="tblIPDAdmServiceOrder" Type="Self.tblIPDAdmServiceOrder" Multiplicity="*" />
+    <ReferentialConstraint>
+      <Principal Role="tblIPDAdmOrder">
+        <PropertyRef Name="intIPDAdmOrderCode" />
+        <PropertyRef Name="intBranchCode" />
+        <PropertyRef Name="intCompanyCode" />
+      </Principal>
+      <Dependent Role="tblIPDAdmServiceOrder">
+        <PropertyRef Name="intIPDAdmOrderCode" />
+        <PropertyRef Name="intBranchCode" />
+        <PropertyRef Name="intCompanyCode" />
+      </Dependent>
+    </ReferentialConstraint>
+  </Association>
   <EntityContainer Name="dbAMCModelStoreContainer">
+    <EntitySet Name="tblClinicalDocument" EntityType="Self.tblClinicalDocument" Schema="dbo" store:Type="Tables" />
     <EntitySet Name="tblClinicalDocumentER" EntityType="Self.tblClinicalDocumentER" Schema="dbo" store:Type="Tables" />
     <EntitySet Name="tblDeathCertificate" EntityType="Self.tblDeathCertificate" Schema="dbo" store:Type="Tables" />
     <EntitySet Name="tblDischargeSummary" EntityType="Self.tblDischargeSummary" Schema="dbo" store:Type="Tables" />
@@ -596,6 +790,10 @@
     <EntitySet Name="tblERPatientReviewForm" EntityType="Self.tblERPatientReviewForm" Schema="dbo" store:Type="Tables" />
     <EntitySet Name="tblERPatientVitals" EntityType="Self.tblERPatientVitals" Schema="dbo" store:Type="Tables" />
     <EntitySet Name="tblException" EntityType="Self.tblException" Schema="dbo" store:Type="Tables" />
+    <EntitySet Name="tblIPDAdmOrder" EntityType="Self.tblIPDAdmOrder" Schema="dbo" store:Type="Tables" />
+    <EntitySet Name="tblIPDAdmPrescriptionOrder" EntityType="Self.tblIPDAdmPrescriptionOrder" Schema="dbo" store:Type="Tables" />
+    <EntitySet Name="tblIPDAdmServiceInst" EntityType="Self.tblIPDAdmServiceInst" Schema="dbo" store:Type="Tables" />
+    <EntitySet Name="tblIPDAdmServiceOrder" EntityType="Self.tblIPDAdmServiceOrder" Schema="dbo" store:Type="Tables" />
     <EntitySet Name="tblLAMA" EntityType="Self.tblLAMA" Schema="dbo" store:Type="Tables" />
     <EntitySet Name="tblPatientReferral" EntityType="Self.tblPatientReferral" Schema="dbo" store:Type="Tables" />
     <AssociationSet Name="FK_tblERPatientChiefComplaint_tblERPatient" Association="Self.FK_tblERPatientChiefComplaint_tblERPatient">
@@ -629,6 +827,22 @@
     <AssociationSet Name="FK_tblERPatientVitals_tblERPatientVitals" Association="Self.FK_tblERPatientVitals_tblERPatientVitals">
       <End Role="tblERPatient" EntitySet="tblERPatient" />
       <End Role="tblERPatientVitals" EntitySet="tblERPatientVitals" />
+    </AssociationSet>
+    <AssociationSet Name="FK_tblIPDAdmPrescriptionOrder_tblDrugRoute" Association="Self.FK_tblIPDAdmPrescriptionOrder_tblDrugRoute">
+      <End Role="tblDrugRoute" EntitySet="tblDrugRoute" />
+      <End Role="tblIPDAdmPrescriptionOrder" EntitySet="tblIPDAdmPrescriptionOrder" />
+    </AssociationSet>
+    <AssociationSet Name="FK_tblIPDAdmPrescriptionOrder_tblIPDAdmOrder" Association="Self.FK_tblIPDAdmPrescriptionOrder_tblIPDAdmOrder">
+      <End Role="tblIPDAdmOrder" EntitySet="tblIPDAdmOrder" />
+      <End Role="tblIPDAdmPrescriptionOrder" EntitySet="tblIPDAdmPrescriptionOrder" />
+    </AssociationSet>
+    <AssociationSet Name="FK_tblIPDAdmServiceInst_tblIPDAdmOrder" Association="Self.FK_tblIPDAdmServiceInst_tblIPDAdmOrder">
+      <End Role="tblIPDAdmOrder" EntitySet="tblIPDAdmOrder" />
+      <End Role="tblIPDAdmServiceInst" EntitySet="tblIPDAdmServiceInst" />
+    </AssociationSet>
+    <AssociationSet Name="FK_tblIPDAdmServiceOrder_tblIPDAdmOrder" Association="Self.FK_tblIPDAdmServiceOrder_tblIPDAdmOrder">
+      <End Role="tblIPDAdmOrder" EntitySet="tblIPDAdmOrder" />
+      <End Role="tblIPDAdmServiceOrder" EntitySet="tblIPDAdmServiceOrder" />
     </AssociationSet>
   </EntityContainer>
 </Schema>

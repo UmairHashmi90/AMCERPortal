@@ -20,6 +20,7 @@
                    name="@Model.GroupName"
                    id="@inputId"
                    value="@item.Id"
+                   data-label="@item.Name"
                    @(Model.SelectedValue.HasValue && Model.SelectedValue.Value == item.Id ? "checked=\"checked\"" : "")
                    @(Model.Disabled ? "disabled=\"disabled\"" : "") />
             <label class="form-check-label" for="@inputId">@item.Name</label>

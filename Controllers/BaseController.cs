@@ -5,7 +5,10 @@ using ERPaperless.Infrastructure.Security;
 using ERPaperless.Models;
 using ERPaperless.Services;
 using System.Configuration;
+using System.Web;
 using System.Web.Mvc;
+using System.Web.Routing;
+using System.Web.Security;
 
 namespace ERPaperless.Controllers
 {
@@ -48,11 +51,27 @@ namespace ERPaperless.Controllers
         {
             base.OnActionExecuting(filterContext);
 
+            PreventBrowserCache();
+
             // Session is populated by AccountController at login time after
             // procGetRoleRightForERPortal is called with user + company code.
             CurrentUserRole = _currentUserContext.GetCurrentUser(
                 HttpContext,
                 User?.Identity?.Name);
+
+            if (CurrentUserRole == null || CurrentUserRole.UserCode <= 0)
+            {
+                FormsAuthentication.SignOut();
+                Session?.Clear();
+                _currentUserContext.ClearCurrentUser(Session);
+                filterContext.Result = new RedirectToRouteResult(
+                    new RouteValueDictionary
+                    {
+                        { "controller", "Account" },
+                        { "action", "Login" }
+                    });
+                return;
+            }
 
             // Existing sessions may not have Consultant/Employee links yet.
             if (CurrentUserRole != null
@@ -90,6 +109,15 @@ namespace ERPaperless.Controllers
             ViewBag.BranchCode     = ErBranchCode;
         }
 
+        private void PreventBrowserCache()
+        {
+            Response.Cache.SetCacheability(HttpCacheability.NoCache);
+            Response.Cache.SetNoStore();
+            Response.Cache.SetRevalidation(HttpCacheRevalidation.AllCaches);
+            Response.Cache.SetExpires(System.DateTime.UtcNow.AddDays(-1));
+            Response.AppendHeader("Pragma", "no-cache");
+        }
+
         protected void UsePatientWorkspaceLayout(string activeForm)
         {
             ViewBag.HideSidebar = true;
@@ -102,7 +130,7 @@ namespace ERPaperless.Controllers
                 return;
 
             var key = returnTo.Trim().ToLowerInvariant();
-            if (key == "pharmacy" || key == "billing")
+            if (key == "pharmacy" || key == "billing" || key == "discharged")
                 ViewBag.ReturnTo = key;
         }
 

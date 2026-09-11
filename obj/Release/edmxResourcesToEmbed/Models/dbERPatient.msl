@@ -87,28 +87,6 @@
         </MappingFragment>
       </EntityTypeMapping>
     </EntitySetMapping>
-    <EntitySetMapping Name="tblERPatients">
-      <EntityTypeMapping TypeName="dbAMCModel.tblERPatient">
-        <MappingFragment StoreEntitySet="tblERPatient">
-          <ScalarProperty Name="intCompanyCode" ColumnName="intCompanyCode" />
-          <ScalarProperty Name="intBranchCode" ColumnName="intBranchCode" />
-          <ScalarProperty Name="intRecordStatusCode" ColumnName="intRecordStatusCode" />
-          <ScalarProperty Name="intAlteredByCode" ColumnName="intAlteredByCode" />
-          <ScalarProperty Name="intCreatedByCode" ColumnName="intCreatedByCode" />
-          <ScalarProperty Name="intOwnerCode" ColumnName="intOwnerCode" />
-          <ScalarProperty Name="dtmLastM" ColumnName="dtmLastM" />
-          <ScalarProperty Name="dtmCreated" ColumnName="dtmCreated" />
-          <ScalarProperty Name="tmVersion" ColumnName="tmVersion" />
-          <ScalarProperty Name="dtmDischarge" ColumnName="dtmDischarge" />
-          <ScalarProperty Name="bolIsDischarge" ColumnName="bolIsDischarge" />
-          <ScalarProperty Name="strName" ColumnName="strName" />
-          <ScalarProperty Name="dtmAdmission" ColumnName="dtmAdmission" />
-          <ScalarProperty Name="intERAdmissionCode" ColumnName="intERAdmissionCode" />
-          <ScalarProperty Name="intWardBedCode" ColumnName="intWardBedCode" />
-          <ScalarProperty Name="intERPatientCode" ColumnName="intERPatientCode" />
-        </MappingFragment>
-      </EntityTypeMapping>
-    </EntitySetMapping>
     <EntitySetMapping Name="tblDrugRoutes">
       <EntityTypeMapping TypeName="dbAMCModel.tblDrugRoute">
         <MappingFragment StoreEntitySet="tblDrugRoute">
@@ -345,38 +323,6 @@
         </MappingFragment>
       </EntityTypeMapping>
     </EntitySetMapping>
-    <EntitySetMapping Name="tblERPatientVitals">
-      <EntityTypeMapping TypeName="dbAMCModel.tblERPatientVital">
-        <MappingFragment StoreEntitySet="tblERPatientVitals">
-          <ScalarProperty Name="intCompanyCode" ColumnName="intCompanyCode" />
-          <ScalarProperty Name="intBranchCode" ColumnName="intBranchCode" />
-          <ScalarProperty Name="intRecordStatusCode" ColumnName="intRecordStatusCode" />
-          <ScalarProperty Name="intAlteredByCode" ColumnName="intAlteredByCode" />
-          <ScalarProperty Name="intCreatedByCode" ColumnName="intCreatedByCode" />
-          <ScalarProperty Name="intOwnerCode" ColumnName="intOwnerCode" />
-          <ScalarProperty Name="dtmLastM" ColumnName="dtmLastM" />
-          <ScalarProperty Name="dtmCreated" ColumnName="dtmCreated" />
-          <ScalarProperty Name="tmVersion" ColumnName="tmVersion" />
-          <ScalarProperty Name="intFallRisk" ColumnName="intFallRisk" />
-          <ScalarProperty Name="intPainScore" ColumnName="intPainScore" />
-          <ScalarProperty Name="numGlucoseR" ColumnName="numGlucoseR" />
-          <ScalarProperty Name="numGlucoseF" ColumnName="numGlucoseF" />
-          <ScalarProperty Name="intSPO2" ColumnName="intSPO2" />
-          <ScalarProperty Name="intMetricBMI" ColumnName="intMetricBMI" />
-          <ScalarProperty Name="numWeight" ColumnName="numWeight" />
-          <ScalarProperty Name="intHeight" ColumnName="intHeight" />
-          <ScalarProperty Name="numTemp" ColumnName="numTemp" />
-          <ScalarProperty Name="intResp" ColumnName="intResp" />
-          <ScalarProperty Name="intBP2" ColumnName="intBP2" />
-          <ScalarProperty Name="intBP1" ColumnName="intBP1" />
-          <ScalarProperty Name="intPulse" ColumnName="intPulse" />
-          <ScalarProperty Name="intHeartRate" ColumnName="intHeartRate" />
-          <ScalarProperty Name="dtmVitals" ColumnName="dtmVitals" />
-          <ScalarProperty Name="intERPatientCode" ColumnName="intERPatientCode" />
-          <ScalarProperty Name="intERPatientVitalsCode" ColumnName="intERPatientVitalsCode" />
-        </MappingFragment>
-      </EntityTypeMapping>
-    </EntitySetMapping>
     <EntitySetMapping Name="tblERPatientDrugAllergies">
       <EntityTypeMapping TypeName="dbAMCModel.tblERPatientDrugAllergy">
         <MappingFragment StoreEntitySet="tblERPatientDrugAllergy">
@@ -436,6 +382,187 @@
           <ScalarProperty Name="dtmSaved" ColumnName="dtmSaved" />
           <ScalarProperty Name="intERPatientCode" ColumnName="intERPatientCode" />
           <ScalarProperty Name="intERPatientReviewFormCode" ColumnName="intERPatientReviewFormCode" />
+        </MappingFragment>
+      </EntityTypeMapping>
+    </EntitySetMapping>
+    <EntitySetMapping Name="tblERPatients">
+      <EntityTypeMapping TypeName="dbAMCModel.tblERPatient">
+        <MappingFragment StoreEntitySet="tblERPatient">
+          <ScalarProperty Name="intCompanyCode" ColumnName="intCompanyCode" />
+          <ScalarProperty Name="intBranchCode" ColumnName="intBranchCode" />
+          <ScalarProperty Name="intRecordStatusCode" ColumnName="intRecordStatusCode" />
+          <ScalarProperty Name="intAlteredByCode" ColumnName="intAlteredByCode" />
+          <ScalarProperty Name="intCreatedByCode" ColumnName="intCreatedByCode" />
+          <ScalarProperty Name="intOwnerCode" ColumnName="intOwnerCode" />
+          <ScalarProperty Name="dtmLastM" ColumnName="dtmLastM" />
+          <ScalarProperty Name="dtmCreated" ColumnName="dtmCreated" />
+          <ScalarProperty Name="tmVersion" ColumnName="tmVersion" />
+          <ScalarProperty Name="strHOPI" ColumnName="strHOPI" />
+          <ScalarProperty Name="strTriageColor" ColumnName="strTriageColor" />
+          <ScalarProperty Name="dtmDischarge" ColumnName="dtmDischarge" />
+          <ScalarProperty Name="bolIsDischarge" ColumnName="bolIsDischarge" />
+          <ScalarProperty Name="dtmDischargeStart" ColumnName="dtmDischargeStart" />
+          <ScalarProperty Name="bolIsDischargeStart" ColumnName="bolIsDischargeStart" />
+          <ScalarProperty Name="strName" ColumnName="strName" />
+          <ScalarProperty Name="dtmAdmission" ColumnName="dtmAdmission" />
+          <ScalarProperty Name="intERAdmissionCode" ColumnName="intERAdmissionCode" />
+          <ScalarProperty Name="intWardBedCode" ColumnName="intWardBedCode" />
+          <ScalarProperty Name="intERPatientCode" ColumnName="intERPatientCode" />
+        </MappingFragment>
+      </EntityTypeMapping>
+    </EntitySetMapping>
+    <EntitySetMapping Name="tblIPDAdmOrders">
+      <EntityTypeMapping TypeName="dbAMCModel.tblIPDAdmOrder">
+        <MappingFragment StoreEntitySet="tblIPDAdmOrder">
+          <ScalarProperty Name="intCompanyCode" ColumnName="intCompanyCode" />
+          <ScalarProperty Name="intBranchCode" ColumnName="intBranchCode" />
+          <ScalarProperty Name="intRecordStatusCode" ColumnName="intRecordStatusCode" />
+          <ScalarProperty Name="intAlteredByCode" ColumnName="intAlteredByCode" />
+          <ScalarProperty Name="intCreatedByCode" ColumnName="intCreatedByCode" />
+          <ScalarProperty Name="intOwnerCode" ColumnName="intOwnerCode" />
+          <ScalarProperty Name="dtmLastM" ColumnName="dtmLastM" />
+          <ScalarProperty Name="dtmCreated" ColumnName="dtmCreated" />
+          <ScalarProperty Name="tmVersion" ColumnName="tmVersion" />
+          <ScalarProperty Name="strCancelRemarks" ColumnName="strCancelRemarks" />
+          <ScalarProperty Name="strComments" ColumnName="strComments" />
+          <ScalarProperty Name="strDietInstruction" ColumnName="strDietInstruction" />
+          <ScalarProperty Name="strDiagnosis" ColumnName="strDiagnosis" />
+          <ScalarProperty Name="intAdmissionCareLevelCode" ColumnName="intAdmissionCareLevelCode" />
+          <ScalarProperty Name="intAdmissionTypeCode" ColumnName="intAdmissionTypeCode" />
+          <ScalarProperty Name="intReffConsultantCode" ColumnName="intReffConsultantCode" />
+          <ScalarProperty Name="intAdmConsultantCode" ColumnName="intAdmConsultantCode" />
+          <ScalarProperty Name="intPatientCode" ColumnName="intPatientCode" />
+          <ScalarProperty Name="intERAdmissionCode" ColumnName="intERAdmissionCode" />
+          <ScalarProperty Name="dtAdmissionRequest" ColumnName="dtAdmissionRequest" />
+          <ScalarProperty Name="dtmIPDAdmOrder" ColumnName="dtmIPDAdmOrder" />
+          <ScalarProperty Name="strIPDAdmOrderNo" ColumnName="strIPDAdmOrderNo" />
+          <ScalarProperty Name="intIPDAdmOrderStatusCode" ColumnName="intIPDAdmOrderStatusCode" />
+          <ScalarProperty Name="intIPDAdmOrderCode" ColumnName="intIPDAdmOrderCode" />
+        </MappingFragment>
+      </EntityTypeMapping>
+    </EntitySetMapping>
+    <EntitySetMapping Name="tblIPDAdmPrescriptionOrders">
+      <EntityTypeMapping TypeName="dbAMCModel.tblIPDAdmPrescriptionOrder">
+        <MappingFragment StoreEntitySet="tblIPDAdmPrescriptionOrder">
+          <ScalarProperty Name="intCompanyCode" ColumnName="intCompanyCode" />
+          <ScalarProperty Name="intBranchCode" ColumnName="intBranchCode" />
+          <ScalarProperty Name="intRecordStatusCode" ColumnName="intRecordStatusCode" />
+          <ScalarProperty Name="intAlteredByCode" ColumnName="intAlteredByCode" />
+          <ScalarProperty Name="intCreatedByCode" ColumnName="intCreatedByCode" />
+          <ScalarProperty Name="intOwnerCode" ColumnName="intOwnerCode" />
+          <ScalarProperty Name="dtmLastM" ColumnName="dtmLastM" />
+          <ScalarProperty Name="dtmCreated" ColumnName="dtmCreated" />
+          <ScalarProperty Name="tmVersion" ColumnName="tmVersion" />
+          <ScalarProperty Name="strInstruction" ColumnName="strInstruction" />
+          <ScalarProperty Name="intDays" ColumnName="intDays" />
+          <ScalarProperty Name="intDrugRouteCode" ColumnName="intDrugRouteCode" />
+          <ScalarProperty Name="intDrugFrequencyCode" ColumnName="intDrugFrequencyCode" />
+          <ScalarProperty Name="intPrescribedUnitCode" ColumnName="intPrescribedUnitCode" />
+          <ScalarProperty Name="numPrescribedDose" ColumnName="numPrescribedDose" />
+          <ScalarProperty Name="intItemCode" ColumnName="intItemCode" />
+          <ScalarProperty Name="intConsultantCode" ColumnName="intConsultantCode" />
+          <ScalarProperty Name="intIPDAdmOrderCode" ColumnName="intIPDAdmOrderCode" />
+          <ScalarProperty Name="intIPDAdmPrescriptionOrderCode" ColumnName="intIPDAdmPrescriptionOrderCode" />
+        </MappingFragment>
+      </EntityTypeMapping>
+    </EntitySetMapping>
+    <EntitySetMapping Name="tblIPDAdmServiceOrders">
+      <EntityTypeMapping TypeName="dbAMCModel.tblIPDAdmServiceOrder">
+        <MappingFragment StoreEntitySet="tblIPDAdmServiceOrder">
+          <ScalarProperty Name="intCompanyCode" ColumnName="intCompanyCode" />
+          <ScalarProperty Name="intBranchCode" ColumnName="intBranchCode" />
+          <ScalarProperty Name="intRecordStatusCode" ColumnName="intRecordStatusCode" />
+          <ScalarProperty Name="intAlteredByCode" ColumnName="intAlteredByCode" />
+          <ScalarProperty Name="intCreatedByCode" ColumnName="intCreatedByCode" />
+          <ScalarProperty Name="intOwnerCode" ColumnName="intOwnerCode" />
+          <ScalarProperty Name="dtmLastM" ColumnName="dtmLastM" />
+          <ScalarProperty Name="dtmCreated" ColumnName="dtmCreated" />
+          <ScalarProperty Name="tmVersion" ColumnName="tmVersion" />
+          <ScalarProperty Name="intServiceCode" ColumnName="intServiceCode" />
+          <ScalarProperty Name="intConsultantCode" ColumnName="intConsultantCode" />
+          <ScalarProperty Name="intIPDAdmOrderCode" ColumnName="intIPDAdmOrderCode" />
+          <ScalarProperty Name="intIPDAdmServiceOrderCode" ColumnName="intIPDAdmServiceOrderCode" />
+        </MappingFragment>
+      </EntityTypeMapping>
+    </EntitySetMapping>
+    <EntitySetMapping Name="tblIPDAdmServiceInsts">
+      <EntityTypeMapping TypeName="dbAMCModel.tblIPDAdmServiceInst">
+        <MappingFragment StoreEntitySet="tblIPDAdmServiceInst">
+          <ScalarProperty Name="intCompanyCode" ColumnName="intCompanyCode" />
+          <ScalarProperty Name="intBranchCode" ColumnName="intBranchCode" />
+          <ScalarProperty Name="intRecordStatusCode" ColumnName="intRecordStatusCode" />
+          <ScalarProperty Name="intAlteredByCode" ColumnName="intAlteredByCode" />
+          <ScalarProperty Name="intCreatedByCode" ColumnName="intCreatedByCode" />
+          <ScalarProperty Name="intOwnerCode" ColumnName="intOwnerCode" />
+          <ScalarProperty Name="dtmLastM" ColumnName="dtmLastM" />
+          <ScalarProperty Name="dtmCreated" ColumnName="dtmCreated" />
+          <ScalarProperty Name="tmVersion" ColumnName="tmVersion" />
+          <ScalarProperty Name="strInstruction" ColumnName="strInstruction" />
+          <ScalarProperty Name="intServiceCode" ColumnName="intServiceCode" />
+          <ScalarProperty Name="intConsultantCode" ColumnName="intConsultantCode" />
+          <ScalarProperty Name="intIPDAdmOrderCode" ColumnName="intIPDAdmOrderCode" />
+          <ScalarProperty Name="intIPDAdmServiceInstCode" ColumnName="intIPDAdmServiceInstCode" />
+        </MappingFragment>
+      </EntityTypeMapping>
+    </EntitySetMapping>
+    <EntitySetMapping Name="tblERPatientVitals">
+      <EntityTypeMapping TypeName="dbAMCModel.tblERPatientVital">
+        <MappingFragment StoreEntitySet="tblERPatientVitals">
+          <ScalarProperty Name="intCompanyCode" ColumnName="intCompanyCode" />
+          <ScalarProperty Name="intBranchCode" ColumnName="intBranchCode" />
+          <ScalarProperty Name="intRecordStatusCode" ColumnName="intRecordStatusCode" />
+          <ScalarProperty Name="intAlteredByCode" ColumnName="intAlteredByCode" />
+          <ScalarProperty Name="intCreatedByCode" ColumnName="intCreatedByCode" />
+          <ScalarProperty Name="intOwnerCode" ColumnName="intOwnerCode" />
+          <ScalarProperty Name="dtmLastM" ColumnName="dtmLastM" />
+          <ScalarProperty Name="dtmCreated" ColumnName="dtmCreated" />
+          <ScalarProperty Name="tmVersion" ColumnName="tmVersion" />
+          <ScalarProperty Name="intConciousness" ColumnName="intConciousness" />
+          <ScalarProperty Name="intFallRisk" ColumnName="intFallRisk" />
+          <ScalarProperty Name="intPainScore" ColumnName="intPainScore" />
+          <ScalarProperty Name="numGlucoseR" ColumnName="numGlucoseR" />
+          <ScalarProperty Name="numGlucoseF" ColumnName="numGlucoseF" />
+          <ScalarProperty Name="strSPo2" ColumnName="strSPo2" />
+          <ScalarProperty Name="intSPO2" ColumnName="intSPO2" />
+          <ScalarProperty Name="intMetricBMI" ColumnName="intMetricBMI" />
+          <ScalarProperty Name="numWeight" ColumnName="numWeight" />
+          <ScalarProperty Name="intHeight" ColumnName="intHeight" />
+          <ScalarProperty Name="numTemp" ColumnName="numTemp" />
+          <ScalarProperty Name="intResp" ColumnName="intResp" />
+          <ScalarProperty Name="intBP2" ColumnName="intBP2" />
+          <ScalarProperty Name="intBP1" ColumnName="intBP1" />
+          <ScalarProperty Name="intPulse" ColumnName="intPulse" />
+          <ScalarProperty Name="intHeartRate" ColumnName="intHeartRate" />
+          <ScalarProperty Name="dtmVitals" ColumnName="dtmVitals" />
+          <ScalarProperty Name="intERPatientCode" ColumnName="intERPatientCode" />
+          <ScalarProperty Name="intERPatientVitalsCode" ColumnName="intERPatientVitalsCode" />
+        </MappingFragment>
+      </EntityTypeMapping>
+    </EntitySetMapping>
+    <EntitySetMapping Name="tblClinicalDocuments">
+      <EntityTypeMapping TypeName="dbAMCModel.tblClinicalDocument">
+        <MappingFragment StoreEntitySet="tblClinicalDocument">
+          <ScalarProperty Name="intCompanyCode" ColumnName="intCompanyCode" />
+          <ScalarProperty Name="intBranchCode" ColumnName="intBranchCode" />
+          <ScalarProperty Name="intRecordStatusCode" ColumnName="intRecordStatusCode" />
+          <ScalarProperty Name="intAlteredByCode" ColumnName="intAlteredByCode" />
+          <ScalarProperty Name="intCreatedByCode" ColumnName="intCreatedByCode" />
+          <ScalarProperty Name="intOwnerCode" ColumnName="intOwnerCode" />
+          <ScalarProperty Name="dtmLastM" ColumnName="dtmLastM" />
+          <ScalarProperty Name="dtmCreated" ColumnName="dtmCreated" />
+          <ScalarProperty Name="tmVersion" ColumnName="tmVersion" />
+          <ScalarProperty Name="bolIsFinal" ColumnName="bolIsFinal" />
+          <ScalarProperty Name="vbrDocument" ColumnName="vbrDocument" />
+          <ScalarProperty Name="strDocumentExtension" ColumnName="strDocumentExtension" />
+          <ScalarProperty Name="strDocumentName" ColumnName="strDocumentName" />
+          <ScalarProperty Name="intPatientCode" ColumnName="intPatientCode" />
+          <ScalarProperty Name="intERAdmissionCode" ColumnName="intERAdmissionCode" />
+          <ScalarProperty Name="intIPDAdmissionCode" ColumnName="intIPDAdmissionCode" />
+          <ScalarProperty Name="intFileTypeCode" ColumnName="intFileTypeCode" />
+          <ScalarProperty Name="intClinicalDocumentTemplateCode" ColumnName="intClinicalDocumentTemplateCode" />
+          <ScalarProperty Name="intClinicalDocumentID" ColumnName="intClinicalDocumentID" />
+          <ScalarProperty Name="dtmClinicalDocument" ColumnName="dtmClinicalDocument" />
+          <ScalarProperty Name="intClinicalDocumentCode" ColumnName="intClinicalDocumentCode" />
         </MappingFragment>
       </EntityTypeMapping>
     </EntitySetMapping>

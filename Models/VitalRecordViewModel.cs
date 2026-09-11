@@ -18,6 +18,8 @@ namespace ERPaperless.Models
         public int? MetricBMI { get; set; }
         public int? Spo2 { get; set; }
         public string Spo2Remark { get; set; }
+        /// <summary>Selected SPO2 LOV key (ERLovType.SPo2). Saved as description text in strSPo2.</summary>
+        public int? Spo2Code { get; set; }
         public decimal? GlucoseF { get; set; }
         public decimal? GlucoseR { get; set; }
         public decimal? Temperature { get; set; }

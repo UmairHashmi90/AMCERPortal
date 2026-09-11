@@ -51,7 +51,7 @@
             </div>
         </div>
         <div class="mt-2">
-            <h6 class="text-muted text-uppercase small mb-2">Surgical</h6>
+            <h6 class="text-muted text-uppercase small mb-2">Past Surgical</h6>
             <textarea id="PastSurgicalHistory" class="form-control" rows="2"
                       placeholder="@(canEdit ? "Enter past surgical procedures..." : "-")"
                       @(canEdit ? "" : "disabled=\"disabled\"")>@(rf.PastSurgicalHistory ?? "")</textarea>

@@ -21,6 +21,7 @@ namespace ERPaperless.Models
         public IEnumerable<ERLovOptionViewModel> PastHistories { get; set; }
         public IEnumerable<ERLovOptionViewModel> GcsOptions { get; set; }
         public IEnumerable<ERLovOptionViewModel> ConsciousnessOptions { get; set; }
+        public IEnumerable<ERLovOptionViewModel> Spo2Options { get; set; }
         public IEnumerable<ERLovOptionViewModel> PlanterOptions { get; set; }
         public IEnumerable<ERLovOptionViewModel> CvsOptions { get; set; }
         public IEnumerable<ERLovOptionViewModel> RespiratoryOptions { get; set; }

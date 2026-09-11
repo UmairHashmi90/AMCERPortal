@@ -20,15 +20,17 @@ namespace ERPaperless.Controllers
             _reportsPortalService = reportsPortalService ?? new ReportsPortalService();
         }
 
-        public ActionResult Index(int admissionCode)
+        public ActionResult Index(int admissionCode, string returnTo = null)
         {
+            ApplyReturnContext(returnTo);
             if (IsReportsAccessBlocked())
                 return ReportsAccessDenied();
             return PatientModuleView(admissionCode, "reports", "Reports");
         }
 
-        public ActionResult Prescription(int admissionCode)
+        public ActionResult Prescription(int admissionCode, string returnTo = null)
         {
+            ApplyReturnContext(returnTo);
             if (IsReportsAccessBlocked())
                 return ReportsAccessDenied();
             return PatientModuleView(admissionCode, "prescription", "Prescription");
@@ -117,13 +119,9 @@ namespace ERPaperless.Controllers
 
         private bool IsReportsAccessBlocked()
         {
-            var isNursingOnly = CurrentUserRole.Nursing
-                && !CurrentUserRole.MO
-                && !CurrentUserRole.Pharmacy
-                && !CurrentUserRole.Billing;
-            return CurrentUserRole.IsBillingOnly
-                || CurrentUserRole.IsPharmacyOnly
-                || isNursingOnly;
+            if (CurrentUserRole.MO || CurrentUserRole.Nursing)
+                return false;
+            return CurrentUserRole.IsBillingOnly || CurrentUserRole.IsPharmacyOnly;
         }
 
         private ActionResult ReportsAccessDenied()

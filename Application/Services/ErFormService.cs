@@ -271,6 +271,9 @@ namespace ERPaperless.Application.Services
         {
             if (string.IsNullOrWhiteSpace(patientId)) return null;
 
+            // Always reload LOVs when opening/refreshing ER Form so DB label changes show immediately.
+            ERLovRepository.ClearCache();
+
             var erPatient = ERPatientRepository.ResolveActivePatient(patientId, companyCode, userCode);
             if (erPatient == null) return null;
 
@@ -326,6 +329,7 @@ namespace ERPaperless.Application.Services
                 PastHistories = GetLovOptions(ERLovType.PastHistory),
                 GcsOptions = GetLovOptions(ERLovType.GcsScore),
                 ConsciousnessOptions = GetLovOptions(ERLovType.Conciousness),
+                Spo2Options = GetLovOptions(ERLovType.SPo2),
                 PlanterOptions = GetLovOptions(ERLovType.Planters),
                 CvsOptions = GetLovOptions(ERLovType.Cvs),
                 RespiratoryOptions = GetLovOptions(ERLovType.Respiratory),

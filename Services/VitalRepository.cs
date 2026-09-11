@@ -85,6 +85,7 @@ namespace ERPaperless.Services
                         numWeight          = record.Weight,
                         intMetricBMI       = record.MetricBMI,
                         intSPO2            = record.Spo2,
+                        strSPo2            = ResolveSpo2LovText(record.Spo2Code),
                         numGlucoseF        = record.GlucoseF,
                         numGlucoseR        = record.GlucoseR,
                         intFallRisk        = record.FallRisk,
@@ -102,7 +103,6 @@ namespace ERPaperless.Services
                     if (db.SaveChanges() <= 0)
                         return false;
 
-                    TrySaveSpo2Remark(entity.intERPatientVitalsCode, target.CompanyCode, record.Spo2Remark);
                     return true;
                 }
             }
@@ -171,7 +171,7 @@ namespace ERPaperless.Services
 
             try
             {
-                var patient = ERPatientRepository.GetByCode(erPatientCode, companyCode);
+                var patient = ERPatientRepository.GetByCode(erPatientCode, companyCode, includeDischarged: true);
                 if (patient == null) return VitalTarget.Invalid;
 
                 return new VitalTarget
@@ -239,35 +239,22 @@ namespace ERPaperless.Services
             };
         }
 
-        private static void TrySaveSpo2Remark(long vitalId, int companyCode, string remark)
+        private static string ResolveSpo2LovText(int? spo2Code)
         {
-            if (vitalId <= 0 || companyCode <= 0)
-                return;
-
-            var value = string.IsNullOrWhiteSpace(remark) ? null : remark.Trim();
-            if (value != null && value.Length > 100)
-                value = value.Substring(0, 100);
+            if (!spo2Code.HasValue || spo2Code.Value <= 0)
+                return null;
 
             try
             {
-                using (var conn = DBHelper.GetConnection())
-                using (var cmd = new SqlCommand(@"
-UPDATE tblERPatientVitals
-SET strSPO2Remark = @remark
-WHERE intERPatientVitalsCode = @vitalId
-  AND intCompanyCode = @companyCode", conn))
-                {
-                    cmd.Parameters.Add("@remark", SqlDbType.NVarChar, 100).Value = (object)value ?? DBNull.Value;
-                    cmd.Parameters.Add("@vitalId", SqlDbType.BigInt).Value = vitalId;
-                    cmd.Parameters.Add("@companyCode", SqlDbType.Int).Value = companyCode;
-                    conn.Open();
-                    cmd.ExecuteNonQuery();
-                }
+                var match = ERLovRepository.GetByType(ERLovType.SPo2)
+                    .FirstOrDefault(x => x != null && x.LovCode == spo2Code.Value);
+                var text = match?.Description?.Trim();
+                return string.IsNullOrWhiteSpace(text) ? null : text;
             }
             catch (Exception ex)
             {
-                // Column may not exist yet — vitals still save without remark.
-                ErrorLogging.Log(nameof(VitalRepository), nameof(TrySaveSpo2Remark), ex);
+                ErrorLogging.Log(nameof(VitalRepository), nameof(ResolveSpo2LovText), ex);
+                return null;
             }
         }
 
@@ -287,7 +274,7 @@ WHERE intERPatientVitalsCode = @vitalId
 
                 var idList = string.Join(",", ids);
                 var sqlWithRemark = @"
-SELECT intERPatientVitalsCode, intMetricBMI, intSPO2, intFallRisk, intPainScore, intConciousness, strSPO2Remark
+SELECT intERPatientVitalsCode, intMetricBMI, intSPO2, intFallRisk, intPainScore, intConciousness, strSPo2
 FROM tblERPatientVitals
 WHERE intCompanyCode = @companyCode
   AND intERPatientVitalsCode IN (" + idList + ")";
@@ -321,7 +308,7 @@ WHERE intCompanyCode = @companyCode
             }
             catch (Exception ex)
             {
-                // strSPO2Remark may be missing — ignore enrichment failure.
+                // strSPo2 may be missing — ignore enrichment failure.
                 ErrorLogging.Log(nameof(VitalRepository), nameof(AttachExtraVitalFields), ex);
             }
         }

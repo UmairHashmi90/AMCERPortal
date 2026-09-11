@@ -27,7 +27,7 @@ namespace ERPaperless.Services
                               && o.intBranchCode == branchCode
                               && o.intRecordStatusCode == 1
                               && (o.intPackageTypeCode == 1 || o.intPackageTypeCode == 2)
-                              && p.intRecordStatusCode == 1
+                              && (p.intRecordStatusCode == 1 || p.intRecordStatusCode == 2)
                               && (p.bolIsDischarge != true)
                         orderby o.bolIsAcknowledged,
                             o.bolDiscontinue,
@@ -121,7 +121,7 @@ namespace ERPaperless.Services
                         where i.intCompanyCode == companyCode
                               && i.intBranchCode == branchCode
                               && i.intRecordStatusCode == 1
-                              && p.intRecordStatusCode == 1
+                              && (p.intRecordStatusCode == 1 || p.intRecordStatusCode == 2)
                               && (p.bolIsDischarge != true)
                         orderby i.bolIsAcknowledged,
                             i.bolIsCancelled,

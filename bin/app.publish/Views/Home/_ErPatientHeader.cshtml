@@ -1,103 +1,116 @@
 @model ERPaperless.Models.ErFormViewModel
 @*
-    Patient Details panel (left) + Vital Metric Cards (right).
-    Data comes from the parent ErFormViewModel.
+    Row 1: Patient Details (left) + compact Triage (right)
+    Row 2: Latest vital metric cards in one line
 *@
-<div class="patient-top-layout">
+<div class="patient-top-stack">
 
-    @* left: patient info *@
-    <section class="panel-card patient-top-left patient-details-compact">
-        <h3>Patient Details</h3>
-        <div class="detail-grid patient-detail-grid">
-            <div class="detail-item">
-                <span class="detail-label">Patient Name</span>
-                <span class="detail-value">@Model.PatientName</span>
+    <div class="patient-top-layout">
+        @* left: patient info *@
+        <section class="panel-card patient-top-left patient-details-compact">
+            <h3>Patient Details</h3>
+            <div class="detail-grid patient-detail-grid">
+                <div class="detail-item">
+                    <span class="detail-label">Patient Name</span>
+                    <span class="detail-value">@(string.IsNullOrWhiteSpace(Model.PatientName) ? "-" : Model.PatientName)</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">MR Number</span>
+                    <span class="detail-value">@(string.IsNullOrWhiteSpace(Model.MrNo) ? "PENDING" : Model.MrNo)</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Admission No</span>
+                    <span class="detail-value">@(string.IsNullOrWhiteSpace(Model.AdmissionNo) ? "-" : Model.AdmissionNo)</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Bed / Chair</span>
+                    <span class="detail-value">@(string.IsNullOrWhiteSpace(Model.BedNo) ? "-" : Model.BedNo)</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Age / Gender</span>
+                    <span class="detail-value">@(string.IsNullOrWhiteSpace(Model.AgeGender) ? "-" : Model.AgeGender)</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Admission Date</span>
+                    <span class="detail-value">@Model.AdmissionDate.ToString("dd/MM/yyyy HH:mm")</span>
+                </div>
             </div>
-            <div class="detail-item">
-                <span class="detail-label">MR Number</span>
-                <span class="detail-value">@Model.MrNo</span>
-            </div>
-            <div class="detail-item">
-                <span class="detail-label">Admission No</span>
-                <span class="detail-value">@Model.AdmissionNo</span>
-            </div>
-            <div class="detail-item">
-                <span class="detail-label">Bed / Chair</span>
-                <span class="detail-value">@Model.BedNo</span>
-            </div>
-            <div class="detail-item">
-                <span class="detail-label">Age / Gender</span>
-                <span class="detail-value">@Model.AgeGender</span>
-            </div>
-            <div class="detail-item">
-                <span class="detail-label">Admission Date</span>
-                <span class="detail-value">@Model.AdmissionDate.ToString("dd/MM/yyyy HH:mm")</span>
-            </div>
+        </section>
+
+        @* right: compact triage (replaces previous vitals slot) *@
+        <div class="patient-top-right triage-top-slot">
+            @Html.Partial("~/Views/Home/_ErTriageColor.cshtml", Model)
         </div>
-    </section>
+    </div>
 
-    @* right: latest-vital metric cards with sparkline hooks *@
-    <section class="vitals-cards-wrap vitals-cards-compact">
+    @* next line: latest-vital metric cards in one row *@
+    <section class="vitals-cards-wrap vitals-cards-compact vitals-cards-row">
         <div class="vitals-recorded-label">
             Recorded: <span id="latestRecorded">@Model.LatestVital.RecordedOn.ToString("dd/MM/yyyy HH:mm")</span>
         </div>
         <div class="vitals-cards-grid">
-        <article class="vital-metric-card vital-accent-blue">
-            <p>Heart Rate</p>
-            <h4 id="latestHeart">@Model.LatestVital.HeartRate</h4>
-            <svg class="vital-sparkline" data-metric="heart"
-                 viewBox="0 0 100 28" preserveAspectRatio="none"></svg>
-        </article>
-        <article class="vital-metric-card vital-accent-purple">
-            <p>Pulse</p>
-            <h4 id="latestPulse">@Model.LatestVital.Pulse</h4>
-            <svg class="vital-sparkline" data-metric="pulse"
-                 viewBox="0 0 100 28" preserveAspectRatio="none"></svg>
-        </article>
-        <article class="vital-metric-card vital-accent-orange">
-            <p>Resp</p>
-            <h4 id="latestRr">@Model.LatestVital.RespiratoryRate</h4>
-            <svg class="vital-sparkline" data-metric="rr"
-                 viewBox="0 0 100 28" preserveAspectRatio="none"></svg>
-        </article>
-        <article class="vital-metric-card vital-accent-red">
-            <p>BP</p>
-            <h4 id="latestBp">@Model.LatestVital.BloodPressure</h4>
-            <svg class="vital-sparkline" data-metric="bpSystolic"
-                 viewBox="0 0 100 28" preserveAspectRatio="none"></svg>
-        </article>
-        <article class="vital-metric-card vital-accent-teal">
-            <p>SPO2</p>
-            <h4 id="latestSpo2">@Model.LatestVital.Spo2%</h4>
-            <svg class="vital-sparkline" data-metric="spo2"
-                 viewBox="0 0 100 28" preserveAspectRatio="none"></svg>
-        </article>
-        <article class="vital-metric-card vital-accent-cyan">
-            <p>Temp</p>
-            <h4 id="latestTemp">@Model.LatestVital.Temperature</h4>
-            <svg class="vital-sparkline" data-metric="temp"
-                 viewBox="0 0 100 28" preserveAspectRatio="none"></svg>
-        </article>
-        <article class="vital-metric-card vital-accent-pink">
-            <p>Glucose R</p>
-            <h4 id="latestGlucoseR">@Model.LatestVital.GlucoseR</h4>
-            <svg class="vital-sparkline" data-metric="glucose-r"
-                 viewBox="0 0 100 28" preserveAspectRatio="none"></svg>
-        </article>
-        <article class="vital-metric-card vital-accent-green">
-            <p>BMI</p>
-            <h4 id="latestBmi">@Model.LatestVital.MetricBMI</h4>
-            <svg class="vital-sparkline" data-metric="bmi"
-                 viewBox="0 0 100 28" preserveAspectRatio="none"></svg>
-        </article>
-        <article class="vital-metric-card vital-accent-blue">
-            <p>Fall Risk</p>
-            <h4 id="latestFallRisk">@Model.LatestVital.FallRisk</h4>
-        </article>
-        <article class="vital-metric-card vital-accent-purple">
-            <p>Pain Score</p>
-            <h4 id="latestPainScore">@Model.LatestVital.PainScore</h4>
-        </article>
+            <article class="vital-metric-card vital-accent-blue">
+                <p>Heart Rate</p>
+                <h4 id="latestHeart">@(Model.LatestVital.HeartRate ?? Model.LatestVital.Pulse)</h4>
+                <svg class="vital-sparkline" data-metric="heart"
+                     viewBox="0 0 100 28" preserveAspectRatio="none"></svg>
+            </article>
+            <article class="vital-metric-card vital-accent-orange">
+                <p>Resp</p>
+                <h4 id="latestRr">@Model.LatestVital.RespiratoryRate</h4>
+                <svg class="vital-sparkline" data-metric="rr"
+                     viewBox="0 0 100 28" preserveAspectRatio="none"></svg>
+            </article>
+            <article class="vital-metric-card vital-accent-red">
+                <p>BP</p>
+                <h4 id="latestBp">@Model.LatestVital.BloodPressure</h4>
+                <svg class="vital-sparkline" data-metric="bpSystolic"
+                     viewBox="0 0 100 28" preserveAspectRatio="none"></svg>
+            </article>
+            <article class="vital-metric-card vital-accent-teal">
+                <p>SPO2</p>
+                <h4 id="latestSpo2">@Model.LatestVital.Spo2%</h4>
+                @if (!string.IsNullOrWhiteSpace(Model.LatestVital.Spo2Remark))
+                {
+                    <small class="text-muted" id="latestSpo2Remark">@Model.LatestVital.Spo2Remark</small>
+                }
+                else
+                {
+                    <small class="text-muted d-none" id="latestSpo2Remark"></small>
+                }
+                <svg class="vital-sparkline" data-metric="spo2"
+                     viewBox="0 0 100 28" preserveAspectRatio="none"></svg>
+            </article>
+            <article class="vital-metric-card vital-accent-cyan">
+                <p>Temp</p>
+                <h4 id="latestTemp">@Model.LatestVital.Temperature</h4>
+                <svg class="vital-sparkline" data-metric="temp"
+                     viewBox="0 0 100 28" preserveAspectRatio="none"></svg>
+            </article>
+            <article class="vital-metric-card vital-accent-pink">
+                <p>Glucose R</p>
+                <h4 id="latestGlucoseR">@Model.LatestVital.GlucoseR</h4>
+                <svg class="vital-sparkline" data-metric="glucose-r"
+                     viewBox="0 0 100 28" preserveAspectRatio="none"></svg>
+            </article>
+            <article class="vital-metric-card vital-accent-green">
+                <p>BMI</p>
+                <h4 id="latestBmi">@Model.LatestVital.MetricBMI</h4>
+                <svg class="vital-sparkline" data-metric="bmi"
+                     viewBox="0 0 100 28" preserveAspectRatio="none"></svg>
+            </article>
+            <article class="vital-metric-card vital-accent-blue">
+                <p>Fall Risk</p>
+                <h4 id="latestFallRisk">@Model.LatestVital.FallRisk</h4>
+            </article>
+            <article class="vital-metric-card vital-accent-purple">
+                <p>Pain Score</p>
+                <h4 id="latestPainScore">@Model.LatestVital.PainScore</h4>
+            </article>
+            <article class="vital-metric-card vital-accent-teal">
+                <p>Consciousness</p>
+                <h4 id="latestConsciousness">@(Model.LatestVital.ConsciousnessText ?? "")</h4>
+            </article>
         </div>
     </section>
 

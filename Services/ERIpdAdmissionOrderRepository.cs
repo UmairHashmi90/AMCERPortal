@@ -36,6 +36,12 @@ namespace ERPaperless.Services
             {
                 using (var db = dbAMCEntities.Create())
                 {
+                    var erPatient = db.tblERPatients
+                        .FirstOrDefault(x => x.intERPatientCode == target.ERPatientCode
+                                             && x.intCompanyCode == companyCode);
+                    if (erPatient != null)
+                        state.Hopi = erPatient.strHOPI;
+
                     var header = QueryOrders(db, target, companyCode, activeOnly: true)
                         .OrderByDescending(x => x.intIPDAdmOrderCode)
                         .FirstOrDefault();
@@ -205,11 +211,34 @@ namespace ERPaperless.Services
                     if (header.dtAdmissionRequest == default(DateTime))
                         header.dtAdmissionRequest = now;
 
+                    var erPatient = db.tblERPatients
+                        .FirstOrDefault(x => x.intERPatientCode == target.ERPatientCode
+                                             && x.intCompanyCode == companyCode);
+                    if (erPatient != null)
+                    {
+                        var hopi = NullIfWhiteSpace(input.Hopi);
+                        if (hopi != null && hopi.Length > 500)
+                            hopi = hopi.Substring(0, 500);
+                        erPatient.strHOPI = hopi;
+                        erPatient.dtmLastM = now;
+                        erPatient.intAlteredByCode = userCode;
+                    }
+
                     db.SaveChanges();
 
                     SyncMedicines(db, header, input.Medicines, target, userCode, now);
                     SyncInvestigations(db, header, input.Investigations, target, userCode, now);
                     SyncRoutineServices(db, header, input.RoutineServices, target, userCode, now);
+
+                    // Keep Outcome radio on Admitted/Admission — do not leave/revert to Discharge.
+                    EROutcomeFormRepository.SyncReviewFormOutcomeCode(
+                        db,
+                        target.ERPatientCode,
+                        target.BranchCode,
+                        companyCode,
+                        "admission",
+                        userCode,
+                        now);
 
                     db.SaveChanges();
                     tx.Commit();
@@ -714,7 +743,7 @@ namespace ERPaperless.Services
             if (!long.TryParse(patientId.Trim(), out erPatientCode) || erPatientCode <= 0)
                 return OrderTarget.Invalid;
 
-            var erPatient = ERPatientRepository.GetByCode(erPatientCode, companyCode);
+            var erPatient = ERPatientRepository.GetByCode(erPatientCode, companyCode, includeDischarged: true);
             if (erPatient == null)
                 return OrderTarget.Invalid;
 
@@ -784,7 +813,7 @@ WHERE intERAdmissionCode = @admissionCode
         {
             try
             {
-                var er = ERPatientRepository.GetByCode(target.ERPatientCode, companyCode);
+                var er = ERPatientRepository.GetByCode(target.ERPatientCode, companyCode, includeDischarged: true);
                 if (er != null && !string.IsNullOrWhiteSpace(er.strName))
                     return er.strName.Trim();
             }

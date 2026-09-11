@@ -14,6 +14,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Web;
 using System.Web.Hosting;
+using System.Web.UI.WebControls;
 using static DevExpress.XtraPrinting.Native.ExportOptionsPropertiesNames;
 
 namespace ERPaperless.Services
@@ -180,12 +181,12 @@ ORDER BY pod2.intPatientOrderDetailCode DESC;";
                 if ((Int32)TypeCode == 1)
                 {
                     //streamBytes = await  PDFReport("rptSimpleTabular", ".rdlc", "procRptLabSimpleReport", "tblPatientOrderDetailStatus.intSampleNo=" + SampleNo);
-                    streamBytes = await  PDFReport("rptSimpleTabular", ".rdlc", "procRptLabSimpleReport", "tblPatientOrderDetail.intPatientOrderDetailCode=" + Code);
+                    streamBytes = await PDFReport("rptSimpleTabular", ".rdlc", "procRptLabSimpleReport", "tblPatientOrderDetail.intPatientOrderDetailCode=" + Code);
                 }
                 else if ((Int32)TypeCode == 2)
                 {
                     //streamBytes = await  PDFReport("rptMicrobiology", ".rdlc", "procRptLabMicrobiologyReport", "tblPatientOrderDetailStatus.intSampleNo=" + SampleNo);
-                    streamBytes = await  PDFReport("rptMicrobiology", ".rdlc", "procRptLabMicrobiologyReport", "tblPatientOrderDetail.intPatientOrderDetailCode=" + Code);
+                    streamBytes = await PDFReport("rptMicrobiology", ".rdlc", "procRptLabMicrobiologyReport", "tblPatientOrderDetail.intPatientOrderDetailCode=" + Code);
 
                 }
                 else if ((Int32)TypeCode == 3)
@@ -201,7 +202,7 @@ ORDER BY pod2.intPatientOrderDetailCode DESC;";
                 }
                 else if ((Int32)TypeCode == 4)
                 {
-                    streamBytes = await  PDFReport("rptMicrobiologyCulture", ".rdlc", "procRptLabMicrobiologyReport", "tblLabTestResult.intPatientOrderDetailCode=" + Code);
+                    streamBytes = await PDFReport("rptMicrobiologyCulture", ".rdlc", "procRptLabMicrobiologyReport", "tblLabTestResult.intPatientOrderDetailCode=" + Code);
 
 
                 }
@@ -209,11 +210,11 @@ ORDER BY pod2.intPatientOrderDetailCode DESC;";
                 {
                     if (strPNRNo.Length > 0)
                     {
-                        streamBytes = await  PDFReport("rptSimpleTabularPCRWithQR", ".rdlc", "procRptLabSimpleReportPCRQR", "tblPatientOrderDetail.intPatientOrderDetailCode=" + Code);
+                        streamBytes = await PDFReport("rptSimpleTabularPCRWithQR", ".rdlc", "procRptLabSimpleReportPCRQR", "tblPatientOrderDetail.intPatientOrderDetailCode=" + Code);
                     }
                     else
                     {
-                        streamBytes = await  PDFReport("rptSimpleTabularPCR", ".rdlc", "procRptLabSimpleReportPCR", "tblPatientOrderDetail.intPatientOrderDetailCode=" + +Code);
+                        streamBytes = await PDFReport("rptSimpleTabularPCR", ".rdlc", "procRptLabSimpleReportPCR", "tblPatientOrderDetail.intPatientOrderDetailCode=" + +Code);
                     }
 
                 }
@@ -360,6 +361,101 @@ ORDER BY pod2.intPatientOrderDetailCode DESC;";
                 }
             }
         }
+        public static DataTable GetIPDAdmServiceOrder(Nullable<long> intIPDAdmOrderCode, Nullable<int> intCompanyCode, Nullable<int> intBarachCode)
+        {
+            DataTable dtblData = new DataTable();
+            try
+            {
+
+                string sprocname = "procGrdIPDAdmServiceOrderForMobileAPI";
+                string jsonOutputParam = "@json";
+
+                using (SqlConnection conn = new SqlConnection(DBManager.strConnection))
+                {
+                    conn.Open();
+
+                    using (SqlCommand cmd = new SqlCommand(sprocname, conn))
+                    {
+                        cmd.CommandType = System.Data.CommandType.StoredProcedure;
+                        var intIPDAdmOrderCodeParameter = intIPDAdmOrderCode.HasValue ?
+                            new SqlParameter("intIPDAdmOrderCode", intIPDAdmOrderCode) :
+                             new SqlParameter("intIPDAdmOrderCode", typeof(long));
+
+                        var intBranchCodeParameter = intBarachCode.HasValue ?
+                            new SqlParameter("intBranchCode", intBarachCode) :
+                            new SqlParameter("intBranchCode", typeof(int));
+
+                        var intCompanyCodeParameter = intCompanyCode.HasValue ?
+                            new SqlParameter("intCompanyCode", intCompanyCode) :
+                            new SqlParameter("intCompanyCode", typeof(int));
+
+                        cmd.Parameters.Add(intIPDAdmOrderCodeParameter);
+                        cmd.Parameters.Add(intBranchCodeParameter);
+                        cmd.Parameters.Add(intCompanyCodeParameter);
+
+                        using (SqlDataAdapter objDA = new SqlDataAdapter(cmd))
+                        {
+                            objDA.Fill(dtblData);
+                            return dtblData;
+                        }
+                    }
+
+                }
+            }
+            catch (Exception ex)
+            {
+                ErrorLogging.Log(ex);
+                throw;
+            }
+        }
+        public static DataTable GetMedicationOrder(Nullable<long> intIPDAdmOrderCode, Nullable<int> intCompanyCode, Nullable<int> intBarachCode)
+        {
+            DataTable dtblData = new DataTable();
+            try
+            {
+
+                string sprocname = "procGrdMedOrderForMobileAPI";
+                string jsonOutputParam = "@json";
+
+                using (SqlConnection conn = new SqlConnection(DBManager.strConnection))
+                {
+                    conn.Open();
+
+                    using (SqlCommand cmd = new SqlCommand(sprocname, conn))
+                    {
+                        cmd.CommandType = System.Data.CommandType.StoredProcedure;
+                        var intIPDAdmOrderCodeParameter = intIPDAdmOrderCode.HasValue ?
+                            new SqlParameter("intIPDAdmOrderCode", intIPDAdmOrderCode) :
+                             new SqlParameter("intIPDAdmOrderCode", typeof(long));
+
+                        var intBranchCodeParameter = intBarachCode.HasValue ?
+                            new SqlParameter("intBranchCode", intBarachCode) :
+                            new SqlParameter("intBranchCode", typeof(int));
+
+                        var intCompanyCodeParameter = intCompanyCode.HasValue ?
+                            new SqlParameter("intCompanyCode", intCompanyCode) :
+                            new SqlParameter("intCompanyCode", typeof(int));
+
+                        cmd.Parameters.Add(intIPDAdmOrderCodeParameter);
+                        cmd.Parameters.Add(intBranchCodeParameter);
+                        cmd.Parameters.Add(intCompanyCodeParameter);
+
+                        using (SqlDataAdapter objDA = new SqlDataAdapter(cmd))
+                        {
+                            objDA.Fill(dtblData);
+                            return dtblData;
+                        }
+                    }
+
+                }
+            }
+            catch (Exception ex)
+            {
+                ErrorLogging.Log(ex);
+                throw;
+            }
+        }
+
         public async static Task<DataTable> GetPatientOrderDetailStatus(Nullable<long> intPatientOrderDetailCode, Nullable<int> intCompanyCode)
         {
             DataTable dtblData = new DataTable();
@@ -451,13 +547,13 @@ ORDER BY pod2.intPatientOrderDetailCode DESC;";
             try
             {
                 List<ReportParameter> rptParamList = await GetReportParameters();
-                
+
                 DataTable dtblReportData = await GetReportData(strReportName, strProcName, null, null, null, null, null, "", "", 1, 1, strWhereClass);
                 if (dtblReportData.Rows.Count > 0)
                 {
                     ReportViewer rptViewer = new Microsoft.Reporting.WebForms.ReportViewer();
                     rptViewer.LocalReport.ReportPath = HttpContext.Current.Request.PhysicalApplicationPath + strReportName + strReportType;
-                    rptViewer.LocalReport.DisplayName = "Online Report";
+                    rptViewer.LocalReport.DisplayName = GetOutcomePdfTitle(strReportName) ?? "Online Report";
                     rptViewer.LocalReport.ReportEmbeddedResource = strReportName + strReportType;
                     rptViewer.LocalReport.EnableExternalImages = true;
                     rptViewer.LocalReport.SubreportProcessing += LocalReport_SubreportProcessing;
@@ -497,6 +593,19 @@ ORDER BY pod2.intPatientOrderDetailCode DESC;";
                         datasource2 = new ReportDataSource("dsMedication", dtblMedication);
                         rptViewer.LocalReport.DataSources.Add(datasource2);
                     }
+                    if (strReportName == "rptIPDAdmOrder")
+                    {
+                        string result = strWhereClass.Split('=')[1];
+                        Int64.TryParse(result, out Int64 AdmCode);
+                        DataTable dttblMedicationData = ReportManager.GetMedicationOrder(AdmCode, 1, 1);
+                        DataTable dttblServicesData = ReportManager.GetIPDAdmServiceOrder(AdmCode, 1, 1);
+                        ReportDataSource medDataSource = new ReportDataSource("dsMedication", dttblMedicationData);
+                        ReportDataSource serDataSource = new ReportDataSource("dsServices", dttblServicesData);
+                        rptViewer.LocalReport.DataSources.Add(medDataSource);
+                        rptViewer.LocalReport.DataSources.Add(serDataSource);
+                    }
+
+
                     ReportParameterInfoCollection rpc = rptViewer.LocalReport.GetParameters();
                     Boolean bolIsfound = false;
                     List<ReportParameter> RptParamListFinal = new List<ReportParameter>();
@@ -527,6 +636,9 @@ ORDER BY pod2.intPatientOrderDetailCode DESC;";
                     string[] streamids = null;
                     Warning[] warnings = null;
                     streamBytes = rptViewer.LocalReport.Render("PDF", null, out mimeType, out encoding, out filenameExtension, out streamids, out warnings);
+                    var pdfTitle = GetOutcomePdfTitle(strReportName);
+                    if (!string.IsNullOrEmpty(pdfTitle))
+                        streamBytes = ApplyPdfTitle(streamBytes, pdfTitle);
 
                 }
                 return streamBytes;
@@ -537,6 +649,45 @@ ORDER BY pod2.intPatientOrderDetailCode DESC;";
                 return streamBytes;
             }
         }
+
+        private static string GetOutcomePdfTitle(string reportName)
+        {
+            switch (reportName)
+            {
+                case "rptIPDAdmOrder": return "Admission Order";
+                case "rptERDischargeSummary": return "Discharge Summary";
+                case "rptERDeathCertificate": return "Death Certificate";
+                case "rptERLAMA": return "LAMA";
+                case "rptERPatientReferral": return "Patient Referral";
+                default: return null;
+            }
+        }
+
+        private static byte[] ApplyPdfTitle(byte[] pdfBytes, string title)
+        {
+            if (pdfBytes == null || pdfBytes.Length == 0 || string.IsNullOrWhiteSpace(title))
+                return pdfBytes;
+
+            try
+            {
+                using (var reader = new PdfReader(pdfBytes))
+                using (var output = new MemoryStream())
+                {
+                    using (var stamper = new PdfStamper(reader, output))
+                    {
+                        var info = reader.Info ?? new System.Collections.Hashtable();
+                        info["Title"] = title;
+                        stamper.MoreInfo = info;
+                    }
+                    return output.ToArray();
+                }
+            }
+            catch (Exception ex)
+            {
+                ErrorLogging.Log("PatientPortal.Logic.DAL", "ReportManager.ApplyPdfTitle", ex);
+                return pdfBytes;
+            }
+        }
         private static async void LocalReport_SubreportProcessing(object sender, SubreportProcessingEventArgs e)
         {
             try
@@ -544,7 +695,7 @@ ORDER BY pod2.intPatientOrderDetailCode DESC;";
                 String strPar = Convert.ToString(e.Parameters[0].Values[0]);
                 if (e.ReportPath == "rptMicrobiologyOrgnasim")
                     e.DataSources.Add(new ReportDataSource("dsReport", GetSubReportDataForMicrobiologyOrganism(strPar)));
-             
+
             }
             catch (Exception ex)
             {
@@ -570,7 +721,7 @@ ORDER BY pod2.intPatientOrderDetailCode DESC;";
                         objCommand.Parameters.AddWithValue("@intERAdmissionCode", admissionCode);
                         objCommand.Parameters.AddWithValue("@intBranchCode", 1);
                         objCommand.Parameters.AddWithValue("@intCompanyCode", 1);
-                        
+
                         using (SqlDataAdapter objDA = new SqlDataAdapter(objCommand))
                         {
                             await Task.Run(() => objDA.Fill(dtblData)); // Use Task.Run for synchronous Fill method
@@ -693,11 +844,32 @@ ORDER BY pod2.intPatientOrderDetailCode DESC;";
             }
             catch (Exception ex)
             {
-                ErrorLogging.Log("PatientPortal.Logic.DAL", "ReportManager.GetReportBytes", ex);
+                ErrorLogging.Log("PatientPortal.Logic.DAL", "ReportManager.GetDeathCertificateBytes", ex);
                 return streamBytes;
             }
 
         }
+        public async static Task<byte[]> GetAdmissionOrderBytes(string strCode)
+
+        {
+            byte[] streamBytes = null;
+            try
+            {
+                long Code;
+                if (!TryResolveReportCode(strCode, out Code) || Code <= 0)
+                    return null;
+                streamBytes = await PDFReport("rptIPDAdmOrder", ".rdlc", "procRptIPDAdmOrder", $"tblIPDAdmOrder.intERAdmissionCode={Code}");
+                return streamBytes;
+            }
+            catch (Exception ex)
+            {
+                ErrorLogging.Log("PatientPortal.Logic.DAL", "ReportManager.GetAdmissionOrderBytes", ex);
+                return streamBytes;
+            }
+
+        }
+
+
         public async static Task<byte[]> GetDischargeSummaryBytes(string strCode)
 
         {
@@ -780,5 +952,7 @@ ORDER BY pod2.intPatientOrderDetailCode DESC;";
             Bitmap img = null;
             return img;
         }
+
+      
     }
 }

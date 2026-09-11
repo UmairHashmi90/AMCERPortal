@@ -5,6 +5,17 @@
     <EntitySet Name="tblERPatientDocuments" EntityType="dbAMCModel.tblERPatientDocument" />
     <EntitySet Name="tblERPatientInvestigations" EntityType="dbAMCModel.tblERPatientInvestigation" />
     <EntitySet Name="tblERPatientPastHistories" EntityType="dbAMCModel.tblERPatientPastHistory" />
+    <EntitySet Name="tblDrugRoutes" EntityType="dbAMCModel.tblDrugRoute" />
+    <EntitySet Name="tblExceptions" EntityType="dbAMCModel.tblException" />
+    <EntitySet Name="tblERPatientPackageOrders" EntityType="dbAMCModel.tblERPatientPackageOrder" />
+    <EntitySet Name="tblDeathCertificates" EntityType="dbAMCModel.tblDeathCertificate" />
+    <EntitySet Name="tblDischargeSummaries" EntityType="dbAMCModel.tblDischargeSummary" />
+    <EntitySet Name="tblERDischargeMedicines" EntityType="dbAMCModel.tblERDischargeMedicine" />
+    <EntitySet Name="tblLAMAs" EntityType="dbAMCModel.tblLAMA" />
+    <EntitySet Name="tblPatientReferrals" EntityType="dbAMCModel.tblPatientReferral" />
+    <EntitySet Name="tblClinicalDocumentERs" EntityType="dbAMCModel.tblClinicalDocumentER" />
+    <EntitySet Name="tblERPatientDrugAllergies" EntityType="dbAMCModel.tblERPatientDrugAllergy" />
+    <EntitySet Name="tblERPatientReviewForms" EntityType="dbAMCModel.tblERPatientReviewForm" />
     <EntitySet Name="tblERPatients" EntityType="dbAMCModel.tblERPatient" />
     <AssociationSet Name="FK_tblERPatientChiefComplaint_tblERPatient" Association="dbAMCModel.FK_tblERPatientChiefComplaint_tblERPatient">
       <End Role="tblERPatient" EntitySet="tblERPatients" />
@@ -14,42 +25,52 @@
       <End Role="tblERPatient" EntitySet="tblERPatients" />
       <End Role="tblERPatientDocument" EntitySet="tblERPatientDocuments" />
     </AssociationSet>
+    <AssociationSet Name="FK_tblERPatientDrugAllergy_tblERPatientDrugAllergy" Association="dbAMCModel.FK_tblERPatientDrugAllergy_tblERPatientDrugAllergy">
+      <End Role="tblERPatient" EntitySet="tblERPatients" />
+      <End Role="tblERPatientDrugAllergy" EntitySet="tblERPatientDrugAllergies" />
+    </AssociationSet>
+    <AssociationSet Name="FK_tblERPatientForm_tblERPatient" Association="dbAMCModel.FK_tblERPatientForm_tblERPatient">
+      <End Role="tblERPatient" EntitySet="tblERPatients" />
+      <End Role="tblERPatientReviewForm" EntitySet="tblERPatientReviewForms" />
+    </AssociationSet>
     <AssociationSet Name="FK_tblERPatientInvestigation_tblERPatient" Association="dbAMCModel.FK_tblERPatientInvestigation_tblERPatient">
       <End Role="tblERPatient" EntitySet="tblERPatients" />
       <End Role="tblERPatientInvestigation" EntitySet="tblERPatientInvestigations" />
+    </AssociationSet>
+    <AssociationSet Name="FK_tblERPatientPackageOrder_tblERPatient" Association="dbAMCModel.FK_tblERPatientPackageOrder_tblERPatient">
+      <End Role="tblERPatient" EntitySet="tblERPatients" />
+      <End Role="tblERPatientPackageOrder" EntitySet="tblERPatientPackageOrders" />
     </AssociationSet>
     <AssociationSet Name="FK_tblERPatientPastHistory_tblERPatient" Association="dbAMCModel.FK_tblERPatientPastHistory_tblERPatient">
       <End Role="tblERPatient" EntitySet="tblERPatients" />
       <End Role="tblERPatientPastHistory" EntitySet="tblERPatientPastHistories" />
     </AssociationSet>
-    <EntitySet Name="tblDrugRoutes" EntityType="dbAMCModel.tblDrugRoute" />
-    <EntitySet Name="tblExceptions" EntityType="dbAMCModel.tblException" />
-    <EntitySet Name="tblERPatientPackageOrders" EntityType="dbAMCModel.tblERPatientPackageOrder" />
-    <AssociationSet Name="FK_tblERPatientPackageOrder_tblERPatient" Association="dbAMCModel.FK_tblERPatientPackageOrder_tblERPatient">
-      <End Role="tblERPatient" EntitySet="tblERPatients" />
-      <End Role="tblERPatientPackageOrder" EntitySet="tblERPatientPackageOrders" />
+    <EntitySet Name="tblIPDAdmOrders" EntityType="dbAMCModel.tblIPDAdmOrder" />
+    <EntitySet Name="tblIPDAdmPrescriptionOrders" EntityType="dbAMCModel.tblIPDAdmPrescriptionOrder" />
+    <EntitySet Name="tblIPDAdmServiceOrders" EntityType="dbAMCModel.tblIPDAdmServiceOrder" />
+    <AssociationSet Name="FK_tblIPDAdmPrescriptionOrder_tblDrugRoute" Association="dbAMCModel.FK_tblIPDAdmPrescriptionOrder_tblDrugRoute">
+      <End Role="tblDrugRoute" EntitySet="tblDrugRoutes" />
+      <End Role="tblIPDAdmPrescriptionOrder" EntitySet="tblIPDAdmPrescriptionOrders" />
     </AssociationSet>
-    <EntitySet Name="tblDeathCertificates" EntityType="dbAMCModel.tblDeathCertificate" />
-    <EntitySet Name="tblDischargeSummaries" EntityType="dbAMCModel.tblDischargeSummary" />
-    <EntitySet Name="tblERDischargeMedicines" EntityType="dbAMCModel.tblERDischargeMedicine" />
-    <EntitySet Name="tblLAMAs" EntityType="dbAMCModel.tblLAMA" />
-    <EntitySet Name="tblPatientReferrals" EntityType="dbAMCModel.tblPatientReferral" />
-    <EntitySet Name="tblClinicalDocumentERs" EntityType="dbAMCModel.tblClinicalDocumentER" />
+    <AssociationSet Name="FK_tblIPDAdmPrescriptionOrder_tblIPDAdmOrder" Association="dbAMCModel.FK_tblIPDAdmPrescriptionOrder_tblIPDAdmOrder">
+      <End Role="tblIPDAdmOrder" EntitySet="tblIPDAdmOrders" />
+      <End Role="tblIPDAdmPrescriptionOrder" EntitySet="tblIPDAdmPrescriptionOrders" />
+    </AssociationSet>
+    <AssociationSet Name="FK_tblIPDAdmServiceOrder_tblIPDAdmOrder" Association="dbAMCModel.FK_tblIPDAdmServiceOrder_tblIPDAdmOrder">
+      <End Role="tblIPDAdmOrder" EntitySet="tblIPDAdmOrders" />
+      <End Role="tblIPDAdmServiceOrder" EntitySet="tblIPDAdmServiceOrders" />
+    </AssociationSet>
+    <EntitySet Name="tblIPDAdmServiceInsts" EntityType="dbAMCModel.tblIPDAdmServiceInst" />
+    <AssociationSet Name="FK_tblIPDAdmServiceInst_tblIPDAdmOrder" Association="dbAMCModel.FK_tblIPDAdmServiceInst_tblIPDAdmOrder">
+      <End Role="tblIPDAdmOrder" EntitySet="tblIPDAdmOrders" />
+      <End Role="tblIPDAdmServiceInst" EntitySet="tblIPDAdmServiceInsts" />
+    </AssociationSet>
     <EntitySet Name="tblERPatientVitals" EntityType="dbAMCModel.tblERPatientVital" />
     <AssociationSet Name="FK_tblERPatientVitals_tblERPatientVitals" Association="dbAMCModel.FK_tblERPatientVitals_tblERPatientVitals">
       <End Role="tblERPatient" EntitySet="tblERPatients" />
       <End Role="tblERPatientVital" EntitySet="tblERPatientVitals" />
     </AssociationSet>
-    <EntitySet Name="tblERPatientDrugAllergies" EntityType="dbAMCModel.tblERPatientDrugAllergy" />
-    <AssociationSet Name="FK_tblERPatientDrugAllergy_tblERPatientDrugAllergy" Association="dbAMCModel.FK_tblERPatientDrugAllergy_tblERPatientDrugAllergy">
-      <End Role="tblERPatient" EntitySet="tblERPatients" />
-      <End Role="tblERPatientDrugAllergy" EntitySet="tblERPatientDrugAllergies" />
-    </AssociationSet>
-    <EntitySet Name="tblERPatientReviewForms" EntityType="dbAMCModel.tblERPatientReviewForm" />
-    <AssociationSet Name="FK_tblERPatientForm_tblERPatient" Association="dbAMCModel.FK_tblERPatientForm_tblERPatient">
-      <End Role="tblERPatient" EntitySet="tblERPatients" />
-      <End Role="tblERPatientReviewForm" EntitySet="tblERPatientReviewForms" />
-    </AssociationSet>
+    <EntitySet Name="tblClinicalDocuments" EntityType="dbAMCModel.tblClinicalDocument" />
   </EntityContainer>
   <EntityType Name="tblERPatientChiefComplaint">
     <Key>
@@ -145,101 +166,6 @@
     <Property Name="intCompanyCode" Type="Int32" Nullable="false" />
     <NavigationProperty Name="tblERPatient" Relationship="dbAMCModel.FK_tblERPatientPastHistory_tblERPatient" FromRole="tblERPatientPastHistory" ToRole="tblERPatient" />
   </EntityType>
-  <EntityType Name="tblERPatient">
-    <Key>
-      <PropertyRef Name="intERPatientCode" />
-      <PropertyRef Name="intBranchCode" />
-      <PropertyRef Name="intCompanyCode" />
-    </Key>
-    <Property Name="intERPatientCode" Type="Int64" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
-    <Property Name="intWardBedCode" Type="Int32" Nullable="false" />
-    <Property Name="intERAdmissionCode" Type="Int64" />
-    <Property Name="dtmAdmission" Type="DateTime" Nullable="false" Precision="3" />
-    <Property Name="strName" Type="String" MaxLength="200" FixedLength="false" Unicode="false" />
-    <Property Name="bolIsDischarge" Type="Boolean" />
-    <Property Name="dtmDischarge" Type="DateTime" Precision="3" />
-    <Property Name="tmVersion" Type="Binary" Nullable="false" MaxLength="8" FixedLength="true" annotation:StoreGeneratedPattern="Computed" />
-    <Property Name="dtmCreated" Type="DateTime" Nullable="false" Precision="3" />
-    <Property Name="dtmLastM" Type="DateTime" Precision="3" />
-    <Property Name="intOwnerCode" Type="Int32" Nullable="false" />
-    <Property Name="intCreatedByCode" Type="Int32" Nullable="false" />
-    <Property Name="intAlteredByCode" Type="Int32" />
-    <Property Name="intRecordStatusCode" Type="Int32" Nullable="false" />
-    <Property Name="intBranchCode" Type="Int32" Nullable="false" />
-    <Property Name="intCompanyCode" Type="Int32" Nullable="false" />
-    <NavigationProperty Name="tblERPatientChiefComplaints" Relationship="dbAMCModel.FK_tblERPatientChiefComplaint_tblERPatient" FromRole="tblERPatient" ToRole="tblERPatientChiefComplaint" />
-    <NavigationProperty Name="tblERPatientDocuments" Relationship="dbAMCModel.FK_tblERPatientDocument_tblERPatient" FromRole="tblERPatient" ToRole="tblERPatientDocument" />
-    <NavigationProperty Name="tblERPatientInvestigations" Relationship="dbAMCModel.FK_tblERPatientInvestigation_tblERPatient" FromRole="tblERPatient" ToRole="tblERPatientInvestigation" />
-    <NavigationProperty Name="tblERPatientPastHistories" Relationship="dbAMCModel.FK_tblERPatientPastHistory_tblERPatient" FromRole="tblERPatient" ToRole="tblERPatientPastHistory" />
-    <NavigationProperty Name="tblERPatientPackageOrders" Relationship="dbAMCModel.FK_tblERPatientPackageOrder_tblERPatient" FromRole="tblERPatient" ToRole="tblERPatientPackageOrder" />
-    <NavigationProperty Name="tblERPatientVitals" Relationship="dbAMCModel.FK_tblERPatientVitals_tblERPatientVitals" FromRole="tblERPatient" ToRole="tblERPatientVital" />
-    <NavigationProperty Name="tblERPatientDrugAllergies" Relationship="dbAMCModel.FK_tblERPatientDrugAllergy_tblERPatientDrugAllergy" FromRole="tblERPatient" ToRole="tblERPatientDrugAllergy" />
-    <NavigationProperty Name="tblERPatientReviewForms" Relationship="dbAMCModel.FK_tblERPatientForm_tblERPatient" FromRole="tblERPatient" ToRole="tblERPatientReviewForm" />
-  </EntityType>
-  <Association Name="FK_tblERPatientChiefComplaint_tblERPatient">
-    <End Type="dbAMCModel.tblERPatient" Role="tblERPatient" Multiplicity="1" />
-    <End Type="dbAMCModel.tblERPatientChiefComplaint" Role="tblERPatientChiefComplaint" Multiplicity="*" />
-    <ReferentialConstraint>
-      <Principal Role="tblERPatient">
-        <PropertyRef Name="intERPatientCode" />
-        <PropertyRef Name="intBranchCode" />
-        <PropertyRef Name="intCompanyCode" />
-      </Principal>
-      <Dependent Role="tblERPatientChiefComplaint">
-        <PropertyRef Name="intERPatientCode" />
-        <PropertyRef Name="intBranchCode" />
-        <PropertyRef Name="intCompanyCode" />
-      </Dependent>
-    </ReferentialConstraint>
-  </Association>
-  <Association Name="FK_tblERPatientDocument_tblERPatient">
-    <End Type="dbAMCModel.tblERPatient" Role="tblERPatient" Multiplicity="1" />
-    <End Type="dbAMCModel.tblERPatientDocument" Role="tblERPatientDocument" Multiplicity="*" />
-    <ReferentialConstraint>
-      <Principal Role="tblERPatient">
-        <PropertyRef Name="intERPatientCode" />
-        <PropertyRef Name="intBranchCode" />
-        <PropertyRef Name="intCompanyCode" />
-      </Principal>
-      <Dependent Role="tblERPatientDocument">
-        <PropertyRef Name="intERPatientCode" />
-        <PropertyRef Name="intBranchCode" />
-        <PropertyRef Name="intCompanyCode" />
-      </Dependent>
-    </ReferentialConstraint>
-  </Association>
-  <Association Name="FK_tblERPatientInvestigation_tblERPatient">
-    <End Type="dbAMCModel.tblERPatient" Role="tblERPatient" Multiplicity="1" />
-    <End Type="dbAMCModel.tblERPatientInvestigation" Role="tblERPatientInvestigation" Multiplicity="*" />
-    <ReferentialConstraint>
-      <Principal Role="tblERPatient">
-        <PropertyRef Name="intERPatientCode" />
-        <PropertyRef Name="intBranchCode" />
-        <PropertyRef Name="intCompanyCode" />
-      </Principal>
-      <Dependent Role="tblERPatientInvestigation">
-        <PropertyRef Name="intERPatientCode" />
-        <PropertyRef Name="intBranchCode" />
-        <PropertyRef Name="intCompanyCode" />
-      </Dependent>
-    </ReferentialConstraint>
-  </Association>
-  <Association Name="FK_tblERPatientPastHistory_tblERPatient">
-    <End Type="dbAMCModel.tblERPatient" Role="tblERPatient" Multiplicity="1" />
-    <End Type="dbAMCModel.tblERPatientPastHistory" Role="tblERPatientPastHistory" Multiplicity="*" />
-    <ReferentialConstraint>
-      <Principal Role="tblERPatient">
-        <PropertyRef Name="intERPatientCode" />
-        <PropertyRef Name="intBranchCode" />
-        <PropertyRef Name="intCompanyCode" />
-      </Principal>
-      <Dependent Role="tblERPatientPastHistory">
-        <PropertyRef Name="intERPatientCode" />
-        <PropertyRef Name="intBranchCode" />
-        <PropertyRef Name="intCompanyCode" />
-      </Dependent>
-    </ReferentialConstraint>
-  </Association>
   <EntityType Name="tblDrugRoute">
     <Key>
       <PropertyRef Name="intDrugRouteCode" />
@@ -256,6 +182,7 @@
     <Property Name="intAlteredByCode" Type="Int32" />
     <Property Name="intRecordStatusCode" Type="Int32" Nullable="false" />
     <Property Name="intCompanyCode" Type="Int32" Nullable="false" />
+    <NavigationProperty Name="tblIPDAdmPrescriptionOrders" Relationship="dbAMCModel.FK_tblIPDAdmPrescriptionOrder_tblDrugRoute" FromRole="tblDrugRoute" ToRole="tblIPDAdmPrescriptionOrder" />
   </EntityType>
   <EntityType Name="tblException">
     <Key>
@@ -306,22 +233,6 @@
     <Property Name="intCompanyCode" Type="Int32" Nullable="false" />
     <NavigationProperty Name="tblERPatient" Relationship="dbAMCModel.FK_tblERPatientPackageOrder_tblERPatient" FromRole="tblERPatientPackageOrder" ToRole="tblERPatient" />
   </EntityType>
-  <Association Name="FK_tblERPatientPackageOrder_tblERPatient">
-    <End Type="dbAMCModel.tblERPatient" Role="tblERPatient" Multiplicity="1" />
-    <End Type="dbAMCModel.tblERPatientPackageOrder" Role="tblERPatientPackageOrder" Multiplicity="*" />
-    <ReferentialConstraint>
-      <Principal Role="tblERPatient">
-        <PropertyRef Name="intERPatientCode" />
-        <PropertyRef Name="intBranchCode" />
-        <PropertyRef Name="intCompanyCode" />
-      </Principal>
-      <Dependent Role="tblERPatientPackageOrder">
-        <PropertyRef Name="intERPatientCode" />
-        <PropertyRef Name="intBranchCode" />
-        <PropertyRef Name="intCompanyCode" />
-      </Dependent>
-    </ReferentialConstraint>
-  </Association>
   <EntityType Name="tblDeathCertificate">
     <Key>
       <PropertyRef Name="intDeathCertificateCode" />
@@ -499,56 +410,6 @@
     <Property Name="intBranchCode" Type="Int32" Nullable="false" />
     <Property Name="intCompanyCode" Type="Int32" Nullable="false" />
   </EntityType>
-  <EntityType Name="tblERPatientVital">
-    <Key>
-      <PropertyRef Name="intERPatientVitalsCode" />
-      <PropertyRef Name="intBranchCode" />
-      <PropertyRef Name="intCompanyCode" />
-    </Key>
-    <Property Name="intERPatientVitalsCode" Type="Int64" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
-    <Property Name="intERPatientCode" Type="Int64" Nullable="false" />
-    <Property Name="dtmVitals" Type="DateTime" Nullable="false" Precision="3" />
-    <Property Name="intHeartRate" Type="Int32" />
-    <Property Name="intPulse" Type="Int32" />
-    <Property Name="intBP1" Type="Int32" />
-    <Property Name="intBP2" Type="Int32" />
-    <Property Name="intResp" Type="Int32" />
-    <Property Name="numTemp" Type="Decimal" Precision="4" Scale="1" />
-    <Property Name="intHeight" Type="Int32" />
-    <Property Name="numWeight" Type="Decimal" Precision="10" Scale="2" />
-    <Property Name="intMetricBMI" Type="Int32" />
-    <Property Name="intSPO2" Type="Int32" />
-    <Property Name="numGlucoseF" Type="Decimal" Precision="10" Scale="2" />
-    <Property Name="numGlucoseR" Type="Decimal" Precision="10" Scale="2" />
-    <Property Name="intPainScore" Type="Int32" />
-    <Property Name="intFallRisk" Type="Int32" />
-    <Property Name="tmVersion" Type="Binary" Nullable="false" MaxLength="8" FixedLength="true" annotation:StoreGeneratedPattern="Computed" />
-    <Property Name="dtmCreated" Type="DateTime" Nullable="false" Precision="3" />
-    <Property Name="dtmLastM" Type="DateTime" Precision="3" />
-    <Property Name="intOwnerCode" Type="Int32" Nullable="false" />
-    <Property Name="intCreatedByCode" Type="Int32" Nullable="false" />
-    <Property Name="intAlteredByCode" Type="Int32" />
-    <Property Name="intRecordStatusCode" Type="Int32" Nullable="false" />
-    <Property Name="intBranchCode" Type="Int32" Nullable="false" />
-    <Property Name="intCompanyCode" Type="Int32" Nullable="false" />
-    <NavigationProperty Name="tblERPatient" Relationship="dbAMCModel.FK_tblERPatientVitals_tblERPatientVitals" FromRole="tblERPatientVital" ToRole="tblERPatient" />
-  </EntityType>
-  <Association Name="FK_tblERPatientVitals_tblERPatientVitals">
-    <End Type="dbAMCModel.tblERPatient" Role="tblERPatient" Multiplicity="1" />
-    <End Type="dbAMCModel.tblERPatientVital" Role="tblERPatientVital" Multiplicity="*" />
-    <ReferentialConstraint>
-      <Principal Role="tblERPatient">
-        <PropertyRef Name="intERPatientCode" />
-        <PropertyRef Name="intBranchCode" />
-        <PropertyRef Name="intCompanyCode" />
-      </Principal>
-      <Dependent Role="tblERPatientVital">
-        <PropertyRef Name="intERPatientCode" />
-        <PropertyRef Name="intBranchCode" />
-        <PropertyRef Name="intCompanyCode" />
-      </Dependent>
-    </ReferentialConstraint>
-  </Association>
   <EntityType Name="tblERPatientDrugAllergy">
     <Key>
       <PropertyRef Name="intERPatientAllergyCode" />
@@ -572,22 +433,6 @@
     <Property Name="intCompanyCode" Type="Int32" Nullable="false" />
     <NavigationProperty Name="tblERPatient" Relationship="dbAMCModel.FK_tblERPatientDrugAllergy_tblERPatientDrugAllergy" FromRole="tblERPatientDrugAllergy" ToRole="tblERPatient" />
   </EntityType>
-  <Association Name="FK_tblERPatientDrugAllergy_tblERPatientDrugAllergy">
-    <End Type="dbAMCModel.tblERPatient" Role="tblERPatient" Multiplicity="1" />
-    <End Type="dbAMCModel.tblERPatientDrugAllergy" Role="tblERPatientDrugAllergy" Multiplicity="*" />
-    <ReferentialConstraint>
-      <Principal Role="tblERPatient">
-        <PropertyRef Name="intERPatientCode" />
-        <PropertyRef Name="intBranchCode" />
-        <PropertyRef Name="intCompanyCode" />
-      </Principal>
-      <Dependent Role="tblERPatientDrugAllergy">
-        <PropertyRef Name="intERPatientCode" />
-        <PropertyRef Name="intBranchCode" />
-        <PropertyRef Name="intCompanyCode" />
-      </Dependent>
-    </ReferentialConstraint>
-  </Association>
   <EntityType Name="tblERPatientReviewForm">
     <Key>
       <PropertyRef Name="intERPatientReviewFormCode" />
@@ -631,6 +476,89 @@
     <Property Name="intCompanyCode" Type="Int32" Nullable="false" />
     <NavigationProperty Name="tblERPatient" Relationship="dbAMCModel.FK_tblERPatientForm_tblERPatient" FromRole="tblERPatientReviewForm" ToRole="tblERPatient" />
   </EntityType>
+  <EntityType Name="tblERPatient">
+    <Key>
+      <PropertyRef Name="intERPatientCode" />
+      <PropertyRef Name="intBranchCode" />
+      <PropertyRef Name="intCompanyCode" />
+    </Key>
+    <Property Name="intERPatientCode" Type="Int64" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
+    <Property Name="intWardBedCode" Type="Int32" Nullable="false" />
+    <Property Name="intERAdmissionCode" Type="Int64" />
+    <Property Name="dtmAdmission" Type="DateTime" Nullable="false" Precision="3" />
+    <Property Name="strName" Type="String" MaxLength="200" FixedLength="false" Unicode="false" />
+    <Property Name="bolIsDischargeStart" Type="Boolean" />
+    <Property Name="dtmDischargeStart" Type="DateTime" Precision="3" />
+    <Property Name="bolIsDischarge" Type="Boolean" />
+    <Property Name="dtmDischarge" Type="DateTime" Precision="3" />
+    <Property Name="strTriageColor" Type="String" MaxLength="20" FixedLength="false" Unicode="true" />
+    <Property Name="strHOPI" Type="String" MaxLength="500" FixedLength="false" Unicode="true" />
+    <Property Name="tmVersion" Type="Binary" Nullable="false" MaxLength="8" FixedLength="true" annotation:StoreGeneratedPattern="Computed" />
+    <Property Name="dtmCreated" Type="DateTime" Nullable="false" Precision="3" />
+    <Property Name="dtmLastM" Type="DateTime" Precision="3" />
+    <Property Name="intOwnerCode" Type="Int32" Nullable="false" />
+    <Property Name="intCreatedByCode" Type="Int32" Nullable="false" />
+    <Property Name="intAlteredByCode" Type="Int32" />
+    <Property Name="intRecordStatusCode" Type="Int32" Nullable="false" />
+    <Property Name="intBranchCode" Type="Int32" Nullable="false" />
+    <Property Name="intCompanyCode" Type="Int32" Nullable="false" />
+    <NavigationProperty Name="tblERPatientChiefComplaints" Relationship="dbAMCModel.FK_tblERPatientChiefComplaint_tblERPatient" FromRole="tblERPatient" ToRole="tblERPatientChiefComplaint" />
+    <NavigationProperty Name="tblERPatientDocuments" Relationship="dbAMCModel.FK_tblERPatientDocument_tblERPatient" FromRole="tblERPatient" ToRole="tblERPatientDocument" />
+    <NavigationProperty Name="tblERPatientDrugAllergies" Relationship="dbAMCModel.FK_tblERPatientDrugAllergy_tblERPatientDrugAllergy" FromRole="tblERPatient" ToRole="tblERPatientDrugAllergy" />
+    <NavigationProperty Name="tblERPatientReviewForms" Relationship="dbAMCModel.FK_tblERPatientForm_tblERPatient" FromRole="tblERPatient" ToRole="tblERPatientReviewForm" />
+    <NavigationProperty Name="tblERPatientInvestigations" Relationship="dbAMCModel.FK_tblERPatientInvestigation_tblERPatient" FromRole="tblERPatient" ToRole="tblERPatientInvestigation" />
+    <NavigationProperty Name="tblERPatientPackageOrders" Relationship="dbAMCModel.FK_tblERPatientPackageOrder_tblERPatient" FromRole="tblERPatient" ToRole="tblERPatientPackageOrder" />
+    <NavigationProperty Name="tblERPatientPastHistories" Relationship="dbAMCModel.FK_tblERPatientPastHistory_tblERPatient" FromRole="tblERPatient" ToRole="tblERPatientPastHistory" />
+    <NavigationProperty Name="tblERPatientVitals" Relationship="dbAMCModel.FK_tblERPatientVitals_tblERPatientVitals" FromRole="tblERPatient" ToRole="tblERPatientVital" />
+  </EntityType>
+  <Association Name="FK_tblERPatientChiefComplaint_tblERPatient">
+    <End Type="dbAMCModel.tblERPatient" Role="tblERPatient" Multiplicity="1" />
+    <End Type="dbAMCModel.tblERPatientChiefComplaint" Role="tblERPatientChiefComplaint" Multiplicity="*" />
+    <ReferentialConstraint>
+      <Principal Role="tblERPatient">
+        <PropertyRef Name="intERPatientCode" />
+        <PropertyRef Name="intBranchCode" />
+        <PropertyRef Name="intCompanyCode" />
+      </Principal>
+      <Dependent Role="tblERPatientChiefComplaint">
+        <PropertyRef Name="intERPatientCode" />
+        <PropertyRef Name="intBranchCode" />
+        <PropertyRef Name="intCompanyCode" />
+      </Dependent>
+    </ReferentialConstraint>
+  </Association>
+  <Association Name="FK_tblERPatientDocument_tblERPatient">
+    <End Type="dbAMCModel.tblERPatient" Role="tblERPatient" Multiplicity="1" />
+    <End Type="dbAMCModel.tblERPatientDocument" Role="tblERPatientDocument" Multiplicity="*" />
+    <ReferentialConstraint>
+      <Principal Role="tblERPatient">
+        <PropertyRef Name="intERPatientCode" />
+        <PropertyRef Name="intBranchCode" />
+        <PropertyRef Name="intCompanyCode" />
+      </Principal>
+      <Dependent Role="tblERPatientDocument">
+        <PropertyRef Name="intERPatientCode" />
+        <PropertyRef Name="intBranchCode" />
+        <PropertyRef Name="intCompanyCode" />
+      </Dependent>
+    </ReferentialConstraint>
+  </Association>
+  <Association Name="FK_tblERPatientDrugAllergy_tblERPatientDrugAllergy">
+    <End Type="dbAMCModel.tblERPatient" Role="tblERPatient" Multiplicity="1" />
+    <End Type="dbAMCModel.tblERPatientDrugAllergy" Role="tblERPatientDrugAllergy" Multiplicity="*" />
+    <ReferentialConstraint>
+      <Principal Role="tblERPatient">
+        <PropertyRef Name="intERPatientCode" />
+        <PropertyRef Name="intBranchCode" />
+        <PropertyRef Name="intCompanyCode" />
+      </Principal>
+      <Dependent Role="tblERPatientDrugAllergy">
+        <PropertyRef Name="intERPatientCode" />
+        <PropertyRef Name="intBranchCode" />
+        <PropertyRef Name="intCompanyCode" />
+      </Dependent>
+    </ReferentialConstraint>
+  </Association>
   <Association Name="FK_tblERPatientForm_tblERPatient">
     <End Type="dbAMCModel.tblERPatient" Role="tblERPatient" Multiplicity="1" />
     <End Type="dbAMCModel.tblERPatientReviewForm" Role="tblERPatientReviewForm" Multiplicity="*" />
@@ -647,4 +575,298 @@
       </Dependent>
     </ReferentialConstraint>
   </Association>
+  <Association Name="FK_tblERPatientInvestigation_tblERPatient">
+    <End Type="dbAMCModel.tblERPatient" Role="tblERPatient" Multiplicity="1" />
+    <End Type="dbAMCModel.tblERPatientInvestigation" Role="tblERPatientInvestigation" Multiplicity="*" />
+    <ReferentialConstraint>
+      <Principal Role="tblERPatient">
+        <PropertyRef Name="intERPatientCode" />
+        <PropertyRef Name="intBranchCode" />
+        <PropertyRef Name="intCompanyCode" />
+      </Principal>
+      <Dependent Role="tblERPatientInvestigation">
+        <PropertyRef Name="intERPatientCode" />
+        <PropertyRef Name="intBranchCode" />
+        <PropertyRef Name="intCompanyCode" />
+      </Dependent>
+    </ReferentialConstraint>
+  </Association>
+  <Association Name="FK_tblERPatientPackageOrder_tblERPatient">
+    <End Type="dbAMCModel.tblERPatient" Role="tblERPatient" Multiplicity="1" />
+    <End Type="dbAMCModel.tblERPatientPackageOrder" Role="tblERPatientPackageOrder" Multiplicity="*" />
+    <ReferentialConstraint>
+      <Principal Role="tblERPatient">
+        <PropertyRef Name="intERPatientCode" />
+        <PropertyRef Name="intBranchCode" />
+        <PropertyRef Name="intCompanyCode" />
+      </Principal>
+      <Dependent Role="tblERPatientPackageOrder">
+        <PropertyRef Name="intERPatientCode" />
+        <PropertyRef Name="intBranchCode" />
+        <PropertyRef Name="intCompanyCode" />
+      </Dependent>
+    </ReferentialConstraint>
+  </Association>
+  <Association Name="FK_tblERPatientPastHistory_tblERPatient">
+    <End Type="dbAMCModel.tblERPatient" Role="tblERPatient" Multiplicity="1" />
+    <End Type="dbAMCModel.tblERPatientPastHistory" Role="tblERPatientPastHistory" Multiplicity="*" />
+    <ReferentialConstraint>
+      <Principal Role="tblERPatient">
+        <PropertyRef Name="intERPatientCode" />
+        <PropertyRef Name="intBranchCode" />
+        <PropertyRef Name="intCompanyCode" />
+      </Principal>
+      <Dependent Role="tblERPatientPastHistory">
+        <PropertyRef Name="intERPatientCode" />
+        <PropertyRef Name="intBranchCode" />
+        <PropertyRef Name="intCompanyCode" />
+      </Dependent>
+    </ReferentialConstraint>
+  </Association>
+  <EntityType Name="tblIPDAdmOrder">
+    <Key>
+      <PropertyRef Name="intIPDAdmOrderCode" />
+      <PropertyRef Name="intBranchCode" />
+      <PropertyRef Name="intCompanyCode" />
+    </Key>
+    <Property Name="intIPDAdmOrderCode" Type="Int64" Nullable="false" />
+    <Property Name="intIPDAdmOrderStatusCode" Type="Int32" />
+    <Property Name="strIPDAdmOrderNo" Type="String" Nullable="false" MaxLength="15" FixedLength="false" Unicode="true" />
+    <Property Name="dtmIPDAdmOrder" Type="DateTime" Nullable="false" Precision="3" />
+    <Property Name="dtAdmissionRequest" Type="DateTime" Nullable="false" Precision="3" />
+    <Property Name="intERAdmissionCode" Type="Int64" />
+    <Property Name="intPatientCode" Type="Int64" Nullable="false" />
+    <Property Name="intAdmConsultantCode" Type="Int64" />
+    <Property Name="intReffConsultantCode" Type="Int64" />
+    <Property Name="intAdmissionTypeCode" Type="Int32" />
+    <Property Name="intAdmissionCareLevelCode" Type="Int32" />
+    <Property Name="strDiagnosis" Type="String" MaxLength="1024" FixedLength="false" Unicode="true" />
+    <Property Name="strDietInstruction" Type="String" MaxLength="1024" FixedLength="false" Unicode="true" />
+    <Property Name="strComments" Type="String" MaxLength="1024" FixedLength="false" Unicode="true" />
+    <Property Name="strCancelRemarks" Type="String" MaxLength="1024" FixedLength="false" Unicode="true" />
+    <Property Name="tmVersion" Type="Binary" Nullable="false" MaxLength="8" FixedLength="true" annotation:StoreGeneratedPattern="Computed" />
+    <Property Name="dtmCreated" Type="DateTime" Nullable="false" Precision="3" />
+    <Property Name="dtmLastM" Type="DateTime" Precision="3" />
+    <Property Name="intOwnerCode" Type="Int32" Nullable="false" />
+    <Property Name="intCreatedByCode" Type="Int32" Nullable="false" />
+    <Property Name="intAlteredByCode" Type="Int32" />
+    <Property Name="intRecordStatusCode" Type="Int32" Nullable="false" />
+    <Property Name="intBranchCode" Type="Int32" Nullable="false" />
+    <Property Name="intCompanyCode" Type="Int32" Nullable="false" />
+    <NavigationProperty Name="tblIPDAdmPrescriptionOrders" Relationship="dbAMCModel.FK_tblIPDAdmPrescriptionOrder_tblIPDAdmOrder" FromRole="tblIPDAdmOrder" ToRole="tblIPDAdmPrescriptionOrder" />
+    <NavigationProperty Name="tblIPDAdmServiceOrders" Relationship="dbAMCModel.FK_tblIPDAdmServiceOrder_tblIPDAdmOrder" FromRole="tblIPDAdmOrder" ToRole="tblIPDAdmServiceOrder" />
+    <NavigationProperty Name="tblIPDAdmServiceInsts" Relationship="dbAMCModel.FK_tblIPDAdmServiceInst_tblIPDAdmOrder" FromRole="tblIPDAdmOrder" ToRole="tblIPDAdmServiceInst" />
+  </EntityType>
+  <EntityType Name="tblIPDAdmPrescriptionOrder">
+    <Key>
+      <PropertyRef Name="intIPDAdmPrescriptionOrderCode" />
+      <PropertyRef Name="intBranchCode" />
+      <PropertyRef Name="intCompanyCode" />
+    </Key>
+    <Property Name="intIPDAdmPrescriptionOrderCode" Type="Int64" Nullable="false" />
+    <Property Name="intIPDAdmOrderCode" Type="Int64" Nullable="false" />
+    <Property Name="intConsultantCode" Type="Int64" />
+    <Property Name="intItemCode" Type="Int64" />
+    <Property Name="numPrescribedDose" Type="Decimal" Precision="10" Scale="2" />
+    <Property Name="intPrescribedUnitCode" Type="Int32" />
+    <Property Name="intDrugFrequencyCode" Type="Int32" />
+    <Property Name="intDrugRouteCode" Type="Int32" />
+    <Property Name="intDays" Type="Int32" />
+    <Property Name="strInstruction" Type="String" MaxLength="250" FixedLength="false" Unicode="true" />
+    <Property Name="tmVersion" Type="Binary" Nullable="false" MaxLength="8" FixedLength="true" annotation:StoreGeneratedPattern="Computed" />
+    <Property Name="dtmCreated" Type="DateTime" Nullable="false" Precision="3" />
+    <Property Name="dtmLastM" Type="DateTime" Precision="3" />
+    <Property Name="intOwnerCode" Type="Int32" Nullable="false" />
+    <Property Name="intCreatedByCode" Type="Int32" Nullable="false" />
+    <Property Name="intAlteredByCode" Type="Int32" />
+    <Property Name="intRecordStatusCode" Type="Int32" Nullable="false" />
+    <Property Name="intBranchCode" Type="Int32" Nullable="false" />
+    <Property Name="intCompanyCode" Type="Int32" Nullable="false" />
+    <NavigationProperty Name="tblDrugRoute" Relationship="dbAMCModel.FK_tblIPDAdmPrescriptionOrder_tblDrugRoute" FromRole="tblIPDAdmPrescriptionOrder" ToRole="tblDrugRoute" />
+    <NavigationProperty Name="tblIPDAdmOrder" Relationship="dbAMCModel.FK_tblIPDAdmPrescriptionOrder_tblIPDAdmOrder" FromRole="tblIPDAdmPrescriptionOrder" ToRole="tblIPDAdmOrder" />
+  </EntityType>
+  <EntityType Name="tblIPDAdmServiceOrder">
+    <Key>
+      <PropertyRef Name="intIPDAdmServiceOrderCode" />
+      <PropertyRef Name="intBranchCode" />
+      <PropertyRef Name="intCompanyCode" />
+    </Key>
+    <Property Name="intIPDAdmServiceOrderCode" Type="Int64" Nullable="false" />
+    <Property Name="intIPDAdmOrderCode" Type="Int64" Nullable="false" />
+    <Property Name="intConsultantCode" Type="Int64" />
+    <Property Name="intServiceCode" Type="Int64" />
+    <Property Name="tmVersion" Type="Binary" Nullable="false" MaxLength="8" FixedLength="true" annotation:StoreGeneratedPattern="Computed" />
+    <Property Name="dtmCreated" Type="DateTime" Nullable="false" Precision="3" />
+    <Property Name="dtmLastM" Type="DateTime" Precision="3" />
+    <Property Name="intOwnerCode" Type="Int32" Nullable="false" />
+    <Property Name="intCreatedByCode" Type="Int32" Nullable="false" />
+    <Property Name="intAlteredByCode" Type="Int32" />
+    <Property Name="intRecordStatusCode" Type="Int32" Nullable="false" />
+    <Property Name="intBranchCode" Type="Int32" Nullable="false" />
+    <Property Name="intCompanyCode" Type="Int32" Nullable="false" />
+    <NavigationProperty Name="tblIPDAdmOrder" Relationship="dbAMCModel.FK_tblIPDAdmServiceOrder_tblIPDAdmOrder" FromRole="tblIPDAdmServiceOrder" ToRole="tblIPDAdmOrder" />
+  </EntityType>
+  <Association Name="FK_tblIPDAdmPrescriptionOrder_tblDrugRoute">
+    <End Type="dbAMCModel.tblDrugRoute" Role="tblDrugRoute" Multiplicity="0..1" />
+    <End Type="dbAMCModel.tblIPDAdmPrescriptionOrder" Role="tblIPDAdmPrescriptionOrder" Multiplicity="*" />
+    <ReferentialConstraint>
+      <Principal Role="tblDrugRoute">
+        <PropertyRef Name="intDrugRouteCode" />
+        <PropertyRef Name="intCompanyCode" />
+      </Principal>
+      <Dependent Role="tblIPDAdmPrescriptionOrder">
+        <PropertyRef Name="intDrugRouteCode" />
+        <PropertyRef Name="intCompanyCode" />
+      </Dependent>
+    </ReferentialConstraint>
+  </Association>
+  <Association Name="FK_tblIPDAdmPrescriptionOrder_tblIPDAdmOrder">
+    <End Type="dbAMCModel.tblIPDAdmOrder" Role="tblIPDAdmOrder" Multiplicity="1" />
+    <End Type="dbAMCModel.tblIPDAdmPrescriptionOrder" Role="tblIPDAdmPrescriptionOrder" Multiplicity="*" />
+    <ReferentialConstraint>
+      <Principal Role="tblIPDAdmOrder">
+        <PropertyRef Name="intIPDAdmOrderCode" />
+        <PropertyRef Name="intBranchCode" />
+        <PropertyRef Name="intCompanyCode" />
+      </Principal>
+      <Dependent Role="tblIPDAdmPrescriptionOrder">
+        <PropertyRef Name="intIPDAdmOrderCode" />
+        <PropertyRef Name="intBranchCode" />
+        <PropertyRef Name="intCompanyCode" />
+      </Dependent>
+    </ReferentialConstraint>
+  </Association>
+  <Association Name="FK_tblIPDAdmServiceOrder_tblIPDAdmOrder">
+    <End Type="dbAMCModel.tblIPDAdmOrder" Role="tblIPDAdmOrder" Multiplicity="1" />
+    <End Type="dbAMCModel.tblIPDAdmServiceOrder" Role="tblIPDAdmServiceOrder" Multiplicity="*" />
+    <ReferentialConstraint>
+      <Principal Role="tblIPDAdmOrder">
+        <PropertyRef Name="intIPDAdmOrderCode" />
+        <PropertyRef Name="intBranchCode" />
+        <PropertyRef Name="intCompanyCode" />
+      </Principal>
+      <Dependent Role="tblIPDAdmServiceOrder">
+        <PropertyRef Name="intIPDAdmOrderCode" />
+        <PropertyRef Name="intBranchCode" />
+        <PropertyRef Name="intCompanyCode" />
+      </Dependent>
+    </ReferentialConstraint>
+  </Association>
+  <EntityType Name="tblIPDAdmServiceInst">
+    <Key>
+      <PropertyRef Name="intIPDAdmServiceInstCode" />
+      <PropertyRef Name="intBranchCode" />
+      <PropertyRef Name="intCompanyCode" />
+    </Key>
+    <Property Name="intIPDAdmServiceInstCode" Type="Int64" Nullable="false" />
+    <Property Name="intIPDAdmOrderCode" Type="Int64" Nullable="false" />
+    <Property Name="intConsultantCode" Type="Int64" />
+    <Property Name="intServiceCode" Type="Int64" />
+    <Property Name="strInstruction" Type="String" MaxLength="250" FixedLength="false" Unicode="true" />
+    <Property Name="tmVersion" Type="Binary" Nullable="false" MaxLength="8" FixedLength="true" annotation:StoreGeneratedPattern="Computed" />
+    <Property Name="dtmCreated" Type="DateTime" Nullable="false" Precision="3" />
+    <Property Name="dtmLastM" Type="DateTime" Precision="3" />
+    <Property Name="intOwnerCode" Type="Int32" Nullable="false" />
+    <Property Name="intCreatedByCode" Type="Int32" Nullable="false" />
+    <Property Name="intAlteredByCode" Type="Int32" />
+    <Property Name="intRecordStatusCode" Type="Int32" Nullable="false" />
+    <Property Name="intBranchCode" Type="Int32" Nullable="false" />
+    <Property Name="intCompanyCode" Type="Int32" Nullable="false" />
+    <NavigationProperty Name="tblIPDAdmOrder" Relationship="dbAMCModel.FK_tblIPDAdmServiceInst_tblIPDAdmOrder" FromRole="tblIPDAdmServiceInst" ToRole="tblIPDAdmOrder" />
+  </EntityType>
+  <Association Name="FK_tblIPDAdmServiceInst_tblIPDAdmOrder">
+    <End Type="dbAMCModel.tblIPDAdmOrder" Role="tblIPDAdmOrder" Multiplicity="1" />
+    <End Type="dbAMCModel.tblIPDAdmServiceInst" Role="tblIPDAdmServiceInst" Multiplicity="*" />
+    <ReferentialConstraint>
+      <Principal Role="tblIPDAdmOrder">
+        <PropertyRef Name="intIPDAdmOrderCode" />
+        <PropertyRef Name="intBranchCode" />
+        <PropertyRef Name="intCompanyCode" />
+      </Principal>
+      <Dependent Role="tblIPDAdmServiceInst">
+        <PropertyRef Name="intIPDAdmOrderCode" />
+        <PropertyRef Name="intBranchCode" />
+        <PropertyRef Name="intCompanyCode" />
+      </Dependent>
+    </ReferentialConstraint>
+  </Association>
+  <EntityType Name="tblERPatientVital">
+    <Key>
+      <PropertyRef Name="intERPatientVitalsCode" />
+      <PropertyRef Name="intBranchCode" />
+      <PropertyRef Name="intCompanyCode" />
+    </Key>
+    <Property Name="intERPatientVitalsCode" Type="Int64" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
+    <Property Name="intERPatientCode" Type="Int64" Nullable="false" />
+    <Property Name="dtmVitals" Type="DateTime" Nullable="false" Precision="3" />
+    <Property Name="intHeartRate" Type="Int32" />
+    <Property Name="intPulse" Type="Int32" />
+    <Property Name="intBP1" Type="Int32" />
+    <Property Name="intBP2" Type="Int32" />
+    <Property Name="intResp" Type="Int32" />
+    <Property Name="numTemp" Type="Decimal" Precision="4" Scale="1" />
+    <Property Name="intHeight" Type="Int32" />
+    <Property Name="numWeight" Type="Decimal" Precision="10" Scale="2" />
+    <Property Name="intMetricBMI" Type="Int32" />
+    <Property Name="intSPO2" Type="Int32" />
+    <Property Name="strSPo2" Type="String" MaxLength="500" FixedLength="false" Unicode="true" />
+    <Property Name="numGlucoseF" Type="Decimal" Precision="10" Scale="2" />
+    <Property Name="numGlucoseR" Type="Decimal" Precision="10" Scale="2" />
+    <Property Name="intPainScore" Type="Int32" />
+    <Property Name="intFallRisk" Type="Int32" />
+    <Property Name="intConciousness" Type="Int32" />
+    <Property Name="tmVersion" Type="Binary" Nullable="false" MaxLength="8" FixedLength="true" annotation:StoreGeneratedPattern="Computed" />
+    <Property Name="dtmCreated" Type="DateTime" Nullable="false" Precision="3" />
+    <Property Name="dtmLastM" Type="DateTime" Precision="3" />
+    <Property Name="intOwnerCode" Type="Int32" Nullable="false" />
+    <Property Name="intCreatedByCode" Type="Int32" Nullable="false" />
+    <Property Name="intAlteredByCode" Type="Int32" />
+    <Property Name="intRecordStatusCode" Type="Int32" Nullable="false" />
+    <Property Name="intBranchCode" Type="Int32" Nullable="false" />
+    <Property Name="intCompanyCode" Type="Int32" Nullable="false" />
+    <NavigationProperty Name="tblERPatient" Relationship="dbAMCModel.FK_tblERPatientVitals_tblERPatientVitals" FromRole="tblERPatientVital" ToRole="tblERPatient" />
+  </EntityType>
+  <Association Name="FK_tblERPatientVitals_tblERPatientVitals">
+    <End Type="dbAMCModel.tblERPatient" Role="tblERPatient" Multiplicity="1" />
+    <End Type="dbAMCModel.tblERPatientVital" Role="tblERPatientVital" Multiplicity="*" />
+    <ReferentialConstraint>
+      <Principal Role="tblERPatient">
+        <PropertyRef Name="intERPatientCode" />
+        <PropertyRef Name="intBranchCode" />
+        <PropertyRef Name="intCompanyCode" />
+      </Principal>
+      <Dependent Role="tblERPatientVital">
+        <PropertyRef Name="intERPatientCode" />
+        <PropertyRef Name="intBranchCode" />
+        <PropertyRef Name="intCompanyCode" />
+      </Dependent>
+    </ReferentialConstraint>
+  </Association>
+  <EntityType Name="tblClinicalDocument">
+    <Key>
+      <PropertyRef Name="intClinicalDocumentCode" />
+      <PropertyRef Name="intCompanyCode" />
+    </Key>
+    <Property Name="intClinicalDocumentCode" Type="Int64" Nullable="false" />
+    <Property Name="dtmClinicalDocument" Type="DateTime" Nullable="false" Precision="3" />
+    <Property Name="intClinicalDocumentID" Type="Guid" Nullable="false" />
+    <Property Name="intClinicalDocumentTemplateCode" Type="Int32" Nullable="false" />
+    <Property Name="intFileTypeCode" Type="Int32" />
+    <Property Name="intIPDAdmissionCode" Type="Int64" />
+    <Property Name="intERAdmissionCode" Type="Int64" />
+    <Property Name="intPatientCode" Type="Int64" />
+    <Property Name="strDocumentName" Type="String" MaxLength="50" FixedLength="false" Unicode="true" />
+    <Property Name="strDocumentExtension" Type="String" Nullable="false" MaxLength="10" FixedLength="false" Unicode="true" />
+    <Property Name="vbrDocument" Type="Binary" MaxLength="Max" FixedLength="false" />
+    <Property Name="bolIsFinal" Type="Boolean" Nullable="false" />
+    <Property Name="tmVersion" Type="Binary" Nullable="false" MaxLength="8" FixedLength="true" annotation:StoreGeneratedPattern="Computed" />
+    <Property Name="dtmCreated" Type="DateTime" Nullable="false" Precision="3" />
+    <Property Name="dtmLastM" Type="DateTime" Precision="3" />
+    <Property Name="intOwnerCode" Type="Int32" Nullable="false" />
+    <Property Name="intCreatedByCode" Type="Int32" Nullable="false" />
+    <Property Name="intAlteredByCode" Type="Int32" />
+    <Property Name="intRecordStatusCode" Type="Int32" Nullable="false" />
+    <Property Name="intBranchCode" Type="Int32" Nullable="false" />
+    <Property Name="intCompanyCode" Type="Int32" Nullable="false" />
+  </EntityType>
 </Schema>

@@ -301,6 +301,37 @@ body.app-body {
     font-size: 0.95rem;
 }
 
+.location-head-end {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    margin-left: auto;
+    flex-shrink: 0;
+}
+
+.location-bin-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    background: transparent;
+    color: #dc2626;
+    padding: 0.1rem;
+    line-height: 1;
+    cursor: pointer;
+    border-radius: 4px;
+}
+
+.location-bin-btn:hover,
+.location-bin-btn:focus {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.location-bin-btn svg {
+    pointer-events: none;
+}
+
 .slot-type-icon {
     width: 32px;
     height: 32px;
@@ -329,9 +360,9 @@ body.app-body {
     font-weight: 600;
 }
 
-.status-green {
-    background: #dcfce7;
-    color: #065f46;
+.status-red {
+    background: #fee2e2;
+    color: #991b1b;
 }
 
 .status-orange {
@@ -339,9 +370,19 @@ body.app-body {
     color: #9a3412;
 }
 
-.status-red {
-    background: #fee2e2;
-    color: #991b1b;
+.status-yellow {
+    background: #fef9c3;
+    color: #854d0e;
+}
+
+.status-green {
+    background: #dcfce7;
+    color: #065f46;
+}
+
+.status-blue {
+    background: #dbeafe;
+    color: #1e40af;
 }
 
 .status-gray {
@@ -389,6 +430,153 @@ button.status-chip-filter.active {
 .panel-card h3 {
     margin: 0 0 0.7rem;
     font-size: 1rem;
+}
+
+.triage-color-panel .triage-color-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+}
+
+.triage-color-option {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.65rem;
+    margin: 0;
+    padding: 0.55rem 0.7rem;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: #fff;
+    cursor: pointer;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+}
+
+.triage-color-option:hover {
+    border-color: #94a3b8;
+}
+
+.triage-color-option.is-selected {
+    box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.08);
+}
+
+.triage-color-option .triage-color-input {
+    margin-top: 0.2rem;
+    flex-shrink: 0;
+}
+
+.triage-color-swatch {
+    width: 0.85rem;
+    height: 0.85rem;
+    border-radius: 50%;
+    margin-top: 0.25rem;
+    flex-shrink: 0;
+    border: 1px solid rgba(0, 0, 0, 0.12);
+}
+
+.triage-color-option.triage-red .triage-color-swatch { background: #ef4444; }
+.triage-color-option.triage-orange .triage-color-swatch { background: #f97316; }
+.triage-color-option.triage-yellow .triage-color-swatch { background: #eab308; }
+.triage-color-option.triage-green .triage-color-swatch { background: #22c55e; }
+.triage-color-option.triage-blue .triage-color-swatch { background: #3b82f6; }
+
+.triage-color-option.triage-red.is-selected,
+.triage-color-option.triage-red:has(.triage-color-input:checked) { background: #fef2f2; border-color: #f87171; }
+.triage-color-option.triage-orange.is-selected,
+.triage-color-option.triage-orange:has(.triage-color-input:checked) { background: #fff7ed; border-color: #fb923c; }
+.triage-color-option.triage-yellow.is-selected,
+.triage-color-option.triage-yellow:has(.triage-color-input:checked) { background: #fefce8; border-color: #facc15; }
+.triage-color-option.triage-green.is-selected,
+.triage-color-option.triage-green:has(.triage-color-input:checked) { background: #f0fdf4; border-color: #4ade80; }
+.triage-color-option.triage-blue.is-selected,
+.triage-color-option.triage-blue:has(.triage-color-input:checked) { background: #eff6ff; border-color: #60a5fa; }
+
+.triage-color-copy {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    min-width: 0;
+}
+
+.triage-color-title {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #0f172a;
+    line-height: 1.25;
+}
+
+.triage-color-detail,
+.triage-color-wait {
+    font-size: 0.78rem;
+    color: #475569;
+    line-height: 1.35;
+}
+
+/* Compact triage beside Patient Details */
+.er-form .triage-top-slot {
+    min-width: 0;
+}
+
+.er-form .triage-color-panel-compact {
+    width: 100%;
+    padding: 0.45rem 0.55rem;
+    margin-bottom: 0;
+}
+
+.er-form .triage-color-panel-compact h3 {
+    font-size: 0.82rem;
+    margin-bottom: 0.3rem;
+}
+
+.er-form .triage-color-panel-compact .triage-color-list {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.25rem;
+}
+
+@media (min-width: 576px) and (max-width: 991.98px) {
+    .er-form .triage-color-panel-compact .triage-color-list {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 575.98px) {
+    .er-form .triage-color-panel-compact .triage-color-list {
+        grid-template-columns: 1fr;
+    }
+}
+
+.er-form .triage-color-panel-compact .triage-color-option {
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.28rem 0.45rem;
+    border-radius: 7px;
+}
+
+.er-form .triage-color-panel-compact .triage-color-input {
+    margin-top: 0;
+    width: 0.85rem;
+    height: 0.85rem;
+}
+
+.er-form .triage-color-panel-compact .triage-color-swatch {
+    width: 0.7rem;
+    height: 0.7rem;
+    margin-top: 0;
+}
+
+.er-form .triage-color-panel-compact .triage-color-title {
+    font-size: 0.72rem;
+    font-weight: 700;
+}
+
+.er-form .triage-color-panel-compact .triage-color-wait {
+    font-size: 0.62rem;
+    color: #64748b;
+    line-height: 1.2;
+}
+
+.er-form .triage-color-panel-compact .triage-color-detail {
+    display: none;
 }
 
 .panel-head-actions {
@@ -452,6 +640,58 @@ button.status-chip-filter.active {
 .app-table.reports-table th:last-child,
 .app-table.reports-table td:last-child {
     white-space: nowrap;
+}
+
+/* Report / Prescription PDF preview */
+#reportPreviewModal .modal-dialog,
+#prescriptionPreviewModal .modal-dialog {
+    max-width: min(1200px, 96vw);
+    width: 96vw;
+    margin: 0.75rem auto;
+}
+
+#reportPreviewModal .modal-content,
+#prescriptionPreviewModal .modal-content {
+    max-height: 96vh;
+}
+
+#reportPreviewModal .modal-body,
+#prescriptionPreviewModal .modal-body {
+    padding-top: 0.75rem;
+    padding-bottom: 0.75rem;
+}
+
+.pdf-preview-host {
+    width: 100%;
+    height: min(78vh, 820px);
+    overflow: auto;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 8px;
+    background: #f8f9fa;
+}
+
+.pdf-preview-host canvas {
+    display: block;
+    max-width: 100%;
+    height: auto !important;
+}
+
+.pdf-preview-actions .btn {
+    min-width: 6.5rem;
+}
+
+@media (max-width: 767.98px) {
+    #reportPreviewModal .modal-dialog,
+    #prescriptionPreviewModal .modal-dialog {
+        max-width: 100vw;
+        width: 100vw;
+        margin: 0.25rem;
+    }
+
+    .pdf-preview-host {
+        height: min(70vh, 640px);
+    }
 }
 
 .vitals-row {
@@ -1026,6 +1266,36 @@ button.status-chip-filter.active {
     margin-left: auto;
 }
 
+.discharged-search-form {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    flex: 1 1 280px;
+    min-width: 0;
+}
+
+.discharged-search-form .quick-input {
+    flex: 1 1 auto;
+    max-width: 360px;
+}
+
+.discharged-page-meta {
+    font-size: 0.82rem;
+    color: #6b7280;
+    margin: -0.25rem 0 0.7rem;
+}
+
+.discharged-pager {
+    display: flex;
+    justify-content: center;
+    margin-top: 0.9rem;
+}
+
+.discharged-pager .page-item.active .page-link {
+    background-color: #dc2626;
+    border-color: #dc2626;
+}
+
 .quick-input {
     max-width: 260px;
     font-size: 0.84rem;
@@ -1419,8 +1689,14 @@ button.status-chip-filter.active {
     margin-bottom: 0.35rem;
 }
 
+.er-form .form-select{
+    min-height: 28px;
+    height: 28px;
+    font-size: 0.95rem;
+    padding: 0.1rem 0.75rem;
+    border-radius: 10px;
+}
 .er-form .form-control,
-.er-form .form-select,
 .er-form .er-touch-input {
     min-height: 28px;
     height: 28px;
@@ -1434,9 +1710,14 @@ button.status-chip-filter.active {
     font-size: 0.7rem;
     line-height: 1.45;
 }
-
-.er-form .form-control-sm,
 .er-form .form-select-sm {
+    min-height: 28px;
+    font-size: 0.9rem;
+    padding: 0.2rem 0.65rem;
+    height: 30px;
+}
+.er-form .form-control-sm
+{
     min-height: 28px;
     font-size: 0.9rem;
     padding: 0.5rem 0.65rem;
@@ -1558,6 +1839,31 @@ button.status-chip-filter.active {
 .er-form .findings-panel {
     padding: 0.6rem 0.75rem;
     margin-bottom: 0.65rem;
+}
+
+.er-form .findings-panel-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    margin-bottom: 0.45rem;
+}
+
+.er-form .findings-panel-head > h3 {
+    font-size: 0.9rem;
+    margin: 0;
+}
+
+.er-form .findings-panel-head .outcome-form-action-wrap {
+    margin: 0;
+    flex: 0 0 auto;
+}
+
+.er-form .findings-panel-head .outcome-form-action-btn {
+    min-height: 32px;
+    padding: 0.25rem 0.75rem;
+    font-size: 0.82rem;
 }
 
 .er-form .findings-panel > h3 {
@@ -1760,12 +2066,19 @@ button.status-chip-filter.active {
     font-size: 1.25rem;
 }
 
-.er-form .patient-top-layout {
-    display: grid;
-    grid-template-columns: minmax(280px, 42%) minmax(0, 1fr);
+.er-form .patient-top-stack {
+    display: flex;
+    flex-direction: column;
     gap: 0.5rem;
     margin-bottom: 0.65rem;
-    align-items: start;
+}
+
+.er-form .patient-top-layout {
+    display: grid;
+    grid-template-columns: minmax(280px, 1.15fr) minmax(220px, 0.85fr);
+    gap: 0.5rem;
+    margin-bottom: 0;
+    align-items: stretch;
 }
 
 .er-form .patient-top-left {
@@ -1777,11 +2090,16 @@ button.status-chip-filter.active {
     max-width: none;
     padding: 0.5rem 0.65rem;
     margin-bottom: 0;
+    height: 100%;
 }
 
 .er-form .vitals-cards-wrap {
     min-width: 0;
-    flex: 1;
+    width: 100%;
+}
+
+.er-form .vitals-cards-row {
+    margin-top: 0;
 }
 
 .er-form .vitals-recorded-label {
@@ -1799,10 +2117,11 @@ button.status-chip-filter.active {
 
 .er-form .vitals-cards-wrap .vitals-cards-grid {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 100px));
-    justify-content: start;
+    grid-template-columns: repeat(10, minmax(0, 1fr));
+    justify-content: stretch;
     gap: 0.35rem;
     min-width: 0;
+    align-content: start;
 }
 
 .er-form .vitals-cards-compact {
@@ -1844,12 +2163,8 @@ button.status-chip-filter.active {
     word-break: break-word;
 }
 
-.er-form .vitals-cards-wrap .vitals-cards-grid {
-    align-content: start;
-}
-
 .er-form .vital-metric-card {
-    max-width: 100px;
+    max-width: none;
     width: 100%;
     box-sizing: border-box;
     padding: 0.38rem 0.42rem;
@@ -1879,13 +2194,49 @@ button.status-chip-filter.active {
 }
 
 .er-form .vitals-table-wrap .app-table {
-    min-width: 640px;
+    min-width: 1180px;
 }
 
 .er-form .vitals-table-wrap th,
 .er-form .vitals-table-wrap td {
     font-size: 0.82rem;
     padding: 0.6rem 0.45rem;
+}
+
+.er-form .vitals-table-wrap .vitals-actions-col {
+    position: sticky;
+    right: 0;
+    z-index: 3;
+    min-width: 3.25rem;
+    width: 3.25rem;
+    background: var(--surface, #fff);
+    box-shadow: -4px 0 8px rgba(15, 23, 42, 0.08);
+    text-align: center;
+    white-space: nowrap;
+}
+
+.er-form .vitals-table-wrap thead .vitals-actions-col {
+    z-index: 4;
+    background: var(--surface, #fff);
+}
+
+.er-form .vitals-delete-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.1rem;
+    height: 2.1rem;
+    padding: 0;
+    border-radius: 8px;
+    line-height: 1;
+}
+
+.er-form .vitals-delete-btn svg {
+    display: block;
+}
+
+.er-form .vitals-row-deleted .vitals-actions-col {
+    background: #fee2e2;
 }
 
 .er-form .panel-head-actions .er-touch-btn {
@@ -1980,14 +2331,17 @@ button.status-chip-filter.active {
 }
 
 @media (min-width: 992px) and (max-width: 1199.98px) {
-    /* 11" landscape: patient strip + vitals grid side by side */
     .er-form .patient-top-layout {
-        grid-template-columns: minmax(300px, 44%) minmax(0, 1fr);
+        grid-template-columns: minmax(280px, 1.1fr) minmax(200px, 0.9fr);
         gap: 0.5rem;
     }
 
     .er-form .patient-top-left .detail-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .er-form .vitals-cards-wrap .vitals-cards-grid {
+        grid-template-columns: repeat(10, minmax(0, 1fr));
     }
 
     .er-form .vital-metric-card {
@@ -2005,12 +2359,12 @@ button.status-chip-filter.active {
     }
 }
 
-/* 10-11" portrait & narrow tablet (e.g. 834px, 960px) — patient + vitals side by side */
+/* 10-11" portrait & narrow tablet (e.g. 834px, 960px) — patient + triage side by side */
 @media (min-width: 576px) and (max-width: 991.98px) {
     .er-form .patient-top-layout {
-        grid-template-columns: minmax(260px, 40%) minmax(0, 1fr);
+        grid-template-columns: minmax(240px, 1fr) minmax(200px, 0.9fr);
         gap: 0.5rem;
-        align-items: start;
+        align-items: stretch;
     }
 
     .er-form .patient-details-compact {
@@ -2019,6 +2373,10 @@ button.status-chip-filter.active {
 
     .er-form .patient-top-left .detail-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .er-form .vitals-cards-wrap .vitals-cards-grid {
+        grid-template-columns: repeat(5, minmax(0, 1fr));
     }
 
     .er-form .vital-metric-card h4 {
@@ -2067,7 +2425,7 @@ button.status-chip-filter.active {
     }
 
     .er-form .vitals-cards-wrap .vitals-cards-grid {
-        grid-template-columns: repeat(2, minmax(0, 100px));
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
     .er-form .findings-handover-fields {
@@ -2208,12 +2566,24 @@ button.status-chip-filter.active {
     font-weight: 600;
 }
 
+#outcomeReferralModal,
+#outcomeDischargeModal,
+#outcomeDeathModal,
+#outcomeLamaModal,
+#outcomeAdmissionModal {
+    --bs-modal-zindex: 1055;
+    --bs-modal-width: 750px;
+    --bs-modal-margin: 0.5rem;
+}
+
 #outcomeReferralModal .modal-dialog,
 #outcomeDischargeModal .modal-dialog,
 #outcomeDeathModal .modal-dialog,
-#outcomeLamaModal .modal-dialog {
-    width: 800px !important;
-    max-width: 800px !important;
+#outcomeLamaModal .modal-dialog,
+#outcomeAdmissionModal .modal-dialog {
+    width: var(--bs-modal-width) !important;
+    max-width: var(--bs-modal-width) !important;
+    margin: var(--bs-modal-margin) auto;
 }
 
 .outcome-modal-content {
@@ -2270,6 +2640,14 @@ button.status-chip-filter.active {
 .outcome-modal-banner-discharge { background: #047857; }
 .outcome-modal-banner-death { background: #7f1d1d; }
 .outcome-modal-banner-lama { background: #a3a300; }
+.outcome-modal-banner-admission { background: #1d4ed8; }
+
+.outcome-section-title {
+    margin: 0.35rem 0 0.55rem;
+    font-size: 0.92rem;
+    font-weight: 700;
+    color: #0f172a;
+}
 
 .outcome-modal-grid {
     display: grid;
@@ -2354,4 +2732,17 @@ button.status-chip-filter.active {
 
 .location-admission-actions {
     margin-top: 0.25rem;
+}
+
+
+/* Target Chrome, Safari, Edge, and Opera */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+/* Target Firefox */
+input[type="number"] {
+    -moz-appearance: textfield;
 }

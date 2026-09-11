@@ -10,7 +10,14 @@
             <h2 class="mb-1">ER Dashboard</h2>
             <p class="mb-0 text-muted">Live operational counts from ER Portal.</p>
         </div>
-        <a class="btn btn-sm btn-outline-secondary" href="@Url.Action("Patients", "Home")">All Patients</a>
+        <div class="d-flex flex-wrap align-items-center gap-2">
+            <a class="btn btn-sm btn-outline-secondary" href="@Url.Action("Patients", "Home")">All Patients</a>
+            @if (ViewBag.IsMO == true || ViewBag.IsNursing == true)
+            {
+                @Html.ActionLink("Discharged Patients", "DischargedPatients", "Home", null,
+                         new { @class = "btn btn-sm patient-form-nav-btn btn-outline-danger" })
+            }
+        </div>
     </div>
 
     <div class="kpi-grid">

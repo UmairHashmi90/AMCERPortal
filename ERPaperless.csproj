@@ -249,6 +249,7 @@
     <Compile Include="Models\DashboardViewModel.cs" />
     <Compile Include="Models\KpiCardViewModel.cs" />
     <Compile Include="Models\LocationCardViewModel.cs" />
+    <Compile Include="Models\DischargedPatientsPageViewModel.cs" />
     <Compile Include="Models\LoginViewModel.cs" />
     <Compile Include="Models\PatientFormContextViewModel.cs" />
     <Compile Include="Models\LovAutocompleteViewModel.cs" />
@@ -266,6 +267,9 @@
     <Compile Include="Models\SaveErReviewFormInputViewModel.cs" />
     <Compile Include="Models\SaveOutcomeFormInputViewModel.cs" />
     <Compile Include="Models\SavePackageOrdersInputViewModel.cs" />
+    <Compile Include="Models\tblClinicalDocument.cs">
+      <DependentUpon>dbERPatient.tt</DependentUpon>
+    </Compile>
     <Compile Include="Models\tblClinicalDocumentER.cs">
       <DependentUpon>dbERPatient.tt</DependentUpon>
     </Compile>
@@ -364,6 +368,7 @@
     <Compile Include="Services\Errorlogging.cs" />
     <Compile Include="Services\ERServiceGroupRepository.cs" />
     <Compile Include="Services\ErFormExcelExporter.cs" />
+    <Compile Include="Services\ErFormExcelToPdfConverter.cs" />
     <Compile Include="Services\EROutcomeFormRepository.cs" />
     <Compile Include="Services\ERIpdAdmissionOrderRepository.cs" />
     <Compile Include="Services\ERReviewFormRepository.cs" />
@@ -484,6 +489,7 @@
     <Content Include="Views\Home\_ErDocuments.cshtml" />
     <Content Include="Views\Home\Index.cshtml" />
     <Content Include="Views\Home\Patients.cshtml" />
+    <Content Include="Views\Home\_LocationGrid.cshtml" />
     <Content Include="Views\Billing\Index.cshtml" />
     <Content Include="Views\Billing\PatientForm.cshtml" />
     <Content Include="Views\Billing\_BillingInvestigations.cshtml" />
@@ -501,6 +507,7 @@
     <Content Include="Views\Shared\_WorkQueueStatusFilters.cshtml" />
     <Content Include="Views\Account\Login.cshtml" />
     <Content Include="Views\Home\_ErTriageColor.cshtml" />
+    <Content Include="Views\Home\DischargedPatients.cshtml" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="App_Data\" />

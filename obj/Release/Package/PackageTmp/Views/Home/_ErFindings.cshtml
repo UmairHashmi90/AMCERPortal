@@ -7,13 +7,26 @@
 }
 
 <section class="panel-card findings-panel">
-    <h3>
-        Clinical Findings
-        @if (!canEdit)
+    <div class="findings-panel-head">
+        <h3>
+            Clinical Findings
+            @if (!canEdit)
+            {
+                <small class="text-muted fw-normal">(read-only)</small>
+            }
+        </h3>
+        @if (isMO)
         {
-            <small class="text-muted fw-normal">(read-only)</small>
+            <div class="outcome-form-action-wrap d-none" id="outcomeFormActionWrap">
+                <button type="button"
+                        id="btnOpenOutcomeFormModal"
+                        class="btn btn-outline-danger btn-sm outcome-form-action-btn"
+                        data-target-modal="">
+                    <span id="outcomeFormActionName">Form</span>
+                </button>
+            </div>
         }
-    </h3>
+    </div>
 
     <div class="findings-grid">
         <div class="findings-quad-row">
@@ -179,15 +192,40 @@
         </div>
     </div>
 
-    @if (isMO)
-    {
-        <div class="outcome-form-action-wrap mt-3 d-none" id="outcomeFormActionWrap">
-            <button type="button"
-                    id="btnOpenOutcomeFormModal"
-                    class="btn btn-outline-primary outcome-form-action-btn"
-                    data-target-modal="">
-                <span id="outcomeFormActionName">Form</span>
-            </button>
+    <div class="row g-3 mt-1 mb-0">
+        <div class="col-md-6">
+            <div class="findings-cell">
+                <div class="findings-cell-head">Condition Upon Release</div>
+                <div class="findings-cell-body">
+                    @Html.Partial("~/Views/Shared/_LovRadioList.cshtml", new ERPaperless.Models.LovRadioListViewModel
+                    {
+                        Label = "",
+                        LabelCss = smLabel,
+                        GroupName = "ConditionUponReleaseCode",
+                        GroupId = "conditionUponRelease",
+                        Options = Model.ConditionUponReleaseOptions,
+                        SelectedValue = rf.ConditionUponReleaseCode,
+                        Disabled = !canEdit
+                    })
+                </div>
+            </div>
         </div>
-    }
+        <div class="col-md-6">
+            <div class="findings-cell">
+                <div class="findings-cell-head">ADR</div>
+                <div class="findings-cell-body">
+                    @Html.Partial("~/Views/Shared/_LovRadioList.cshtml", new ERPaperless.Models.LovRadioListViewModel
+                    {
+                        Label = "",
+                        LabelCss = smLabel,
+                        GroupName = "AdrCode",
+                        GroupId = "adr",
+                        Options = Model.AdrOptions,
+                        SelectedValue = rf.AdrCode,
+                        Disabled = !canEdit
+                    })
+                </div>
+            </div>
+        </div>
+    </div>
 </section>

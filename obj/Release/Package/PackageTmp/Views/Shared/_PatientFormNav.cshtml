@@ -21,13 +21,13 @@
     var isPharmacyOnly = ViewBag.IsPharmacyOnly == true;
     var isBillingOnly = ViewBag.IsBillingOnly == true;
     var isNursingOnly = isNursing && !isMo && ViewBag.IsPharmacy != true && ViewBag.IsBilling != true;
-    var hideReportsAndPrescriptions = isPharmacyOnly || isBillingOnly || isNursingOnly;
+    var hideReportsAndPrescriptions = (isPharmacyOnly || isBillingOnly || isNursingOnly) && returnTo != "discharged";
     var isAdmissionDischarged = ViewBag.IsAdmissionDischarged == true;
     var showDischargeFinalize = isMOUser && active == "er";
 
     object patientRoute = string.IsNullOrWhiteSpace(returnTo)
-        ? (object)new { patientId = Model.PatientId }
-        : new { patientId = Model.PatientId, returnTo = returnTo };
+        ? (object)new { patientId = Model?.PatientId }
+        : new { patientId = Model?.PatientId, returnTo = returnTo };
 
     string backText;
     string backAction;
@@ -45,6 +45,12 @@
         backAction = "PatientForm";
         backController = "Billing";
     }
+    else if (returnTo == "discharged")
+    {
+        backText = "Back to Discharged Patients";
+        backAction = "DischargedPatients";
+        backController = "Home";
+    }
     else
     {
         backText = "Back to Patients";
@@ -56,21 +62,28 @@
 <div class="patient-form-nav-wrap">
     <div class="patient-form-nav-head">
         <div>
-            <strong>@Model.PatientName</strong>
-            <span class="text-muted small ms-1">@Model.BedNo · @Model.MrNo</span>
+            <strong>@(string.IsNullOrWhiteSpace(Model?.PatientName) ? "-" : Model.PatientName)</strong>
+            <span class="text-muted small ms-1">@(Model?.BedNo ?? "-") · @(Model?.MrNo ?? "-")</span>
         </div>
         <div class="patient-form-mode-wrap">
             <span class="badge @(canWork ? "bg-success" : "bg-secondary") patient-form-mode-badge">@pageLabel</span>
             @if (showDischargeFinalize)
             {
-                <div class="form-check patient-form-discharge-finalize mb-0">
-                    <input class="form-check-input" type="checkbox" id="chkDischargeFinalize"
-                           @(isAdmissionDischarged ? "checked=\"checked\"" : "")
-                           @(isAdmissionDischarged ? "disabled=\"disabled\"" : "") />
-                    <label class="form-check-label fw-semibold" for="chkDischargeFinalize">Discharged Finalize</label>
+                <div class="d-flex flex-wrap align-items-center gap-3 patient-form-discharge-finalize mb-0">
+                    <div class="form-check mb-0">
+                        <input class="form-check-input" type="checkbox" id="chkDischargeSummaryNotRequired"
+                               @(isAdmissionDischarged ? "disabled=\"disabled\"" : "") />
+                        <label class="form-check-label" for="chkDischargeSummaryNotRequired">Discharge Summary not required</label>
+                    </div>
+                    <div class="form-check mb-0">
+                        <input class="form-check-input" type="checkbox" id="chkDischargeFinalize"
+                               @(isAdmissionDischarged ? "checked=\"checked\"" : "")
+                               @(isAdmissionDischarged ? "disabled=\"disabled\"" : "") />
+                        <label class="form-check-label fw-semibold" for="chkDischargeFinalize">Discharged Finalize</label>
+                    </div>
                     @if (isAdmissionDischarged)
                     {
-                        <small class="text-success ms-1">Already finalized. ER form is now read-only.</small>
+                        <small class="text-success">Discharge finalized. ER form is now read-only for all roles.</small>
                     }
                 </div>
             }
@@ -91,13 +104,16 @@
             @Html.ActionLink("Billing", "PatientForm", "Billing", patientRoute,
                 new { @class = "btn btn-sm patient-form-nav-btn" + (active == "billing" ? " btn-danger" : " btn-outline-danger") })
         }
-        @if (Model.HasAdmission && !hideReportsAndPrescriptions)
+        @if (Model != null && Model.HasAdmission && !hideReportsAndPrescriptions)
         {
+            object reportsRoute = string.IsNullOrWhiteSpace(returnTo)
+                ? (object)new { admissionCode = Model.AdmissionCode }
+                : new { admissionCode = Model.AdmissionCode, returnTo = returnTo };
             @Html.ActionLink("Reports", "Index", "Reports",
-                new { admissionCode = Model.AdmissionCode },
+                reportsRoute,
                 new { @class = "btn btn-sm patient-form-nav-btn" + (active == "reports" ? " btn-primary" : " btn-outline-primary") })
             @Html.ActionLink("Prescriptions", "Prescription", "Reports",
-                new { admissionCode = Model.AdmissionCode },
+                reportsRoute,
                 new { @class = "btn btn-sm patient-form-nav-btn" + (active == "prescription" ? " btn-primary" : " btn-outline-primary") })
         }
     </div>

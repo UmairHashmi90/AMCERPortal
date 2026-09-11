@@ -8,7 +8,6 @@
 
     <div class="section-head">
         <h2>Reports</h2>
-        
     </div>
 
     <article class="panel-card">
@@ -27,17 +26,21 @@
 </section>
 
 <div class="modal fade" id="reportPreviewModal" tabindex="-1" aria-labelledby="reportPreviewModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-centered">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="reportPreviewModalLabel">Report Preview</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <p class="text-muted mb-2" id="reportPreviewInfo">PDF preview will be shown here.</p>
-                <div id="reportPreviewCanvasHost"
-                     style="width:100%;height:70vh;overflow:auto;border:1px solid #dee2e6;border-radius:8px;padding:8px;background:#f8f9fa;">
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+                    <p class="text-muted mb-0" id="reportPreviewInfo">PDF preview will be shown here.</p>
+                    <div class="pdf-preview-actions d-flex flex-wrap gap-2">
+                        <button type="button" class="btn btn-sm btn-outline-secondary" id="btnReportPrint" disabled>Print</button>
+                        <button type="button" class="btn btn-sm btn-outline-primary" id="btnReportShare" disabled>Share</button>
+                    </div>
                 </div>
+                <div id="reportPreviewCanvasHost" class="pdf-preview-host"></div>
             </div>
         </div>
     </div>
@@ -53,6 +56,8 @@
     }
 
     var currentRenderToken = 0;
+    var currentPdfBlob = null;
+    var currentPdfTitle = "Report.pdf";
     var searchInput = document.getElementById("reportSearchInput");
     var table = document.getElementById("reportsInvestigationsTable");
     var emptyEl = document.getElementById("reportsFilterEmpty");
@@ -60,15 +65,30 @@
     var modalEl = document.getElementById("reportPreviewModal");
     var infoEl = document.getElementById("reportPreviewInfo");
     var canvasHostEl = document.getElementById("reportPreviewCanvasHost");
+    var printBtn = document.getElementById("btnReportPrint");
+    var shareBtn = document.getElementById("btnReportShare");
+
+    function setActionButtonsEnabled(enabled) {
+        if (printBtn) printBtn.disabled = !enabled;
+        if (shareBtn) shareBtn.disabled = !enabled;
+    }
 
     function clearPdfCanvas() {
         if (canvasHostEl) canvasHostEl.innerHTML = "";
+        currentPdfBlob = null;
+        setActionButtonsEnabled(false);
     }
 
     function isPdfBuffer(buffer) {
         if (!buffer || buffer.byteLength < 4) return false;
         var bytes = new Uint8Array(buffer);
-        return bytes[0] === 0x25 && bytes[1] === 0x50 && bytes[2] === 0x44 && bytes[3] === 0x46; // %PDF
+        return bytes[0] === 0x25 && bytes[1] === 0x50 && bytes[2] === 0x44 && bytes[3] === 0x46;
+    }
+
+    function safeFileName(name) {
+        var base = String(name || "Report").replace(/[\\/:*?"<>|]+/g, " ").trim();
+        if (!base) base = "Report";
+        return base + (/\.pdf$/i.test(base) ? "" : ".pdf");
     }
 
     function renderPdfBuffer(buffer) {
@@ -82,7 +102,7 @@
             return Promise.reject(new Error("Invalid PDF data received."));
         }
 
-        clearPdfCanvas();
+        if (canvasHostEl) canvasHostEl.innerHTML = "";
         var renderToken = ++currentRenderToken;
         var loadingTask = window.pdfjsLib.getDocument({ data: new Uint8Array(buffer) });
 
@@ -95,12 +115,11 @@
                         return pdf.getPage(pageNumber).then(function (page) {
                             if (renderToken !== currentRenderToken) return;
 
-                            var containerWidth = Math.max((canvasHostEl.clientWidth || 900) - 16, 320);
+                            var containerWidth = Math.max((canvasHostEl.clientWidth || 1000) - 20, 280);
                             var initialViewport = page.getViewport({ scale: 1 });
-                            var baseScale = containerWidth / initialViewport.width;
-                            var qualityBoost = 1.35;
-                            var viewport = page.getViewport({ scale: baseScale * qualityBoost });
-                            var outputScale = Math.min(window.devicePixelRatio || 1, 2.5);
+                            var scale = containerWidth / initialViewport.width;
+                            var viewport = page.getViewport({ scale: scale });
+                            var outputScale = Math.min(window.devicePixelRatio || 1, 2);
 
                             var wrapper = document.createElement("div");
                             wrapper.style.marginBottom = "10px";
@@ -110,8 +129,8 @@
                             wrapper.style.padding = "6px";
 
                             var canvas = document.createElement("canvas");
-                            canvas.style.width = Math.floor(viewport.width) + "px";
-                            canvas.style.height = Math.floor(viewport.height) + "px";
+                            canvas.style.width = "100%";
+                            canvas.style.height = "auto";
                             canvas.width = Math.floor(viewport.width * outputScale);
                             canvas.height = Math.floor(viewport.height * outputScale);
                             wrapper.appendChild(canvas);
@@ -128,6 +147,61 @@
             }
             return renderSequentially;
         });
+    }
+
+    function printCurrentPdf() {
+        if (!currentPdfBlob) return;
+        var url = URL.createObjectURL(currentPdfBlob);
+        var frame = document.createElement("iframe");
+        frame.style.position = "fixed";
+        frame.style.right = "0";
+        frame.style.bottom = "0";
+        frame.style.width = "0";
+        frame.style.height = "0";
+        frame.style.border = "0";
+        frame.src = url;
+        document.body.appendChild(frame);
+        frame.onload = function () {
+            try {
+                frame.contentWindow.focus();
+                frame.contentWindow.print();
+            } catch (err) {
+                window.open(url, "_blank");
+            }
+            setTimeout(function () {
+                URL.revokeObjectURL(url);
+                if (frame.parentNode) frame.parentNode.removeChild(frame);
+            }, 60000);
+        };
+    }
+
+    function shareCurrentPdf() {
+        if (!currentPdfBlob) return;
+        var fileName = safeFileName(currentPdfTitle);
+        var file = new File([currentPdfBlob], fileName, { type: "application/pdf" });
+
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+            navigator.share({
+                files: [file],
+                title: currentPdfTitle,
+                text: currentPdfTitle
+            }).catch(function () { /* user cancelled */ });
+            return;
+        }
+
+        var url = URL.createObjectURL(currentPdfBlob);
+        var link = document.createElement("a");
+        link.href = url;
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        setTimeout(function () { URL.revokeObjectURL(url); }, 2000);
+        if (infoEl) {
+            var previous = infoEl.textContent;
+            infoEl.textContent = previous + " — downloaded for sharing.";
+            setTimeout(function () { if (infoEl) infoEl.textContent = previous; }, 2500);
+        }
     }
 
     function applyReportFilters() {
@@ -149,6 +223,8 @@
     if (searchInput) {
         searchInput.addEventListener("input", applyReportFilters);
     }
+    if (printBtn) printBtn.addEventListener("click", printCurrentPdf);
+    if (shareBtn) shareBtn.addEventListener("click", shareCurrentPdf);
 
     document.addEventListener("click", function (e) {
         var btn = e.target.closest(".open-report-modal-btn");
@@ -158,6 +234,7 @@
 
         var reportName = btn.getAttribute("data-report-name") || "Report";
         var reportUrl = btn.getAttribute("data-report-url") || "";
+        currentPdfTitle = reportName;
         infoEl.textContent = reportName;
 
         var modal = window.bootstrap.Modal.getOrCreateInstance(modalEl);
@@ -180,12 +257,16 @@
                 return response.arrayBuffer();
             })
             .then(function (buffer) {
+                currentPdfBlob = new Blob([buffer], { type: "application/pdf" });
                 return renderPdfBuffer(buffer);
             })
             .then(function () {
                 infoEl.textContent = reportName;
+                setActionButtonsEnabled(true);
             })
             .catch(function () {
+                currentPdfBlob = null;
+                setActionButtonsEnabled(false);
                 infoEl.textContent = "Could not display PDF preview in this device/browser.";
             });
     });

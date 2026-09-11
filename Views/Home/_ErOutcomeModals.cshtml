@@ -578,6 +578,10 @@
                         <label class="form-label">Diagnosis</label>
                         <textarea class="form-control" rows="2" id="ipdAdmissionDiagnosis" @(ipdOrder.IsFinal ? "disabled=\"disabled\"" : "")>@(ipdOrder.Diagnosis ?? "")</textarea>
                     </div>
+                    <div class="outcome-field outcome-field-span-2">
+                        <label class="form-label">HOPI</label>
+                        <textarea class="form-control" rows="3" id="ipdAdmissionHopi" @(ipdOrder.IsFinal ? "disabled=\"disabled\"" : "")>@(ipdOrder.Hopi ?? "")</textarea>
+                    </div>
                     <div class="outcome-field">
                         <label class="form-label">Diet Instruction</label>
                         <textarea class="form-control" rows="2" id="ipdAdmissionDiet" @(ipdOrder.IsFinal ? "disabled=\"disabled\"" : "")>@(ipdOrder.DietInstruction ?? "")</textarea>
@@ -597,8 +601,8 @@
                         <thead>
                             <tr>
                                 <th style="width:22%">Medicine</th>
-                                <th style="width:10%">Prescribed Dose</th>
-                                <th style="width:12%">Dose Unit</th>
+                                <th style="width:10%">Dose</th>
+                                <th style="width:12%">Unit</th>
                                 <th style="width:14%">Frequency</th>
                                 <th style="width:12%">Route</th>
                                 <th style="width:8%">Days</th>

@@ -1,6 +1,6 @@
 @{
     var patient = ViewBag.PharmacyBillingNavPatient as ERPaperless.Models.PatientFormContextViewModel;
-    var isAllPatients = ViewBag.PharmacyBillingNavAllPatients == true;
+    var isAllPatients = ViewBag.PharmacyBillingNavAllPatients == true || patient == null;
     var active = (ViewBag.ActivePatientForm as string ?? string.Empty).ToLowerInvariant();
     var canWork = ViewBag.CanWorkOnPage == true;
     var pageLabel = ViewBag.PageModeLabel as string ?? "View Only";
@@ -23,8 +23,8 @@
             }
             else
             {
-                <strong>@patient.PatientName</strong>
-                <span class="text-muted small ms-1">@patient.BedNo · @patient.MrNo</span>
+                <strong>@(string.IsNullOrWhiteSpace(patient.PatientName) ? "-" : patient.PatientName)</strong>
+                <span class="text-muted small ms-1">@(patient.BedNo ?? "-") · @(patient.MrNo ?? "-")</span>
             }
         </div>
         @Html.ActionLink("All Patients", "Patients", "Home", null,

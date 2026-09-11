@@ -83,7 +83,11 @@ namespace ERPaperless.Controllers
             ViewBag.CanPrintDeathCertificate = printableOutcomes.CanPrintDeath;
             ViewBag.CanPrintPatientReferral = printableOutcomes.CanPrintReferral;
             ViewBag.CanPrintLama = printableOutcomes.CanPrintLama;
+            ViewBag.CanPrintAdmissionOrder = printableOutcomes.CanPrintAdmission;
             ViewBag.CanPrintOutcome = printableOutcomes.CanPrintAny;
+            ViewBag.CanDownloadErFormPdf = HasStoredErFormPdf(
+                erPatient != null ? erPatient.intERAdmissionCode : null,
+                CurrentUserRole.CompanyCode);
 
             var model = _erFormService.BuildErFormModel(
                 patientContext.PatientId,
@@ -158,6 +162,7 @@ namespace ERPaperless.Controllers
                 MetricBMI       = model.MetricBMI,
                 Spo2            = model.Spo2,
                 Spo2Remark      = model.Spo2Remark,
+                Spo2Code        = model.Spo2Code,
                 GlucoseF        = model.GlucoseF,
                 GlucoseR        = model.GlucoseR,
                 Temperature     = model.Temperature,
@@ -351,7 +356,7 @@ namespace ERPaperless.Controllers
 
                     byte[] pdfBytes = null;
                     byte[] excelBytes = null;
-                    string excelFileName = null;
+                    byte[] excelPdfBytes = null;
                     string excelDocumentName = null;
                     try
                     {
@@ -370,7 +375,7 @@ namespace ERPaperless.Controllers
                             CurrentUserRole.UserCode);
                         if (erFormModel != null)
                         {
-                            // In-memory Excel only (never written to disk/folder).
+                            // In-memory Excel only (never written to disk/folder / never stored in DB).
                             excelBytes = ErFormExcelExporter.Build(erFormModel, now);
                             var safeMr = string.IsNullOrWhiteSpace(erFormModel.MrNo) ? "PENDING" : erFormModel.MrNo.Trim();
                             var safeVisit = string.IsNullOrWhiteSpace(erFormModel.AdmissionNo)
@@ -383,7 +388,12 @@ namespace ERPaperless.Controllers
                             }
                             var stamp = now.ToString("yyyyMMdd-HHmmss", CultureInfo.InvariantCulture);
                             excelDocumentName = "ERForm-" + safeMr + "-" + safeVisit + "-" + stamp;
-                            excelFileName = excelDocumentName + ".xls";
+
+                            if (excelBytes != null && excelBytes.Length > 0)
+                            {
+                                // Generate Excel → convert to PDF → compress → store PDF only.
+                                excelPdfBytes = ErFormExcelToPdfConverter.ConvertToPdf(excelBytes);
+                            }
                         }
                     }
                     catch (Exception excelEx)
@@ -394,7 +404,7 @@ namespace ERPaperless.Controllers
                     var pdfArchived = false;
                     if (pdfBytes != null && pdfBytes.Length > 0)
                     {
-                        pdfArchived = SaveClinicalDocumentEr(
+                        pdfArchived = SaveClinicalDocument(
                             db,
                             context,
                             pdfBytes,
@@ -404,26 +414,24 @@ namespace ERPaperless.Controllers
                             now);
                     }
 
-                    var excelArchived = false;
-                    if (excelBytes != null && excelBytes.Length > 0)
+                    var excelPdfArchived = false;
+                    if (excelPdfBytes != null && excelPdfBytes.Length > 0)
                     {
-                        // GZip-compress in memory, store compressed bytes in vbrDocument only.
-                        var compressedExcel = CompressGZip(excelBytes);
-                        excelArchived = SaveClinicalDocumentEr(
+                        // Store compressed PDF bytes only (no Excel in DB, no server folder).
+                        excelPdfArchived = SaveClinicalDocument(
                             db,
                             context,
-                            compressedExcel ?? excelBytes,
-                            ".xls",
+                            excelPdfBytes,
+                            ".pdf",
                             CurrentUserRole.CompanyCode,
                             CurrentUserRole.UserCode,
                             now,
-                            excelDocumentName ?? excelFileName);
+                            excelDocumentName);
                     }
 
                     var stateAfterFinalize = saveResult.Data;
                     var archiveBits = new List<string>();
-                    if (excelArchived) archiveBits.Add("Excel");
-                    if (pdfArchived) archiveBits.Add("PDF");
+                    if (excelPdfArchived || pdfArchived) archiveBits.Add("PDF");
                     var archiveMsg = archiveBits.Count > 0
                         ? (" ER Form " + string.Join(" + ", archiveBits) + " archived.")
                         : " Discharge finalized (document archive skipped or failed).";
@@ -432,6 +440,7 @@ namespace ERPaperless.Controllers
                     {
                         ok = true,
                         discharged = true,
+                        documentSaved = excelPdfArchived || pdfArchived,
                         message = "Form saved successfully." + archiveMsg,
                         savedOn = stateAfterFinalize.SavedOn?.ToString("dd-MMM-yyyy HH:mm"),
                         investigations = stateAfterFinalize.Investigations.Select(x => new
@@ -800,34 +809,27 @@ namespace ERPaperless.Controllers
             if (erPatient == null || !erPatient.intERAdmissionCode.HasValue || erPatient.intERAdmissionCode.Value <= 0)
                 return HttpNotFound();
 
-            // Only allow download after discharge finalize.
-            if (!IsDischargeStarted(erPatient))
-                return new HttpStatusCodeResult(403, "Excel download is available only after discharge finalize.");
-
-            var admissionCode = (int)erPatient.intERAdmissionCode.Value;
+            var admissionCode = erPatient.intERAdmissionCode.Value;
             try
             {
                 using (var db = dbAMCEntities.Create())
                 {
-                    var entity = db.tblClinicalDocumentERs
-                        .Where(x => x.intCompanyCode == CurrentUserRole.CompanyCode
-                                    && x.intERAdmissionCode == admissionCode
-                                    && x.intClinicalDocumentTemplateCode == 9
-                                    && x.strDocumentExtension == ".xls"
-                                    && x.intRecordStatusCode != 8
-                                    && x.vbrDocument != null)
-                        .OrderByDescending(x => x.intClinicalDocumentERCode)
+                    // Retrieve stored PDF from tblClinicalDocument — do not regenerate.
+                    var entity = QueryStoredErFormDocuments(db, admissionCode, CurrentUserRole.CompanyCode)
+                        .OrderByDescending(x => x.intClinicalDocumentCode)
                         .FirstOrDefault();
 
                     if (entity == null || entity.vbrDocument == null || entity.vbrDocument.Length == 0)
                         return HttpNotFound();
 
-                    var bytes = TryDecompressGZip(entity.vbrDocument) ?? entity.vbrDocument;
+                    var bytes = entity.vbrDocument;
                     var fileName = string.IsNullOrWhiteSpace(entity.strDocumentName)
-                        ? ("ERForm-" + admissionCode + ".xls")
-                        : (entity.strDocumentName.Trim() + ".xls");
+                        ? ("ERForm-" + admissionCode + ".pdf")
+                        : (entity.strDocumentName.Trim().EndsWith(".pdf", StringComparison.OrdinalIgnoreCase)
+                            ? entity.strDocumentName.Trim()
+                            : (entity.strDocumentName.Trim() + ".pdf"));
 
-                    return File(bytes, "application/vnd.ms-excel", fileName);
+                    return File(bytes, "application/pdf", fileName);
                 }
             }
             catch (Exception ex)
@@ -943,7 +945,7 @@ namespace ERPaperless.Controllers
                     if (pdfBytes == null || pdfBytes.Length == 0)
                         return Json(new { ok = false, message = "Could not generate ER Form PDF." });
 
-                    var saveDocOk = SaveClinicalDocumentEr(
+                    var saveDocOk = SaveClinicalDocument(
                         db,
                         context,
                         pdfBytes,
@@ -952,7 +954,7 @@ namespace ERPaperless.Controllers
                         CurrentUserRole.UserCode,
                         now);
                     if (!saveDocOk)
-                        return Json(new { ok = false, message = "Patient discharged but ER document could not be archived in tblClinicalDocumentER." });
+                        return Json(new { ok = false, message = "Patient discharged but ER document could not be archived in tblClinicalDocument." });
 
                     tx.Commit();
                     return Json(new
@@ -977,11 +979,20 @@ namespace ERPaperless.Controllers
                 return HttpNotFound();
 
             var bytes = await ReportManager.GetDischargeSummaryBytes(admissionCode.Value.ToString());
-            if (bytes == null || bytes.Length == 0)
+            return InlineOutcomePdf(bytes, "Discharge Summary");
+        }
+
+        [RequireERRole("MO")]
+        [HttpGet]
+        public async Task<ActionResult> PrintAdmisisonOrder(long? admissionCode)
+        {
+            if (!admissionCode.HasValue || admissionCode.Value <= 0)
                 return HttpNotFound();
 
-            return File(bytes, "application/pdf");
+            var bytes = await ReportManager.GetAdmissionOrderBytes(admissionCode.Value.ToString());
+            return InlineOutcomePdf(bytes, "Admission Order");
         }
+
 
         [RequireERRole("MO")]
         [HttpGet]
@@ -991,10 +1002,7 @@ namespace ERPaperless.Controllers
                 return HttpNotFound();
 
             var bytes = await ReportManager.GetDeathCertificateBytes(admissionCode.Value.ToString());
-            if (bytes == null || bytes.Length == 0)
-                return HttpNotFound();
-
-            return File(bytes, "application/pdf");
+            return InlineOutcomePdf(bytes, "Death Certificate");
         }
 
         [RequireERRole("MO")]
@@ -1005,10 +1013,7 @@ namespace ERPaperless.Controllers
                 return HttpNotFound();
 
             var bytes = await ReportManager.GetPatientReferralBytes(admissionCode.Value.ToString());
-            if (bytes == null || bytes.Length == 0)
-                return HttpNotFound();
-
-            return File(bytes, "application/pdf");
+            return InlineOutcomePdf(bytes, "Patient Referral");
         }
 
         [RequireERRole("MO")]
@@ -1019,10 +1024,7 @@ namespace ERPaperless.Controllers
                 return HttpNotFound();
 
             var bytes = await ReportManager.GetLAMABytes(admissionCode.Value.ToString());
-            if (bytes == null || bytes.Length == 0)
-                return HttpNotFound();
-
-            return File(bytes, "application/pdf");
+            return InlineOutcomePdf(bytes, "LAMA");
         }
 
         [RequireERRole("MO", "Nursing")]
@@ -1043,7 +1045,7 @@ namespace ERPaperless.Controllers
                 {
                     var bytes = await ReportManager.GetDischargeSummaryBytes(context.AdmissionCode.ToString());
                     if (bytes != null && bytes.Length > 0)
-                        return File(bytes, "application/pdf");
+                        return InlineOutcomePdf(bytes, "Discharge Summary");
                 }
 
                 var hasDeath = db.tblDeathCertificates.Any(x =>
@@ -1054,7 +1056,7 @@ namespace ERPaperless.Controllers
                 {
                     var bytes = await ReportManager.GetDeathCertificateBytes(context.AdmissionCode.ToString());
                     if (bytes != null && bytes.Length > 0)
-                        return File(bytes, "application/pdf");
+                        return InlineOutcomePdf(bytes, "Death Certificate");
                 }
 
                 var referral = db.tblPatientReferrals
@@ -1067,7 +1069,7 @@ namespace ERPaperless.Controllers
                 {
                     var bytes = await ReportManager.GetPatientReferralBytes(context.AdmissionCode.ToString());
                     if (bytes != null && bytes.Length > 0)
-                        return File(bytes, "application/pdf");
+                        return InlineOutcomePdf(bytes, "Patient Referral");
                 }
 
                 var lama = db.tblLAMAs
@@ -1080,11 +1082,28 @@ namespace ERPaperless.Controllers
                 {
                     var bytes = await ReportManager.GetLAMABytes(context.AdmissionCode.ToString());
                     if (bytes != null && bytes.Length > 0)
-                        return File(bytes, "application/pdf");
+                        return InlineOutcomePdf(bytes, "LAMA");
                 }
 
                 return HttpNotFound("No active outcome form found to print.");
             }
+        }
+
+        private ActionResult InlineOutcomePdf(byte[] bytes, string title)
+        {
+            if (bytes == null || bytes.Length == 0)
+                return HttpNotFound();
+
+            var safeTitle = (title ?? "Document")
+                .Replace("\"", string.Empty)
+                .Replace("\r", string.Empty)
+                .Replace("\n", string.Empty)
+                .Trim();
+            if (string.IsNullOrEmpty(safeTitle))
+                safeTitle = "Document";
+
+            Response.AppendHeader("Content-Disposition", "inline; filename=\"" + safeTitle + ".pdf\"");
+            return File(bytes, "application/pdf");
         }
 
         private JsonResult JsonSaveError(string message)
@@ -1499,7 +1518,70 @@ WHERE intERAdmissionCode = @admissionCode
             }
         }
 
-        private static bool SaveClinicalDocumentEr(
+        private const int ErFormClinicalDocumentTemplateCode = 9;
+
+        private static IQueryable<tblClinicalDocument> QueryStoredErFormDocuments(
+            dbAMCEntities db,
+            long admissionCode,
+            int companyCode,
+            string extension = ".pdf")
+        {
+            var docExt = string.IsNullOrWhiteSpace(extension) ? ".pdf" : extension.Trim();
+            if (!docExt.StartsWith(".", StringComparison.Ordinal))
+                docExt = "." + docExt;
+
+            return db.tblClinicalDocuments
+                .Where(x => x.intCompanyCode == companyCode
+                            && x.intERAdmissionCode == admissionCode
+                            && x.intClinicalDocumentTemplateCode == ErFormClinicalDocumentTemplateCode
+                            && x.strDocumentExtension == docExt
+                            && x.intRecordStatusCode != 8
+                            && x.vbrDocument != null);
+        }
+
+        private static bool HasStoredErFormPdf(long? admissionCode, int companyCode)
+        {
+            if (!admissionCode.HasValue || admissionCode.Value <= 0 || companyCode <= 0)
+                return false;
+
+            try
+            {
+                using (var db = dbAMCEntities.Create())
+                {
+                    return QueryStoredErFormDocuments(db, admissionCode.Value, companyCode)
+                        .Any();
+                }
+            }
+            catch (Exception ex)
+            {
+                ErrorLogging.Log(nameof(EmergencyFormController), nameof(HasStoredErFormPdf), ex);
+                return false;
+            }
+        }
+
+        private static string NormalizeClinicalDocumentName(string documentNameOverride, long admissionCode, string docExt)
+        {
+            var documentName = !string.IsNullOrWhiteSpace(documentNameOverride)
+                ? documentNameOverride.Trim()
+                : ("ERForm-" + admissionCode);
+            if (documentName.EndsWith(".xls.gz", StringComparison.OrdinalIgnoreCase))
+                documentName = documentName.Substring(0, documentName.Length - 7);
+            else if (documentName.EndsWith(".xlsx.gz", StringComparison.OrdinalIgnoreCase))
+                documentName = documentName.Substring(0, documentName.Length - 8);
+            else if (documentName.EndsWith(".xlsx", StringComparison.OrdinalIgnoreCase))
+                documentName = documentName.Substring(0, documentName.Length - 5);
+            else if (documentName.EndsWith(".xls", StringComparison.OrdinalIgnoreCase))
+                documentName = documentName.Substring(0, documentName.Length - 4);
+            else if (documentName.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
+                documentName = documentName.Substring(0, documentName.Length - 4);
+            else if (documentName.EndsWith(docExt, StringComparison.OrdinalIgnoreCase))
+                documentName = documentName.Substring(0, documentName.Length - docExt.Length);
+            if (documentName.Length > 50)
+                documentName = documentName.Substring(0, 50);
+            return documentName;
+        }
+
+        private static bool SaveClinicalDocument(
             dbAMCEntities db,
             DischargeContext context,
             byte[] documentBytes,
@@ -1518,38 +1600,23 @@ WHERE intERAdmissionCode = @admissionCode
 
             try
             {
-                var documentName = !string.IsNullOrWhiteSpace(documentNameOverride)
-                    ? documentNameOverride.Trim()
-                    : ("ERForm-" + context.AdmissionCode);
-                // Strip known file suffixes; extension is stored in strDocumentExtension.
-                if (documentName.EndsWith(".xls.gz", StringComparison.OrdinalIgnoreCase))
-                    documentName = documentName.Substring(0, documentName.Length - 7);
-                else if (documentName.EndsWith(".xlsx.gz", StringComparison.OrdinalIgnoreCase))
-                    documentName = documentName.Substring(0, documentName.Length - 8);
-                else if (documentName.EndsWith(".xlsx", StringComparison.OrdinalIgnoreCase))
-                    documentName = documentName.Substring(0, documentName.Length - 5);
-                else if (documentName.EndsWith(".xls", StringComparison.OrdinalIgnoreCase))
-                    documentName = documentName.Substring(0, documentName.Length - 4);
-                else if (documentName.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
-                    documentName = documentName.Substring(0, documentName.Length - 4);
-                else if (documentName.EndsWith(docExt, StringComparison.OrdinalIgnoreCase))
-                    documentName = documentName.Substring(0, documentName.Length - docExt.Length);
-                if (documentName.Length > 50)
-                    documentName = documentName.Substring(0, 50);
+                var documentName = NormalizeClinicalDocumentName(documentNameOverride, context.AdmissionCode, docExt);
 
-                var entity = db.tblClinicalDocumentERs
+                var entity = db.tblClinicalDocuments
                     .Where(x => x.intCompanyCode == companyCode
                                 && x.intERAdmissionCode == context.AdmissionCode
-                                && x.intClinicalDocumentTemplateCode == 9
+                                && x.intClinicalDocumentTemplateCode == ErFormClinicalDocumentTemplateCode
                                 && x.strDocumentExtension == docExt
                                 && x.intRecordStatusCode != 8)
-                    .OrderByDescending(x => x.intClinicalDocumentERCode)
+                    .OrderByDescending(x => x.intClinicalDocumentCode)
                     .FirstOrDefault();
 
                 if (entity != null)
                 {
-                    entity.dtmClinicalDocumentER = now;
+                    entity.dtmClinicalDocument = now;
                     entity.intPatientCode = context.PatientCode;
+                    entity.intERAdmissionCode = context.AdmissionCode;
+                    entity.intIPDAdmissionCode = null;
                     entity.strDocumentName = documentName;
                     entity.strDocumentExtension = docExt;
                     entity.vbrDocument = documentBytes;
@@ -1561,18 +1628,19 @@ WHERE intERAdmissionCode = @admissionCode
                 }
                 else
                 {
-                    var nextCode = db.tblClinicalDocumentERs
+                    var nextCode = db.tblClinicalDocuments
                         .Where(x => x.intCompanyCode == companyCode)
-                        .Select(x => (long?)x.intClinicalDocumentERCode)
+                        .Select(x => (long?)x.intClinicalDocumentCode)
                         .Max();
 
-                    entity = new tblClinicalDocumentER
+                    entity = new tblClinicalDocument
                     {
-                        intClinicalDocumentERCode = (nextCode ?? 0L) + 1L,
-                        dtmClinicalDocumentER = now,
-                        intClinicalDocumentERID = Guid.NewGuid(),
-                        intClinicalDocumentTemplateCode = 9,
+                        intClinicalDocumentCode = (nextCode ?? 0L) + 1L,
+                        dtmClinicalDocument = now,
+                        intClinicalDocumentID = Guid.NewGuid(),
+                        intClinicalDocumentTemplateCode = ErFormClinicalDocumentTemplateCode,
                         intFileTypeCode = null,
+                        intIPDAdmissionCode = null,
                         intERAdmissionCode = context.AdmissionCode,
                         intPatientCode = context.PatientCode,
                         strDocumentName = documentName,
@@ -1589,7 +1657,7 @@ WHERE intERAdmissionCode = @admissionCode
                         intCompanyCode = companyCode
                     };
 
-                    db.tblClinicalDocumentERs.Add(entity);
+                    db.tblClinicalDocuments.Add(entity);
                 }
 
                 db.SaveChanges();
@@ -1597,12 +1665,12 @@ WHERE intERAdmissionCode = @admissionCode
             }
             catch (Exception ex)
             {
-                ErrorLogging.Log(nameof(EmergencyFormController), nameof(SaveClinicalDocumentEr), ex);
-                return SaveClinicalDocumentErSql(context, documentBytes, docExt, companyCode, userCode, now, documentNameOverride);
+                ErrorLogging.Log(nameof(EmergencyFormController), nameof(SaveClinicalDocument), ex);
+                return SaveClinicalDocumentSql(context, documentBytes, docExt, companyCode, userCode, now, documentNameOverride);
             }
         }
 
-        private static bool SaveClinicalDocumentErSql(
+        private static bool SaveClinicalDocumentSql(
             DischargeContext context,
             byte[] documentBytes,
             string extension,
@@ -1620,23 +1688,7 @@ WHERE intERAdmissionCode = @admissionCode
 
             try
             {
-                var documentName = !string.IsNullOrWhiteSpace(documentNameOverride)
-                    ? documentNameOverride.Trim()
-                    : ("ERForm-" + context.AdmissionCode);
-                if (documentName.EndsWith(".xls.gz", StringComparison.OrdinalIgnoreCase))
-                    documentName = documentName.Substring(0, documentName.Length - 7);
-                else if (documentName.EndsWith(".xlsx.gz", StringComparison.OrdinalIgnoreCase))
-                    documentName = documentName.Substring(0, documentName.Length - 8);
-                else if (documentName.EndsWith(".xlsx", StringComparison.OrdinalIgnoreCase))
-                    documentName = documentName.Substring(0, documentName.Length - 5);
-                else if (documentName.EndsWith(".xls", StringComparison.OrdinalIgnoreCase))
-                    documentName = documentName.Substring(0, documentName.Length - 4);
-                else if (documentName.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
-                    documentName = documentName.Substring(0, documentName.Length - 4);
-                else if (documentName.EndsWith(docExt, StringComparison.OrdinalIgnoreCase))
-                    documentName = documentName.Substring(0, documentName.Length - docExt.Length);
-                if (documentName.Length > 50)
-                    documentName = documentName.Substring(0, 50);
+                var documentName = NormalizeClinicalDocumentName(documentNameOverride, context.AdmissionCode, docExt);
 
                 using (var conn = DBHelper.GetConnection())
                 {
@@ -1644,17 +1696,18 @@ WHERE intERAdmissionCode = @admissionCode
 
                     long existingCode = 0;
                     using (var findCmd = new SqlCommand(@"
-SELECT TOP 1 intClinicalDocumentERCode
-FROM tblClinicalDocumentER
+SELECT TOP 1 intClinicalDocumentCode
+FROM tblClinicalDocument
 WHERE intCompanyCode = @companyCode
   AND intERAdmissionCode = @admissionCode
-  AND intClinicalDocumentTemplateCode = 9
+  AND intClinicalDocumentTemplateCode = @templateCode
   AND strDocumentExtension = @docExt
   AND intRecordStatusCode <> 8
-ORDER BY intClinicalDocumentERCode DESC", conn))
+ORDER BY intClinicalDocumentCode DESC", conn))
                     {
                         findCmd.Parameters.Add("@companyCode", SqlDbType.Int).Value = companyCode;
                         findCmd.Parameters.Add("@admissionCode", SqlDbType.BigInt).Value = context.AdmissionCode;
+                        findCmd.Parameters.Add("@templateCode", SqlDbType.Int).Value = ErFormClinicalDocumentTemplateCode;
                         findCmd.Parameters.Add("@docExt", SqlDbType.NVarChar, 10).Value = docExt;
                         var result = findCmd.ExecuteScalar();
                         if (result != null && result != DBNull.Value)
@@ -1664,9 +1717,11 @@ ORDER BY intClinicalDocumentERCode DESC", conn))
                     if (existingCode > 0)
                     {
                         using (var upd = new SqlCommand(@"
-UPDATE tblClinicalDocumentER
-SET dtmClinicalDocumentER = @docDate,
+UPDATE tblClinicalDocument
+SET dtmClinicalDocument = @docDate,
     intPatientCode = @patientCode,
+    intERAdmissionCode = @admissionCode,
+    intIPDAdmissionCode = NULL,
     strDocumentName = @docName,
     strDocumentExtension = @docExt,
     vbrDocument = @docBytes,
@@ -1675,11 +1730,12 @@ SET dtmClinicalDocumentER = @docDate,
     intAlteredByCode = @userCode,
     intRecordStatusCode = 1,
     intBranchCode = @branchCode
-WHERE intClinicalDocumentERCode = @code
+WHERE intClinicalDocumentCode = @code
   AND intCompanyCode = @companyCode", conn))
                         {
                             upd.Parameters.Add("@docDate", SqlDbType.DateTime).Value = now;
                             upd.Parameters.Add("@patientCode", SqlDbType.BigInt).Value = context.PatientCode;
+                            upd.Parameters.Add("@admissionCode", SqlDbType.BigInt).Value = context.AdmissionCode;
                             upd.Parameters.Add("@docName", SqlDbType.NVarChar, 50).Value = documentName;
                             upd.Parameters.Add("@docExt", SqlDbType.NVarChar, 10).Value = docExt;
                             upd.Parameters.Add("@docBytes", SqlDbType.VarBinary, -1).Value = documentBytes;
@@ -1694,8 +1750,8 @@ WHERE intClinicalDocumentERCode = @code
 
                     long nextCode;
                     using (var maxCmd = new SqlCommand(@"
-SELECT ISNULL(MAX(intClinicalDocumentERCode), 0) + 1
-FROM tblClinicalDocumentER
+SELECT ISNULL(MAX(intClinicalDocumentCode), 0) + 1
+FROM tblClinicalDocument
 WHERE intCompanyCode = @companyCode", conn))
                     {
                         maxCmd.Parameters.Add("@companyCode", SqlDbType.Int).Value = companyCode;
@@ -1703,10 +1759,11 @@ WHERE intCompanyCode = @companyCode", conn))
                     }
 
                     using (var ins = new SqlCommand(@"
-INSERT INTO tblClinicalDocumentER
+INSERT INTO tblClinicalDocument
 (
-    intClinicalDocumentERCode, dtmClinicalDocumentER, intClinicalDocumentERID,
-    intClinicalDocumentTemplateCode, intFileTypeCode, intERAdmissionCode, intPatientCode,
+    intClinicalDocumentCode, dtmClinicalDocument, intClinicalDocumentID,
+    intClinicalDocumentTemplateCode, intFileTypeCode, intIPDAdmissionCode,
+    intERAdmissionCode, intPatientCode,
     strDocumentName, strDocumentExtension, vbrDocument, bolIsFinal,
     dtmCreated, dtmLastM, intOwnerCode, intCreatedByCode, intAlteredByCode,
     intRecordStatusCode, intBranchCode, intCompanyCode
@@ -1714,7 +1771,8 @@ INSERT INTO tblClinicalDocumentER
 VALUES
 (
     @code, @docDate, @docId,
-    9, NULL, @admissionCode, @patientCode,
+    @templateCode, NULL, NULL,
+    @admissionCode, @patientCode,
     @docName, @docExt, @docBytes, 1,
     @now, @now, @userCode, @userCode, @userCode,
     1, @branchCode, @companyCode
@@ -1723,6 +1781,7 @@ VALUES
                         ins.Parameters.Add("@code", SqlDbType.BigInt).Value = nextCode;
                         ins.Parameters.Add("@docDate", SqlDbType.DateTime).Value = now;
                         ins.Parameters.Add("@docId", SqlDbType.UniqueIdentifier).Value = Guid.NewGuid();
+                        ins.Parameters.Add("@templateCode", SqlDbType.Int).Value = ErFormClinicalDocumentTemplateCode;
                         ins.Parameters.Add("@admissionCode", SqlDbType.BigInt).Value = context.AdmissionCode;
                         ins.Parameters.Add("@patientCode", SqlDbType.BigInt).Value = context.PatientCode;
                         ins.Parameters.Add("@docName", SqlDbType.NVarChar, 50).Value = documentName;
@@ -1738,7 +1797,7 @@ VALUES
             }
             catch (Exception ex)
             {
-                ErrorLogging.Log(nameof(EmergencyFormController), nameof(SaveClinicalDocumentErSql), ex);
+                ErrorLogging.Log(nameof(EmergencyFormController), nameof(SaveClinicalDocumentSql), ex);
                 return false;
             }
         }
@@ -1872,7 +1931,8 @@ WHERE intERAdmissionCode = @admissionCode
 
         private static bool IsDischargeStarted(tblERPatient erPatient)
         {
-            return erPatient != null && erPatient.bolIsDischargeStart == true;
+            return erPatient != null
+                && (erPatient.bolIsDischargeStart == true || erPatient.bolIsDischarge == true);
         }
 
         private static bool MarkErPatientDischargeStart(
@@ -1948,6 +2008,8 @@ WHERE intERAdmissionCode = @admissionCode
                     x.intERAdmissionCode == code && x.intCompanyCode == companyCode && x.intRecordStatusCode != 8);
                 flags.CanPrintLama = db.tblLAMAs.Any(x =>
                     x.intERAdmissionCode == code && x.intCompanyCode == companyCode && x.intRecordStatusCode != 8);
+                flags.CanPrintAdmission = db.tblIPDAdmOrders.Any(x =>
+                    x.intERAdmissionCode == code && x.intCompanyCode == companyCode && x.intRecordStatusCode == 1);
             }
 
             return flags;
@@ -1959,7 +2021,9 @@ WHERE intERAdmissionCode = @admissionCode
             public bool CanPrintDeath { get; set; }
             public bool CanPrintReferral { get; set; }
             public bool CanPrintLama { get; set; }
-            public bool CanPrintAny => CanPrintDischarge || CanPrintDeath || CanPrintReferral || CanPrintLama;
+            public bool CanPrintAdmission { get; set; }
+            public bool CanPrintAny =>
+                CanPrintDischarge || CanPrintDeath || CanPrintReferral || CanPrintLama || CanPrintAdmission;
         }
 
         private DischargeContext GetDischargeContext(string patientId, long? admissionCode, int companyCode)

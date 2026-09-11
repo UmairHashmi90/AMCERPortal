@@ -18,7 +18,9 @@
     bool canPrintDeathCertificate = ViewBag.CanPrintDeathCertificate == true;
     bool canPrintPatientReferral = ViewBag.CanPrintPatientReferral == true;
     bool canPrintLama = ViewBag.CanPrintLama == true;
-    bool canPrintOutcome = canPrintDischargeSummary || canPrintDeathCertificate || canPrintPatientReferral || canPrintLama;
+    bool canPrintAdmissionOrder = ViewBag.CanPrintAdmissionOrder == true;
+    bool canPrintOutcome = canPrintDischargeSummary || canPrintDeathCertificate || canPrintPatientReferral || canPrintLama || canPrintAdmissionOrder;
+    bool canDownloadErFormPdf = ViewBag.CanDownloadErFormPdf == true;
 }
 
 <section class="page-section er-form">
@@ -82,6 +84,7 @@
     <input type="hidden" id="printDeathCertificateUrl" value="@Url.Action("PrintDeathCertificate", "EmergencyForm")" />
     <input type="hidden" id="printPatientReferralUrl" value="@Url.Action("PrintPatientReferral", "EmergencyForm")" />
     <input type="hidden" id="printLamaUrl" value="@Url.Action("PrintLama", "EmergencyForm")" />
+    <input type="hidden" id="printAdmissionOrderUrl" value="@Url.Action("PrintAdmisisonOrder", "EmergencyForm")" />
     <input type="hidden" id="uploadDocumentUrl" value="@Url.Action("UploadDocument", "EmergencyForm")" />
     <input type="hidden" id="deleteDocumentUrl" value="@Url.Action("DeleteDocument", "EmergencyForm")" />
     <input type="hidden" id="erFormIsMO" value="@(isMO ? "1" : "0")" />
@@ -153,7 +156,7 @@
     @Html.Partial("~/Views/Home/_ErDocuments.cshtml")
 
     @* ── Action bar (Save / Discharge) ─────────────── *@
-    @if (canSaveReviewForm || canPrintOutcome)
+    @if (canSaveReviewForm || canPrintOutcome || canDownloadErFormPdf)
     {
         var returnTo = (ViewBag.ReturnTo as string ?? string.Empty).Trim().ToLowerInvariant();
         <div class="er-form-actions d-flex justify-content-between align-items-center gap-2">
@@ -165,6 +168,11 @@
             else if (returnTo == "billing")
             {
                 @Html.ActionLink("Back to Billing", "PatientForm", "Billing", null,
+                              new { @class = "btn btn-outline-secondary btn-lg" })
+            }
+            else if (returnTo == "discharged")
+            {
+                @Html.ActionLink("Back to Discharged Patients", "DischargedPatients", "Home", null,
                               new { @class = "btn btn-outline-secondary btn-lg" })
             }
             else
@@ -190,13 +198,17 @@
                 {
                     <button type="button" class="btn btn-dark btn-lg outcome-print-btn" data-print-type="death">Death Certificate</button>
                 }
-                @if (isAdmissionDischarged)
+                @if (canPrintAdmissionOrder)
+                {
+                    <button type="button" class="btn btn-primary btn-lg outcome-print-btn" data-print-type="admission">Adm Order</button>
+                }
+                @if (canDownloadErFormPdf)
                 {
                     <a class="btn btn-success btn-lg"
                        id="btnDownloadErFormExcel"
                        href="@Url.Action("DownloadErFormExcel", "EmergencyForm", new { patientId = Model.PatientId })"
-                       title="Download ER Form Excel from archive">
-                        Download Excel
+                       title="Download ER Form PDF from archive">
+                        Download PDF
                     </a>
                 }
                 @if (canSaveReviewForm)
@@ -978,6 +990,7 @@
     var printDeathUrlEl = document.getElementById("printDeathCertificateUrl");
     var printReferralUrlEl = document.getElementById("printPatientReferralUrl");
     var printLamaUrlEl = document.getElementById("printLamaUrl");
+    var printAdmissionOrderUrlEl = document.getElementById("printAdmissionOrderUrl");
     var uploadUrlEl = document.getElementById("uploadDocumentUrl");
     var deleteDocUrlEl = document.getElementById("deleteDocumentUrl");
     var isMO = document.getElementById("erFormIsMO") && document.getElementById("erFormIsMO").value === "1";
@@ -1696,6 +1709,7 @@
             else if (printType === "death") baseUrl = printDeathUrlEl ? printDeathUrlEl.value : "";
             else if (printType === "referral") baseUrl = printReferralUrlEl ? printReferralUrlEl.value : "";
             else if (printType === "lama") baseUrl = printLamaUrlEl ? printLamaUrlEl.value : "";
+            else if (printType === "admission") baseUrl = printAdmissionOrderUrlEl ? printAdmissionOrderUrlEl.value : "";
 
             if (!baseUrl) {
                 showAlert("Print endpoint is not configured.", true);
@@ -1738,10 +1752,11 @@
         if (value.indexOf("death") >= 0) {
             return { title: "Death Certificate", modalId: "outcomeDeathModal" };
         }
-        // Admitted / Admit / Admission / IPD Admission → same open-modal button pattern
-        if (value.indexOf("admit") >= 0
-            || value.indexOf("admission") >= 0
-            || value.indexOf("ipd") >= 0) {
+        // Admitted / Admit / Admission / IPD — never treat Discharge as Admission.
+        if ((value.indexOf("admit") >= 0
+                || value.indexOf("admission") >= 0
+                || value.indexOf("ipd") >= 0)
+            && value.indexOf("discharge") < 0) {
             return { title: "Adm Order", modalId: "outcomeAdmissionModal" };
         }
         return null;
@@ -2656,6 +2671,7 @@
             Diagnosis: valueOf("ipdAdmissionDiagnosis"),
             DietInstruction: valueOf("ipdAdmissionDiet"),
             Comments: valueOf("ipdAdmissionComments"),
+            Hopi: valueOf("ipdAdmissionHopi"),
             Medicines: collectIpdMedicines(),
             Investigations: collectIpdInvestigations(),
             RoutineServices: collectIpdRoutineServices()
@@ -2722,6 +2738,15 @@
                     }
                     if (typeof window.showErFormToast === "function") {
                         window.showErFormToast(result.message || "IPD Admission Order saved.", false);
+                    }
+
+                    // Close modal immediately, then reload so ER Form reflects saved Admission Order.
+                    if (window.bootstrap && window.bootstrap.Modal) {
+                        var admissionModalEl = document.getElementById("outcomeAdmissionModal");
+                        if (admissionModalEl) {
+                            var admissionModal = window.bootstrap.Modal.getOrCreateInstance(admissionModalEl);
+                            admissionModal.hide();
+                        }
                     }
                     window.setTimeout(function () { window.location.reload(); }, 300);
                     return result;

@@ -301,6 +301,37 @@ body.app-body {
     font-size: 0.95rem;
 }
 
+.location-head-end {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    margin-left: auto;
+    flex-shrink: 0;
+}
+
+.location-bin-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    background: transparent;
+    color: #dc2626;
+    padding: 0.1rem;
+    line-height: 1;
+    cursor: pointer;
+    border-radius: 4px;
+}
+
+.location-bin-btn:hover,
+.location-bin-btn:focus {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.location-bin-btn svg {
+    pointer-events: none;
+}
+
 .slot-type-icon {
     width: 32px;
     height: 32px;
@@ -1235,6 +1266,36 @@ button.status-chip-filter.active {
     margin-left: auto;
 }
 
+.discharged-search-form {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    flex: 1 1 280px;
+    min-width: 0;
+}
+
+.discharged-search-form .quick-input {
+    flex: 1 1 auto;
+    max-width: 360px;
+}
+
+.discharged-page-meta {
+    font-size: 0.82rem;
+    color: #6b7280;
+    margin: -0.25rem 0 0.7rem;
+}
+
+.discharged-pager {
+    display: flex;
+    justify-content: center;
+    margin-top: 0.9rem;
+}
+
+.discharged-pager .page-item.active .page-link {
+    background-color: #dc2626;
+    border-color: #dc2626;
+}
+
 .quick-input {
     max-width: 260px;
     font-size: 0.84rem;
@@ -1628,8 +1689,14 @@ button.status-chip-filter.active {
     margin-bottom: 0.35rem;
 }
 
+.er-form .form-select{
+    min-height: 28px;
+    height: 28px;
+    font-size: 0.95rem;
+    padding: 0.1rem 0.75rem;
+    border-radius: 10px;
+}
 .er-form .form-control,
-.er-form .form-select,
 .er-form .er-touch-input {
     min-height: 28px;
     height: 28px;
@@ -1643,9 +1710,14 @@ button.status-chip-filter.active {
     font-size: 0.7rem;
     line-height: 1.45;
 }
-
-.er-form .form-control-sm,
 .er-form .form-select-sm {
+    min-height: 28px;
+    font-size: 0.9rem;
+    padding: 0.2rem 0.65rem;
+    height: 30px;
+}
+.er-form .form-control-sm
+{
     min-height: 28px;
     font-size: 0.9rem;
     padding: 0.5rem 0.65rem;
@@ -2660,4 +2732,17 @@ button.status-chip-filter.active {
 
 .location-admission-actions {
     margin-top: 0.25rem;
+}
+
+
+/* Target Chrome, Safari, Edge, and Opera */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+/* Target Firefox */
+input[type="number"] {
+    -moz-appearance: textfield;
 }

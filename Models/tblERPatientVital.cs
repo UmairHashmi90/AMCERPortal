@@ -27,6 +27,7 @@ namespace ERPaperless.Models
         public Nullable<decimal> numWeight { get; set; }
         public Nullable<int> intMetricBMI { get; set; }
         public Nullable<int> intSPO2 { get; set; }
+        public string strSPo2 { get; set; }
         public Nullable<decimal> numGlucoseF { get; set; }
         public Nullable<decimal> numGlucoseR { get; set; }
         public Nullable<int> intPainScore { get; set; }

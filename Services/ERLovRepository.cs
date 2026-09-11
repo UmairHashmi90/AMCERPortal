@@ -11,6 +11,9 @@ namespace ERPaperless.Services
     {
         private static readonly object CacheLock = new object();
         private static List<ERLovItemViewModel> _cachedLovs;
+        private static DateTime _cacheLoadedUtc = DateTime.MinValue;
+        // Short TTL so DB label changes appear after refresh without waiting for IIS recycle.
+        private static readonly TimeSpan CacheTtl = TimeSpan.FromSeconds(30);
 
         private static readonly Dictionary<ERLovType, string[]> TypeDescriptionHints =
             new Dictionary<ERLovType, string[]>
@@ -28,7 +31,8 @@ namespace ERPaperless.Services
                 { ERLovType.Outcome, new[] { "OUTCOME" } },
                 { ERLovType.ConditionUponRelease, new[] { "CONDITION UPON RELEASE", "CONDITION ON RELEASE" } },
                 { ERLovType.Adr, new[] { "ADR", "ADVERSE DRUG REACTION" } },
-                { ERLovType.Conciousness, new[] { "CONSCIOUSNESS", "CONCIOUSNESS", "CONSCIOUS" } }
+                { ERLovType.Conciousness, new[] { "CONSCIOUSNESS" } },
+                { ERLovType.SPo2, new[] { "SPo2" } }
             };
 
         public static string LastError { get; private set; }
@@ -39,12 +43,21 @@ namespace ERPaperless.Services
 
             lock (CacheLock)
             {
-                if (_cachedLovs != null)
+                var now = DateTime.UtcNow;
+                if (_cachedLovs != null && (now - _cacheLoadedUtc) < CacheTtl)
                     return _cachedLovs;
 
                 var loaded = LoadAll();
                 if (string.IsNullOrWhiteSpace(LastError))
+                {
                     _cachedLovs = loaded;
+                    _cacheLoadedUtc = now;
+                    return _cachedLovs;
+                }
+
+                // Prefer last good cache if reload failed.
+                if (_cachedLovs != null)
+                    return _cachedLovs;
 
                 return loaded;
             }
@@ -433,6 +446,7 @@ namespace ERPaperless.Services
             lock (CacheLock)
             {
                 _cachedLovs = null;
+                _cacheLoadedUtc = DateTime.MinValue;
             }
         }
 
@@ -451,7 +465,7 @@ namespace ERPaperless.Services
             }
 
             if (result.Count == 0 && fallback.Count == 0)
-                LastError = LastError ?? "No LOV detail rows found in tblERLovDetail.";
+                LastError = LastError ?? "No list found.";
 
             return fallback;
         }

@@ -200,11 +200,21 @@
                             </div>
                             <div>
                                 <label class="form-label">SPO2 <small class="text-muted">%</small></label>
-                                <div class="d-flex gap-2 align-items-center">
+                                <div class="d-flex gap-2 align-items-end">
                                     @Html.TextBox("Spo2", Model.AddVitalInput.Spo2,
                                         new { @class = "form-control", type = "number", min = "0", max = "100", style = "max-width:9.5rem;" })
-                                    @Html.TextBox("Spo2Remark", Model.AddVitalInput.Spo2Remark,
-                                        new { @class = "form-control form-control-sm", maxlength = "100", placeholder = "Comment", title = "SPO2 short comment", style = "max-width:13.5rem;" })
+                                    <div class="flex-grow-1" style="max-width:13.5rem;">
+                                        @Html.Partial("~/Views/Shared/_LovSelect.cshtml", new ERPaperless.Models.LovSelectViewModel
+                                        {
+                                            Label = null,
+                                            FieldId = "Spo2Code",
+                                            FieldName = "Spo2Code",
+                                            SelectCss = "form-select form-select-sm",
+                                            Placeholder = "-- select --",
+                                            SelectedValue = Model.AddVitalInput.Spo2Code,
+                                            Options = Model.Spo2Options
+                                        })
+                                    </div>
                                 </div>
                             </div>
                             <div>

@@ -41,10 +41,11 @@ namespace ERPaperless.Models
         public virtual DbSet<tblERPatientDrugAllergy> tblERPatientDrugAllergies { get; set; }
         public virtual DbSet<tblERPatientReviewForm> tblERPatientReviewForms { get; set; }
         public virtual DbSet<tblERPatient> tblERPatients { get; set; }
-        public virtual DbSet<tblERPatientVital> tblERPatientVitals { get; set; }
         public virtual DbSet<tblIPDAdmOrder> tblIPDAdmOrders { get; set; }
         public virtual DbSet<tblIPDAdmPrescriptionOrder> tblIPDAdmPrescriptionOrders { get; set; }
         public virtual DbSet<tblIPDAdmServiceOrder> tblIPDAdmServiceOrders { get; set; }
         public virtual DbSet<tblIPDAdmServiceInst> tblIPDAdmServiceInsts { get; set; }
+        public virtual DbSet<tblERPatientVital> tblERPatientVitals { get; set; }
+        public virtual DbSet<tblClinicalDocument> tblClinicalDocuments { get; set; }
     }
 }

@@ -245,8 +245,9 @@ namespace ERPaperless.Services
                                     bed.PatientId = pendingPatient.intERPatientCode.ToString();
                                     bed.PatientName = FirstNonEmpty(
                                         pendingPatient.strName,
+                                        bed.SlotName,
                                         bed.PatientName,
-                                        $"BED#{bed.BedId}");
+                                        $"BED-{bed.BedId}");
                                     triageColor = pendingPatient.strTriageColor;
                                 }
                             }
@@ -266,6 +267,128 @@ namespace ERPaperless.Services
             }
 
             return drafts.Select(d => d.Card).ToList();
+        }
+
+        public static List<LocationCardViewModel> GetDischargedPatients(
+            int companyCode,
+            int branchCode)
+        {
+            var cards = new List<LocationCardViewModel>();
+
+            try
+            {
+                using (var conn = DBHelper.GetConnection())
+                {
+                    conn.Open();
+
+                    using (var cmd = new SqlCommand("procGrdERDischargedPatientForERPortal", conn))
+                    {
+                        cmd.CommandType = System.Data.CommandType.StoredProcedure;
+                        cmd.Parameters.AddWithValue("@intBranchCode", branchCode);
+                        cmd.Parameters.AddWithValue("@intCompanyCode", companyCode);
+
+                        using (var rdr = cmd.ExecuteReader())
+                        {
+                            while (rdr.Read())
+                            {
+                                var bedCode = Convert.ToInt32(rdr["intWardBedCode"]);
+                                var bedBranch = Convert.ToInt32(rdr["intBranchCode"]);
+                                var bedName = ReadDbString(rdr, "strWardBedName") ?? string.Empty;
+                                var admCode = rdr["intERAdmissionCode"] != DBNull.Value
+                                    ? Convert.ToInt32(rdr["intERAdmissionCode"]) : 0;
+
+                                string patientName, ageGender, mrNo, admNo;
+                                DateTime? admDate;
+                                ApplyAdmissionPatientFields(
+                                    rdr,
+                                    out patientName,
+                                    out ageGender,
+                                    out mrNo,
+                                    out admNo,
+                                    out admDate);
+
+                                cards.Add(new LocationCardViewModel
+                                {
+                                    BedId = bedCode,
+                                    BranchCode = bedBranch,
+                                    AdmissionCode = admCode,
+                                    PatientId = admCode > 0
+                                        ? admCode.ToString()
+                                        : ("BED-" + bedCode + "-" + bedBranch),
+                                    SlotName = bedName,
+                                    IsChair = bedName.IndexOf("chair", StringComparison.OrdinalIgnoreCase) >= 0,
+                                    PatientName = patientName,
+                                    AgeGender = ageGender,
+                                    MrNo = mrNo,
+                                    AdmissionNo = admNo,
+                                    AdmissionDate = admDate,
+                                    StateClass = "status-gray",
+                                    StateLabel = "Discharged",
+                                    ShowViewFormAction = true
+                                });
+                            }
+                        }
+                    }
+                }
+
+                var admissionCodes = cards
+                    .Where(c => c.AdmissionCode > 0)
+                    .Select(c => (long)c.AdmissionCode)
+                    .Distinct()
+                    .ToList();
+
+                if (admissionCodes.Count == 0 || companyCode <= 0)
+                    return cards;
+
+                using (var db = dbAMCEntities.Create())
+                {
+                    var erRows = db.tblERPatients
+                        .Where(p => p.intCompanyCode == companyCode
+                                    && (p.intRecordStatusCode == 1 || p.intRecordStatusCode == 2)
+                                    && p.intERAdmissionCode != null
+                                    && admissionCodes.Contains(p.intERAdmissionCode.Value))
+                        .Select(p => new
+                        {
+                            p.intERAdmissionCode,
+                            p.intERPatientCode,
+                            p.strTriageColor,
+                            p.strName,
+                            p.bolIsDischarge
+                        })
+                        .ToList();
+
+                    var byAdmission = erRows
+                        .GroupBy(x => x.intERAdmissionCode.Value)
+                        .ToDictionary(
+                            g => g.Key,
+                            g => g.OrderByDescending(x => x.bolIsDischarge == true)
+                                  .ThenByDescending(x => x.intERPatientCode)
+                                  .First());
+
+                    foreach (var card in cards)
+                    {
+                        if (card.AdmissionCode <= 0)
+                            continue;
+
+                        var row = byAdmission.ContainsKey(card.AdmissionCode)
+                            ? byAdmission[card.AdmissionCode]
+                            : null;
+                        if (row == null)
+                            continue;
+
+                        card.PatientId = row.intERPatientCode.ToString();
+                        card.CardBackgroundClass = ERPatientRepository.TryGetTriageStateClass(row.strTriageColor);
+                        if (string.IsNullOrWhiteSpace(card.PatientName) || card.PatientName == "-")
+                            card.PatientName = FirstNonEmpty(row.strName, card.PatientName, "-");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                ErrorLogging.Log(nameof(BedRepository), nameof(GetDischargedPatients), ex);
+            }
+
+            return cards;
         }
 
         // ─────────────────────────────────────────────────────────────────────
@@ -484,6 +607,11 @@ namespace ERPaperless.Services
         /// </summary>
         public static string GetBedSlotName(int bedCode, int branchCode, int companyCode, int userCode = 0)
         {
+            // Prefer lightweight lookup — avoids recursion through GetBeds enrichment.
+            var direct = GetWardBedName(bedCode, branchCode, companyCode);
+            if (!string.IsNullOrWhiteSpace(direct))
+                return direct;
+
             if (bedCode <= 0)
                 return null;
 
@@ -491,6 +619,40 @@ namespace ERPaperless.Services
                 .FirstOrDefault(x => x.BedId == bedCode);
 
             return string.IsNullOrWhiteSpace(bed?.SlotName) ? null : bed.SlotName;
+        }
+
+        /// <summary>
+        /// Reads strWardBedName directly from tblWardBed (no GetBeds / enrich side effects).
+        /// </summary>
+        public static string GetWardBedName(int bedCode, int branchCode, int companyCode)
+        {
+            if (bedCode <= 0 || branchCode <= 0)
+                return null;
+
+            try
+            {
+                using (var conn = DBHelper.GetConnection())
+                using (var cmd = new SqlCommand(@"
+SELECT TOP 1 strWardBedName
+FROM tblWardBed
+WHERE intWardBedCode = @bedCode
+  AND intBranchCode = @branchCode", conn))
+                {
+                    cmd.Parameters.AddWithValue("@bedCode", bedCode);
+                    cmd.Parameters.AddWithValue("@branchCode", branchCode);
+                    conn.Open();
+                    var value = cmd.ExecuteScalar();
+                    if (value == null || value == DBNull.Value)
+                        return null;
+                    var name = Convert.ToString(value);
+                    return string.IsNullOrWhiteSpace(name) ? null : name.Trim();
+                }
+            }
+            catch (Exception ex)
+            {
+                ErrorLogging.Log(nameof(BedRepository), nameof(GetWardBedName), ex);
+                return null;
+            }
         }
 
         /// <summary>

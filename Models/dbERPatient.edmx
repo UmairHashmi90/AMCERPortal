@@ -5,6 +5,33 @@
     <!-- SSDL content -->
     <edmx:StorageModels>
       <Schema Namespace="dbAMCModel.Store" Provider="System.Data.SqlClient" ProviderManifestToken="2012" Alias="Self" xmlns:store="http://schemas.microsoft.com/ado/2007/12/edm/EntityStoreSchemaGenerator" xmlns:customannotation="http://schemas.microsoft.com/ado/2013/11/edm/customannotation" xmlns="http://schemas.microsoft.com/ado/2009/11/edm/ssdl">
+        <EntityType Name="tblClinicalDocument">
+          <Key>
+            <PropertyRef Name="intClinicalDocumentCode" />
+            <PropertyRef Name="intCompanyCode" />
+          </Key>
+          <Property Name="intClinicalDocumentCode" Type="bigint" Nullable="false" />
+          <Property Name="dtmClinicalDocument" Type="datetime" Nullable="false" />
+          <Property Name="intClinicalDocumentID" Type="uniqueidentifier" Nullable="false" />
+          <Property Name="intClinicalDocumentTemplateCode" Type="int" Nullable="false" />
+          <Property Name="intFileTypeCode" Type="int" />
+          <Property Name="intIPDAdmissionCode" Type="bigint" />
+          <Property Name="intERAdmissionCode" Type="bigint" />
+          <Property Name="intPatientCode" Type="bigint" />
+          <Property Name="strDocumentName" Type="nvarchar" MaxLength="50" />
+          <Property Name="strDocumentExtension" Type="nvarchar" MaxLength="10" Nullable="false" />
+          <Property Name="vbrDocument" Type="varbinary(max)" />
+          <Property Name="bolIsFinal" Type="bit" Nullable="false" />
+          <Property Name="tmVersion" Type="timestamp" StoreGeneratedPattern="Computed" Nullable="false" />
+          <Property Name="dtmCreated" Type="datetime" Nullable="false" />
+          <Property Name="dtmLastM" Type="datetime" />
+          <Property Name="intOwnerCode" Type="int" Nullable="false" />
+          <Property Name="intCreatedByCode" Type="int" Nullable="false" />
+          <Property Name="intAlteredByCode" Type="int" />
+          <Property Name="intRecordStatusCode" Type="int" Nullable="false" />
+          <Property Name="intBranchCode" Type="int" Nullable="false" />
+          <Property Name="intCompanyCode" Type="int" Nullable="false" />
+        </EntityType>
         <EntityType Name="tblClinicalDocumentER">
           <Key>
             <PropertyRef Name="intClinicalDocumentERCode" />
@@ -372,6 +399,7 @@
           <Property Name="numWeight" Type="numeric" Precision="10" Scale="2" />
           <Property Name="intMetricBMI" Type="int" />
           <Property Name="intSPO2" Type="int" />
+          <Property Name="strSPo2" Type="nvarchar" MaxLength="500" />
           <Property Name="numGlucoseF" Type="numeric" Precision="10" Scale="2" />
           <Property Name="numGlucoseR" Type="numeric" Precision="10" Scale="2" />
           <Property Name="intPainScore" Type="int" />
@@ -751,6 +779,7 @@
           </ReferentialConstraint>
         </Association>
         <EntityContainer Name="dbAMCModelStoreContainer">
+          <EntitySet Name="tblClinicalDocument" EntityType="Self.tblClinicalDocument" Schema="dbo" store:Type="Tables" />
           <EntitySet Name="tblClinicalDocumentER" EntityType="Self.tblClinicalDocumentER" Schema="dbo" store:Type="Tables" />
           <EntitySet Name="tblDeathCertificate" EntityType="Self.tblDeathCertificate" Schema="dbo" store:Type="Tables" />
           <EntitySet Name="tblDischargeSummary" EntityType="Self.tblDischargeSummary" Schema="dbo" store:Type="Tables" />
@@ -870,11 +899,6 @@
             <End Role="tblERPatient" EntitySet="tblERPatients" />
             <End Role="tblERPatientPastHistory" EntitySet="tblERPatientPastHistories" />
           </AssociationSet>
-          <EntitySet Name="tblERPatientVitals" EntityType="dbAMCModel.tblERPatientVital" />
-          <AssociationSet Name="FK_tblERPatientVitals_tblERPatientVitals" Association="dbAMCModel.FK_tblERPatientVitals_tblERPatientVitals">
-            <End Role="tblERPatient" EntitySet="tblERPatients" />
-            <End Role="tblERPatientVital" EntitySet="tblERPatientVitals" />
-          </AssociationSet>
           <EntitySet Name="tblIPDAdmOrders" EntityType="dbAMCModel.tblIPDAdmOrder" />
           <EntitySet Name="tblIPDAdmPrescriptionOrders" EntityType="dbAMCModel.tblIPDAdmPrescriptionOrder" />
           <EntitySet Name="tblIPDAdmServiceOrders" EntityType="dbAMCModel.tblIPDAdmServiceOrder" />
@@ -895,6 +919,12 @@
             <End Role="tblIPDAdmOrder" EntitySet="tblIPDAdmOrders" />
             <End Role="tblIPDAdmServiceInst" EntitySet="tblIPDAdmServiceInsts" />
           </AssociationSet>
+          <EntitySet Name="tblERPatientVitals" EntityType="dbAMCModel.tblERPatientVital" />
+          <AssociationSet Name="FK_tblERPatientVitals_tblERPatientVitals" Association="dbAMCModel.FK_tblERPatientVitals_tblERPatientVitals">
+            <End Role="tblERPatient" EntitySet="tblERPatients" />
+            <End Role="tblERPatientVital" EntitySet="tblERPatientVitals" />
+          </AssociationSet>
+          <EntitySet Name="tblClinicalDocuments" EntityType="dbAMCModel.tblClinicalDocument" />
           </EntityContainer>
         <EntityType Name="tblERPatientChiefComplaint">
           <Key>
@@ -1447,57 +1477,6 @@
             </Dependent>
           </ReferentialConstraint>
         </Association>
-        <EntityType Name="tblERPatientVital">
-          <Key>
-            <PropertyRef Name="intERPatientVitalsCode" />
-            <PropertyRef Name="intBranchCode" />
-            <PropertyRef Name="intCompanyCode" />
-          </Key>
-          <Property Name="intERPatientVitalsCode" Type="Int64" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
-          <Property Name="intERPatientCode" Type="Int64" Nullable="false" />
-          <Property Name="dtmVitals" Type="DateTime" Nullable="false" Precision="3" />
-          <Property Name="intHeartRate" Type="Int32" />
-          <Property Name="intPulse" Type="Int32" />
-          <Property Name="intBP1" Type="Int32" />
-          <Property Name="intBP2" Type="Int32" />
-          <Property Name="intResp" Type="Int32" />
-          <Property Name="numTemp" Type="Decimal" Precision="4" Scale="1" />
-          <Property Name="intHeight" Type="Int32" />
-          <Property Name="numWeight" Type="Decimal" Precision="10" Scale="2" />
-          <Property Name="intMetricBMI" Type="Int32" />
-          <Property Name="intSPO2" Type="Int32" />
-          <Property Name="numGlucoseF" Type="Decimal" Precision="10" Scale="2" />
-          <Property Name="numGlucoseR" Type="Decimal" Precision="10" Scale="2" />
-          <Property Name="intPainScore" Type="Int32" />
-          <Property Name="intFallRisk" Type="Int32" />
-          <Property Name="intConciousness" Type="Int32" />
-          <Property Name="tmVersion" Type="Binary" Nullable="false" MaxLength="8" FixedLength="true" annotation:StoreGeneratedPattern="Computed" />
-          <Property Name="dtmCreated" Type="DateTime" Nullable="false" Precision="3" />
-          <Property Name="dtmLastM" Type="DateTime" Precision="3" />
-          <Property Name="intOwnerCode" Type="Int32" Nullable="false" />
-          <Property Name="intCreatedByCode" Type="Int32" Nullable="false" />
-          <Property Name="intAlteredByCode" Type="Int32" />
-          <Property Name="intRecordStatusCode" Type="Int32" Nullable="false" />
-          <Property Name="intBranchCode" Type="Int32" Nullable="false" />
-          <Property Name="intCompanyCode" Type="Int32" Nullable="false" />
-          <NavigationProperty Name="tblERPatient" Relationship="dbAMCModel.FK_tblERPatientVitals_tblERPatientVitals" FromRole="tblERPatientVital" ToRole="tblERPatient" />
-        </EntityType>
-        <Association Name="FK_tblERPatientVitals_tblERPatientVitals">
-          <End Type="dbAMCModel.tblERPatient" Role="tblERPatient" Multiplicity="1" />
-          <End Type="dbAMCModel.tblERPatientVital" Role="tblERPatientVital" Multiplicity="*" />
-          <ReferentialConstraint>
-            <Principal Role="tblERPatient">
-              <PropertyRef Name="intERPatientCode" />
-              <PropertyRef Name="intBranchCode" />
-              <PropertyRef Name="intCompanyCode" />
-            </Principal>
-            <Dependent Role="tblERPatientVital">
-              <PropertyRef Name="intERPatientCode" />
-              <PropertyRef Name="intBranchCode" />
-              <PropertyRef Name="intCompanyCode" />
-            </Dependent>
-          </ReferentialConstraint>
-        </Association>
         <EntityType Name="tblIPDAdmOrder">
           <Key>
             <PropertyRef Name="intIPDAdmOrderCode" />
@@ -1665,6 +1644,85 @@
             </Dependent>
           </ReferentialConstraint>
         </Association>
+        <EntityType Name="tblERPatientVital">
+          <Key>
+            <PropertyRef Name="intERPatientVitalsCode" />
+            <PropertyRef Name="intBranchCode" />
+            <PropertyRef Name="intCompanyCode" />
+          </Key>
+          <Property Name="intERPatientVitalsCode" Type="Int64" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
+          <Property Name="intERPatientCode" Type="Int64" Nullable="false" />
+          <Property Name="dtmVitals" Type="DateTime" Nullable="false" Precision="3" />
+          <Property Name="intHeartRate" Type="Int32" />
+          <Property Name="intPulse" Type="Int32" />
+          <Property Name="intBP1" Type="Int32" />
+          <Property Name="intBP2" Type="Int32" />
+          <Property Name="intResp" Type="Int32" />
+          <Property Name="numTemp" Type="Decimal" Precision="4" Scale="1" />
+          <Property Name="intHeight" Type="Int32" />
+          <Property Name="numWeight" Type="Decimal" Precision="10" Scale="2" />
+          <Property Name="intMetricBMI" Type="Int32" />
+          <Property Name="intSPO2" Type="Int32" />
+          <Property Name="strSPo2" Type="String" MaxLength="500" FixedLength="false" Unicode="true" />
+          <Property Name="numGlucoseF" Type="Decimal" Precision="10" Scale="2" />
+          <Property Name="numGlucoseR" Type="Decimal" Precision="10" Scale="2" />
+          <Property Name="intPainScore" Type="Int32" />
+          <Property Name="intFallRisk" Type="Int32" />
+          <Property Name="intConciousness" Type="Int32" />
+          <Property Name="tmVersion" Type="Binary" Nullable="false" MaxLength="8" FixedLength="true" annotation:StoreGeneratedPattern="Computed" />
+          <Property Name="dtmCreated" Type="DateTime" Nullable="false" Precision="3" />
+          <Property Name="dtmLastM" Type="DateTime" Precision="3" />
+          <Property Name="intOwnerCode" Type="Int32" Nullable="false" />
+          <Property Name="intCreatedByCode" Type="Int32" Nullable="false" />
+          <Property Name="intAlteredByCode" Type="Int32" />
+          <Property Name="intRecordStatusCode" Type="Int32" Nullable="false" />
+          <Property Name="intBranchCode" Type="Int32" Nullable="false" />
+          <Property Name="intCompanyCode" Type="Int32" Nullable="false" />
+          <NavigationProperty Name="tblERPatient" Relationship="dbAMCModel.FK_tblERPatientVitals_tblERPatientVitals" FromRole="tblERPatientVital" ToRole="tblERPatient" />
+        </EntityType>
+        <Association Name="FK_tblERPatientVitals_tblERPatientVitals">
+          <End Type="dbAMCModel.tblERPatient" Role="tblERPatient" Multiplicity="1" />
+          <End Type="dbAMCModel.tblERPatientVital" Role="tblERPatientVital" Multiplicity="*" />
+          <ReferentialConstraint>
+            <Principal Role="tblERPatient">
+              <PropertyRef Name="intERPatientCode" />
+              <PropertyRef Name="intBranchCode" />
+              <PropertyRef Name="intCompanyCode" />
+            </Principal>
+            <Dependent Role="tblERPatientVital">
+              <PropertyRef Name="intERPatientCode" />
+              <PropertyRef Name="intBranchCode" />
+              <PropertyRef Name="intCompanyCode" />
+            </Dependent>
+          </ReferentialConstraint>
+        </Association>
+        <EntityType Name="tblClinicalDocument">
+          <Key>
+            <PropertyRef Name="intClinicalDocumentCode" />
+            <PropertyRef Name="intCompanyCode" />
+          </Key>
+          <Property Name="intClinicalDocumentCode" Type="Int64" Nullable="false" />
+          <Property Name="dtmClinicalDocument" Type="DateTime" Nullable="false" Precision="3" />
+          <Property Name="intClinicalDocumentID" Type="Guid" Nullable="false" />
+          <Property Name="intClinicalDocumentTemplateCode" Type="Int32" Nullable="false" />
+          <Property Name="intFileTypeCode" Type="Int32" />
+          <Property Name="intIPDAdmissionCode" Type="Int64" />
+          <Property Name="intERAdmissionCode" Type="Int64" />
+          <Property Name="intPatientCode" Type="Int64" />
+          <Property Name="strDocumentName" Type="String" MaxLength="50" FixedLength="false" Unicode="true" />
+          <Property Name="strDocumentExtension" Type="String" Nullable="false" MaxLength="10" FixedLength="false" Unicode="true" />
+          <Property Name="vbrDocument" Type="Binary" MaxLength="Max" FixedLength="false" />
+          <Property Name="bolIsFinal" Type="Boolean" Nullable="false" />
+          <Property Name="tmVersion" Type="Binary" Nullable="false" MaxLength="8" FixedLength="true" annotation:StoreGeneratedPattern="Computed" />
+          <Property Name="dtmCreated" Type="DateTime" Nullable="false" Precision="3" />
+          <Property Name="dtmLastM" Type="DateTime" Precision="3" />
+          <Property Name="intOwnerCode" Type="Int32" Nullable="false" />
+          <Property Name="intCreatedByCode" Type="Int32" Nullable="false" />
+          <Property Name="intAlteredByCode" Type="Int32" />
+          <Property Name="intRecordStatusCode" Type="Int32" Nullable="false" />
+          <Property Name="intBranchCode" Type="Int32" Nullable="false" />
+          <Property Name="intCompanyCode" Type="Int32" Nullable="false" />
+        </EntityType>
         </Schema>
     </edmx:ConceptualModels>
     <!-- C-S mapping content -->
@@ -2081,39 +2139,6 @@
               </MappingFragment>
             </EntityTypeMapping>
           </EntitySetMapping>
-          <EntitySetMapping Name="tblERPatientVitals">
-            <EntityTypeMapping TypeName="dbAMCModel.tblERPatientVital">
-              <MappingFragment StoreEntitySet="tblERPatientVitals">
-                <ScalarProperty Name="intCompanyCode" ColumnName="intCompanyCode" />
-                <ScalarProperty Name="intBranchCode" ColumnName="intBranchCode" />
-                <ScalarProperty Name="intRecordStatusCode" ColumnName="intRecordStatusCode" />
-                <ScalarProperty Name="intAlteredByCode" ColumnName="intAlteredByCode" />
-                <ScalarProperty Name="intCreatedByCode" ColumnName="intCreatedByCode" />
-                <ScalarProperty Name="intOwnerCode" ColumnName="intOwnerCode" />
-                <ScalarProperty Name="dtmLastM" ColumnName="dtmLastM" />
-                <ScalarProperty Name="dtmCreated" ColumnName="dtmCreated" />
-                <ScalarProperty Name="tmVersion" ColumnName="tmVersion" />
-                <ScalarProperty Name="intConciousness" ColumnName="intConciousness" />
-                <ScalarProperty Name="intFallRisk" ColumnName="intFallRisk" />
-                <ScalarProperty Name="intPainScore" ColumnName="intPainScore" />
-                <ScalarProperty Name="numGlucoseR" ColumnName="numGlucoseR" />
-                <ScalarProperty Name="numGlucoseF" ColumnName="numGlucoseF" />
-                <ScalarProperty Name="intSPO2" ColumnName="intSPO2" />
-                <ScalarProperty Name="intMetricBMI" ColumnName="intMetricBMI" />
-                <ScalarProperty Name="numWeight" ColumnName="numWeight" />
-                <ScalarProperty Name="intHeight" ColumnName="intHeight" />
-                <ScalarProperty Name="numTemp" ColumnName="numTemp" />
-                <ScalarProperty Name="intResp" ColumnName="intResp" />
-                <ScalarProperty Name="intBP2" ColumnName="intBP2" />
-                <ScalarProperty Name="intBP1" ColumnName="intBP1" />
-                <ScalarProperty Name="intPulse" ColumnName="intPulse" />
-                <ScalarProperty Name="intHeartRate" ColumnName="intHeartRate" />
-                <ScalarProperty Name="dtmVitals" ColumnName="dtmVitals" />
-                <ScalarProperty Name="intERPatientCode" ColumnName="intERPatientCode" />
-                <ScalarProperty Name="intERPatientVitalsCode" ColumnName="intERPatientVitalsCode" />
-              </MappingFragment>
-            </EntityTypeMapping>
-          </EntitySetMapping>
           <EntitySetMapping Name="tblIPDAdmOrders">
             <EntityTypeMapping TypeName="dbAMCModel.tblIPDAdmOrder">
               <MappingFragment StoreEntitySet="tblIPDAdmOrder">
@@ -2205,6 +2230,67 @@
                 <ScalarProperty Name="intConsultantCode" ColumnName="intConsultantCode" />
                 <ScalarProperty Name="intIPDAdmOrderCode" ColumnName="intIPDAdmOrderCode" />
                 <ScalarProperty Name="intIPDAdmServiceInstCode" ColumnName="intIPDAdmServiceInstCode" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
+          <EntitySetMapping Name="tblERPatientVitals">
+            <EntityTypeMapping TypeName="dbAMCModel.tblERPatientVital">
+              <MappingFragment StoreEntitySet="tblERPatientVitals">
+                <ScalarProperty Name="intCompanyCode" ColumnName="intCompanyCode" />
+                <ScalarProperty Name="intBranchCode" ColumnName="intBranchCode" />
+                <ScalarProperty Name="intRecordStatusCode" ColumnName="intRecordStatusCode" />
+                <ScalarProperty Name="intAlteredByCode" ColumnName="intAlteredByCode" />
+                <ScalarProperty Name="intCreatedByCode" ColumnName="intCreatedByCode" />
+                <ScalarProperty Name="intOwnerCode" ColumnName="intOwnerCode" />
+                <ScalarProperty Name="dtmLastM" ColumnName="dtmLastM" />
+                <ScalarProperty Name="dtmCreated" ColumnName="dtmCreated" />
+                <ScalarProperty Name="tmVersion" ColumnName="tmVersion" />
+                <ScalarProperty Name="intConciousness" ColumnName="intConciousness" />
+                <ScalarProperty Name="intFallRisk" ColumnName="intFallRisk" />
+                <ScalarProperty Name="intPainScore" ColumnName="intPainScore" />
+                <ScalarProperty Name="numGlucoseR" ColumnName="numGlucoseR" />
+                <ScalarProperty Name="numGlucoseF" ColumnName="numGlucoseF" />
+                <ScalarProperty Name="strSPo2" ColumnName="strSPo2" />
+                <ScalarProperty Name="intSPO2" ColumnName="intSPO2" />
+                <ScalarProperty Name="intMetricBMI" ColumnName="intMetricBMI" />
+                <ScalarProperty Name="numWeight" ColumnName="numWeight" />
+                <ScalarProperty Name="intHeight" ColumnName="intHeight" />
+                <ScalarProperty Name="numTemp" ColumnName="numTemp" />
+                <ScalarProperty Name="intResp" ColumnName="intResp" />
+                <ScalarProperty Name="intBP2" ColumnName="intBP2" />
+                <ScalarProperty Name="intBP1" ColumnName="intBP1" />
+                <ScalarProperty Name="intPulse" ColumnName="intPulse" />
+                <ScalarProperty Name="intHeartRate" ColumnName="intHeartRate" />
+                <ScalarProperty Name="dtmVitals" ColumnName="dtmVitals" />
+                <ScalarProperty Name="intERPatientCode" ColumnName="intERPatientCode" />
+                <ScalarProperty Name="intERPatientVitalsCode" ColumnName="intERPatientVitalsCode" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
+          <EntitySetMapping Name="tblClinicalDocuments">
+            <EntityTypeMapping TypeName="dbAMCModel.tblClinicalDocument">
+              <MappingFragment StoreEntitySet="tblClinicalDocument">
+                <ScalarProperty Name="intCompanyCode" ColumnName="intCompanyCode" />
+                <ScalarProperty Name="intBranchCode" ColumnName="intBranchCode" />
+                <ScalarProperty Name="intRecordStatusCode" ColumnName="intRecordStatusCode" />
+                <ScalarProperty Name="intAlteredByCode" ColumnName="intAlteredByCode" />
+                <ScalarProperty Name="intCreatedByCode" ColumnName="intCreatedByCode" />
+                <ScalarProperty Name="intOwnerCode" ColumnName="intOwnerCode" />
+                <ScalarProperty Name="dtmLastM" ColumnName="dtmLastM" />
+                <ScalarProperty Name="dtmCreated" ColumnName="dtmCreated" />
+                <ScalarProperty Name="tmVersion" ColumnName="tmVersion" />
+                <ScalarProperty Name="bolIsFinal" ColumnName="bolIsFinal" />
+                <ScalarProperty Name="vbrDocument" ColumnName="vbrDocument" />
+                <ScalarProperty Name="strDocumentExtension" ColumnName="strDocumentExtension" />
+                <ScalarProperty Name="strDocumentName" ColumnName="strDocumentName" />
+                <ScalarProperty Name="intPatientCode" ColumnName="intPatientCode" />
+                <ScalarProperty Name="intERAdmissionCode" ColumnName="intERAdmissionCode" />
+                <ScalarProperty Name="intIPDAdmissionCode" ColumnName="intIPDAdmissionCode" />
+                <ScalarProperty Name="intFileTypeCode" ColumnName="intFileTypeCode" />
+                <ScalarProperty Name="intClinicalDocumentTemplateCode" ColumnName="intClinicalDocumentTemplateCode" />
+                <ScalarProperty Name="intClinicalDocumentID" ColumnName="intClinicalDocumentID" />
+                <ScalarProperty Name="dtmClinicalDocument" ColumnName="dtmClinicalDocument" />
+                <ScalarProperty Name="intClinicalDocumentCode" ColumnName="intClinicalDocumentCode" />
               </MappingFragment>
             </EntityTypeMapping>
           </EntitySetMapping>

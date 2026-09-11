@@ -62,6 +62,19 @@ namespace ERPaperless.Filters
 
         protected override void HandleUnauthorizedRequest(AuthorizationContext filterContext)
         {
+            var httpContext = filterContext.HttpContext;
+            var sessionUser = _currentUserContext.GetCurrentUser(httpContext);
+            if (httpContext == null || !httpContext.Request.IsAuthenticated || sessionUser == null)
+            {
+                filterContext.Result = new RedirectToRouteResult(
+                    new RouteValueDictionary
+                    {
+                        { "controller", "Account" },
+                        { "action", "Login" }
+                    });
+                return;
+            }
+
             var roleList = _requiredRoles.Length > 0
                 ? string.Join(" or ", _requiredRoles)
                 : "an authorized role";

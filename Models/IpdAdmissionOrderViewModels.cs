@@ -18,6 +18,7 @@ namespace ERPaperless.Models
         public string Diagnosis { get; set; }
         public string DietInstruction { get; set; }
         public string Comments { get; set; }
+        public string Hopi { get; set; }
         public bool IsFinal { get; set; }
         public List<IpdAdmissionMedicineRowViewModel> Medicines { get; set; } = new List<IpdAdmissionMedicineRowViewModel>();
         public List<IpdAdmissionServiceRowViewModel> Investigations { get; set; } = new List<IpdAdmissionServiceRowViewModel>();
@@ -66,6 +67,7 @@ namespace ERPaperless.Models
         public string Diagnosis { get; set; }
         public string DietInstruction { get; set; }
         public string Comments { get; set; }
+        public string Hopi { get; set; }
 
         public List<IpdAdmissionMedicineRowViewModel> Medicines { get; set; }
         public List<IpdAdmissionServiceRowViewModel> Investigations { get; set; }

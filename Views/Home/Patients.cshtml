@@ -32,6 +32,11 @@
         <input type="text" class="form-control quick-input"
                id="bedSearch" placeholder="Search by Name / MR No / Bed" />
         <div class="patients-module-actions">
+            @if (ViewBag.IsMO == true || ViewBag.IsNursing == true)
+            {
+                @Html.ActionLink("Discharged Patients", "DischargedPatients", "Home", null,
+                         new { @class = "btn btn-sm patient-form-nav-btn btn-outline-danger" })
+            }
             @if (ViewBag.IsPharmacy == true)
             {
                 @Html.ActionLink("Pharmacy", "PatientForm", "Pharmacy", null,
@@ -54,12 +59,12 @@
     </div>
 
     <div class="location-grid" id="locationGrid">
-        @foreach (var bed in Model)
-        {
-            @Html.Partial("_LocationCard", bed)
-        }
+        @Html.Partial("_LocationGrid", Model)
     </div>
 </section>
+
+<input type="hidden" id="cancelPendingMrUrl" value="@Url.Action("CancelPendingMr", "Home")" />
+<input type="hidden" id="patientsGridUrl" value="@Url.Action("PatientsGrid", "Home")" />
 
 @* ══════════════════════════════════════════════════════════════════════════
    Pending MR Confirmation Modal – fires when View Form clicked on a free bed
@@ -103,7 +108,7 @@
                                id="pmPatientName"
                                name="patientName"
                                maxlength="100"
-                               placeholder="Leave blank to use BED code" />
+                               placeholder="Leave blank to use bed name" />
                     </div>
                     <p class="text-muted small mb-0">
                         The bed status will be set to <strong>Pending MR</strong>
@@ -125,27 +130,148 @@
     </div>
 </div>
 
+<div class="modal fade" id="cancelPendingMrModal" tabindex="-1" role="dialog"
+     aria-labelledby="cancelPendingMrModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="cancelPendingMrModalLabel">Cancel Pending MR</h4>
+                <button type="button" class="close" data-dismiss="modal" data-bs-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p>
+                    Cancel Pending MR for
+                    <strong><span id="cpmPatientNameSpan"></span></strong>
+                    on <strong><span id="cpmBedNameSpan"></span></strong>?
+                </p>
+                <p class="text-muted small mb-0">
+                    This removes the pending patient and sets the bed back to Available.
+                </p>
+                <input type="hidden" id="cpmBedId" value="0" />
+                <input type="hidden" id="cpmBranchCode" value="0" />
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal" data-bs-dismiss="modal">No</button>
+                <button type="button" class="btn btn-danger" id="cpmConfirmBtn">Yes, Cancel</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 @section scripts {
 <script>
-    // ── Quick search / filter beds ────────────────────────────────────────────
-    document.getElementById('bedSearch').addEventListener('keyup', function () {
+    function showPatientsToast(message, isError) {
+        var host = document.getElementById("patientsToastHost");
+        if (!host) {
+            host = document.createElement("div");
+            host.id = "patientsToastHost";
+            var section = document.querySelector(".page-section");
+            if (section) section.insertBefore(host, section.firstChild);
+        }
+        host.innerHTML = '<div class="alert ' + (isError ? 'alert-danger' : 'alert-success') +
+            ' alert-dismissible"><button type="button" class="close" data-dismiss="alert">&times;</button>' +
+            (message || "") + "</div>";
+    }
+
+    function showModal(id) {
+        var el = document.getElementById(id);
+        if (!el) return;
+        if (window.jQuery && typeof window.jQuery.fn.modal === "function") {
+            window.jQuery("#" + id).modal("show");
+            return;
+        }
+        if (window.bootstrap && bootstrap.Modal) {
+            bootstrap.Modal.getOrCreateInstance(el).show();
+        }
+    }
+
+    function hideModal(id) {
+        var el = document.getElementById(id);
+        if (!el) return;
+        if (window.jQuery && typeof window.jQuery.fn.modal === "function") {
+            window.jQuery("#" + id).modal("hide");
+            return;
+        }
+        if (window.bootstrap && bootstrap.Modal) {
+            var instance = bootstrap.Modal.getInstance(el);
+            if (instance) instance.hide();
+        }
+    }
+
+    function refreshLocationGrid() {
+        var grid = document.getElementById("locationGrid");
+        var urlEl = document.getElementById("patientsGridUrl");
+        if (!grid || !urlEl || !urlEl.value) return Promise.resolve();
+        return fetch(urlEl.value, { credentials: "same-origin" })
+            .then(function (res) { return res.text(); })
+            .then(function (html) { grid.innerHTML = html; });
+    }
+
+    document.getElementById("bedSearch").addEventListener("keyup", function () {
         var term = this.value.toLowerCase();
-        document.querySelectorAll('#locationGrid .location-card').forEach(function (card) {
-            card.style.display = card.textContent.toLowerCase().indexOf(term) >= 0
-                ? '' : 'none';
+        document.querySelectorAll("#locationGrid .location-card").forEach(function (card) {
+            card.style.display = card.textContent.toLowerCase().indexOf(term) >= 0 ? "" : "none";
         });
     });
 
-    // ── Open Bed (View Form on unoccupied) – populate and open confirm modal ──
-    document.querySelectorAll('.open-bed-btn').forEach(function (btn) {
-        btn.addEventListener('click', function () {
-            document.getElementById('pmBedId').value         = this.getAttribute('data-bedid');
-            document.getElementById('pmBranchCode').value    = this.getAttribute('data-branchcode');
-            document.getElementById('pmBedNameSpan').textContent   = this.getAttribute('data-bedname');
-            document.getElementById('pmStatusSpan').textContent    = this.getAttribute('data-status');
-            document.getElementById('pmPatientName').value = '';
-            $('#pendingMrModal').modal('show');
-        });
+    document.getElementById("locationGrid").addEventListener("click", function (e) {
+        var openBtn = e.target.closest(".open-bed-btn");
+        if (openBtn) {
+            document.getElementById("pmBedId").value = openBtn.getAttribute("data-bedid");
+            document.getElementById("pmBranchCode").value = openBtn.getAttribute("data-branchcode");
+            document.getElementById("pmBedNameSpan").textContent = openBtn.getAttribute("data-bedname");
+            document.getElementById("pmStatusSpan").textContent = openBtn.getAttribute("data-status");
+            document.getElementById("pmPatientName").value = "";
+            showModal("pendingMrModal");
+            return;
+        }
+
+        var binBtn = e.target.closest(".cancel-pending-mr-btn");
+        if (binBtn) {
+            document.getElementById("cpmBedId").value = binBtn.getAttribute("data-bedid") || "0";
+            document.getElementById("cpmBranchCode").value = binBtn.getAttribute("data-branchcode") || "0";
+            document.getElementById("cpmBedNameSpan").textContent = binBtn.getAttribute("data-bedname") || "";
+            document.getElementById("cpmPatientNameSpan").textContent = binBtn.getAttribute("data-patientname") || "";
+            showModal("cancelPendingMrModal");
+        }
     });
+
+    var confirmBtn = document.getElementById("cpmConfirmBtn");
+    if (confirmBtn) {
+        confirmBtn.addEventListener("click", function () {
+            var urlEl = document.getElementById("cancelPendingMrUrl");
+            var tokenEl = document.querySelector('input[name="__RequestVerificationToken"]');
+            if (!urlEl || !urlEl.value) return;
+
+            var formData = new FormData();
+            formData.append("bedId", document.getElementById("cpmBedId").value || "0");
+            formData.append("branchCode", document.getElementById("cpmBranchCode").value || "0");
+            if (tokenEl) formData.append("__RequestVerificationToken", tokenEl.value);
+
+            confirmBtn.disabled = true;
+            fetch(urlEl.value, {
+                method: "POST",
+                body: formData,
+                credentials: "same-origin",
+                headers: { "X-Requested-With": "XMLHttpRequest" }
+            })
+                .then(function (res) { return res.json(); })
+                .then(function (result) {
+                    if (!result || !result.ok) throw new Error((result && result.message) || "Could not cancel Pending MR.");
+                    hideModal("cancelPendingMrModal");
+                    return refreshLocationGrid().then(function () {
+                        showPatientsToast(result.message || "Pending MR cancelled.", false);
+                    });
+                })
+                .catch(function (err) {
+                    showPatientsToast(err.message || "Could not cancel Pending MR.", true);
+                })
+                .then(function () {
+                    confirmBtn.disabled = false;
+                });
+        });
+    }
 </script>
 }

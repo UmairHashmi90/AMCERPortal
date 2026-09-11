@@ -21,7 +21,7 @@
     var isPharmacyOnly = ViewBag.IsPharmacyOnly == true;
     var isBillingOnly = ViewBag.IsBillingOnly == true;
     var isNursingOnly = isNursing && !isMo && ViewBag.IsPharmacy != true && ViewBag.IsBilling != true;
-    var hideReportsAndPrescriptions = isPharmacyOnly || isBillingOnly || isNursingOnly;
+    var hideReportsAndPrescriptions = (isPharmacyOnly || isBillingOnly || isNursingOnly) && returnTo != "discharged";
     var isAdmissionDischarged = ViewBag.IsAdmissionDischarged == true;
     var showDischargeFinalize = isMOUser && active == "er";
 
@@ -44,6 +44,12 @@
         backText = "Back to Billing";
         backAction = "PatientForm";
         backController = "Billing";
+    }
+    else if (returnTo == "discharged")
+    {
+        backText = "Back to Discharged Patients";
+        backAction = "DischargedPatients";
+        backController = "Home";
     }
     else
     {
@@ -100,11 +106,14 @@
         }
         @if (Model != null && Model.HasAdmission && !hideReportsAndPrescriptions)
         {
+            object reportsRoute = string.IsNullOrWhiteSpace(returnTo)
+                ? (object)new { admissionCode = Model.AdmissionCode }
+                : new { admissionCode = Model.AdmissionCode, returnTo = returnTo };
             @Html.ActionLink("Reports", "Index", "Reports",
-                new { admissionCode = Model.AdmissionCode },
+                reportsRoute,
                 new { @class = "btn btn-sm patient-form-nav-btn" + (active == "reports" ? " btn-primary" : " btn-outline-primary") })
             @Html.ActionLink("Prescriptions", "Prescription", "Reports",
-                new { admissionCode = Model.AdmissionCode },
+                reportsRoute,
                 new { @class = "btn btn-sm patient-form-nav-btn" + (active == "prescription" ? " btn-primary" : " btn-outline-primary") })
         }
     </div>

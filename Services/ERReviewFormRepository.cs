@@ -555,7 +555,7 @@ namespace ERPaperless.Services
             var patient = db.tblERPatients.FirstOrDefault(p =>
                 p.intERPatientCode == target.ERPatientCode
                 && p.intCompanyCode == target.CompanyCode
-                && p.intRecordStatusCode == 1);
+                && (p.intRecordStatusCode == 1 || p.intRecordStatusCode == 2));
 
             if (patient == null) return;
 
@@ -903,7 +903,7 @@ namespace ERPaperless.Services
                               && o.intBranchCode == branchCode
                               && (o.intRecordStatusCode == 1 || o.intRecordStatusCode == 8)
                               && (o.intPackageTypeCode == 1 || o.intPackageTypeCode == 2)
-                              && p.intRecordStatusCode == 1
+                              && (p.intRecordStatusCode == 1 || p.intRecordStatusCode == 2)
                               && (p.bolIsDischarge != true)
                         select new { Order = o, Patient = p };
 
@@ -1309,7 +1309,7 @@ WHERE u.intUserCode IN (" + string.Join(",", paramNames) + @")";
                         where i.intCompanyCode == companyCode
                               && i.intBranchCode == branchCode
                               && (i.intRecordStatusCode == 1 || i.intRecordStatusCode == 8)
-                              && p.intRecordStatusCode == 1
+                              && (p.intRecordStatusCode == 1 || p.intRecordStatusCode == 2)
                               && (p.bolIsDischarge != true)
                         select new { Investigation = i, Patient = p };
 
@@ -1734,7 +1734,7 @@ WHERE u.intUserCode IN (" + string.Join(",", paramNames) + @")";
             if (!long.TryParse(patientId, out var erPatientCode) || erPatientCode <= 0)
                 return PatientTarget.Invalid;
 
-            var patient = ERPatientRepository.GetByCode(erPatientCode, companyCode);
+            var patient = ERPatientRepository.GetByCode(erPatientCode, companyCode, includeDischarged: true);
             if (patient == null)
                 return PatientTarget.Invalid;
 

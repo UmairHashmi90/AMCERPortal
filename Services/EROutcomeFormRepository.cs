@@ -735,7 +735,7 @@ namespace ERPaperless.Services
             tblERPatient erPatient = null;
             if (long.TryParse((patientId ?? string.Empty).Trim(), out erPatientCode) && erPatientCode > 0)
             {
-                erPatient = ERPatientRepository.GetByCode(erPatientCode, companyCode);
+                erPatient = ERPatientRepository.GetByCode(erPatientCode, companyCode, includeDischarged: true);
             }
 
             if (erPatient == null)
@@ -1013,23 +1013,49 @@ WHERE intCompanyCode = @companyCode
             int userCode,
             DateTime now)
         {
+            SyncReviewFormOutcomeCode(
+                db,
+                target.ERPatientCode,
+                target.BranchCode,
+                target.CompanyCode,
+                formType,
+                userCode,
+                now);
+        }
+
+        /// <summary>
+        /// Persists the matching Outcome LOV (e.g. Admitted) onto the ER review form
+        /// so the Outcome radio stays correct after Admission Order / outcome saves.
+        /// </summary>
+        public static void SyncReviewFormOutcomeCode(
+            dbAMCEntities db,
+            long erPatientCode,
+            int branchCode,
+            int companyCode,
+            string formType,
+            int userCode,
+            DateTime now)
+        {
+            if (db == null || erPatientCode <= 0 || branchCode <= 0 || companyCode <= 0)
+                return;
+
             var outcomeCode = ResolveOutcomeLovCodeForFormType(formType);
             if (!outcomeCode.HasValue || outcomeCode.Value <= 0)
                 return;
 
             var header = db.tblERPatientReviewForms.FirstOrDefault(f =>
-                f.intERPatientCode == target.ERPatientCode
-                && f.intBranchCode == target.BranchCode
-                && f.intCompanyCode == target.CompanyCode
+                f.intERPatientCode == erPatientCode
+                && f.intBranchCode == branchCode
+                && f.intCompanyCode == companyCode
                 && f.intRecordStatusCode == 1);
 
             if (header == null)
             {
                 header = new tblERPatientReviewForm
                 {
-                    intERPatientCode = target.ERPatientCode,
-                    intBranchCode = target.BranchCode,
-                    intCompanyCode = target.CompanyCode,
+                    intERPatientCode = erPatientCode,
+                    intBranchCode = branchCode,
+                    intCompanyCode = companyCode,
                     dtmSaved = now,
                     dtmCreated = now,
                     intOwnerCode = userCode,
@@ -1069,6 +1095,10 @@ WHERE intCompanyCode = @companyCode
                     return d.Contains("REFERRAL") || d.Contains("REFER");
                 if (normalized == "DEATH")
                     return d.Contains("DEATH") || d.Contains("EXPIRE");
+                // Admission / Admit / Admitted — never match Discharge.
+                if (normalized == "ADMISSION" || normalized == "ADMIT" || normalized == "ADMITTED")
+                    return (d.Contains("ADMIT") || d.Contains("ADMISSION") || d.Contains("IPD"))
+                           && !d.Contains("DISCHARGE");
                 return false;
             };
 

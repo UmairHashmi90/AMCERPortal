@@ -9,13 +9,10 @@ namespace ERPaperless.Infrastructure.Security
         public ERUserRoleModel GetCurrentUser(HttpContextBase httpContext, string fallbackLoginName = null)
         {
             var role = httpContext?.Session?["UserRole"] as ERUserRoleModel;
-            if (role != null) return role;
+            if (role == null || role.UserCode <= 0)
+                return null;
 
-            return new ERUserRoleModel
-            {
-                LoginName = fallbackLoginName,
-                CompanyCode = 1
-            };
+            return role;
         }
 
         public void SetCurrentUser(HttpSessionStateBase session, ERUserRoleModel user)

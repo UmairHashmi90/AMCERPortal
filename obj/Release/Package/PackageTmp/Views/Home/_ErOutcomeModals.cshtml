@@ -1,11 +1,19 @@
 @model ERPaperless.Models.ErFormViewModel
 @{
     var employeeOptions = Model?.EmployeeOptions ?? Enumerable.Empty<ERPaperless.Models.ERLovOptionViewModel>();
+    var moEmployeeOptions = Model?.MoEmployeeOptions ?? Enumerable.Empty<ERPaperless.Models.ERLovOptionViewModel>();
     var consultantOptions = Model?.ConsultantOptions ?? Enumerable.Empty<ERPaperless.Models.ERLovOptionViewModel>();
     var relationOptions = Model?.RelationOptions ?? Enumerable.Empty<ERPaperless.Models.ERLovOptionViewModel>();
     var referralReasonOptions = Model?.ReferralReasonOptions ?? Enumerable.Empty<ERPaperless.Models.ERLovOptionViewModel>();
     var dischargeMedicineOptions = Model?.DischargeMedicineOptions ?? Enumerable.Empty<ERPaperless.Models.ERLovOptionViewModel>();
     var drugFrequencyOptions = Model?.DrugFrequencyOptions ?? Enumerable.Empty<ERPaperless.Models.ERLovOptionViewModel>();
+    var drugRouteOptions = Model?.DrugRouteOptions ?? Enumerable.Empty<ERPaperless.Models.ERLovOptionViewModel>();
+    var admissionTypeOptions = Model?.AdmissionTypeOptions ?? Enumerable.Empty<ERPaperless.Models.ERLovOptionViewModel>();
+    var admissionCareLevelOptions = Model?.AdmissionCareLevelOptions ?? Enumerable.Empty<ERPaperless.Models.ERLovOptionViewModel>();
+    var ipdMedicineOptions = Model?.IpdMedicineOptions ?? Enumerable.Empty<ERPaperless.Models.ERLovOptionViewModel>();
+    var ipdInvestigationServiceOptions = Model?.IpdInvestigationServiceOptions ?? Enumerable.Empty<ERPaperless.Models.ERLovOptionViewModel>();
+    var ipdRoutineServiceOptions = Model?.IpdRoutineServiceOptions ?? Enumerable.Empty<ERPaperless.Models.ERLovOptionViewModel>();
+    var doseUnitOptions = Model?.DoseUnitOptions ?? Enumerable.Empty<ERPaperless.Models.ERLovOptionViewModel>();
     var conditionUponReleaseOptions = Model?.ConditionUponReleaseOptions ?? Enumerable.Empty<ERPaperless.Models.ERLovOptionViewModel>();
     var reviewForm = Model?.ReviewForm ?? new ERPaperless.Models.ErReviewFormStateViewModel();
     var selectedChiefComplaints = (Model?.ChiefComplaints ?? Enumerable.Empty<ERPaperless.Models.ChiefComplaintItemViewModel>())
@@ -56,9 +64,9 @@
     var conditionUponReleaseName = conditionUponReleaseOptions
         .FirstOrDefault(x => reviewForm.ConditionUponReleaseCode.HasValue && x.Id == reviewForm.ConditionUponReleaseCode.Value)
         ?.Name ?? string.Empty;
-    Func<IEnumerable<ERPaperless.Models.ERLovOptionViewModel>, int?, string> optionNameById =
+    Func<IEnumerable<ERPaperless.Models.ERLovOptionViewModel>, long?, string> optionNameById =
         (options, id) =>
-            !id.HasValue
+            !id.HasValue || id.Value <= 0
                 ? string.Empty
                 : (options.FirstOrDefault(x => x.Id == id.Value)?.Name ?? string.Empty);
     var outcome = Model?.OutcomeForms ?? new ERPaperless.Models.OutcomeFormStateViewModel();
@@ -66,6 +74,26 @@
     var dischargeState = outcome.Discharge ?? new ERPaperless.Models.DischargeFormStateViewModel();
     var deathState = outcome.Death ?? new ERPaperless.Models.DeathFormStateViewModel();
     var lamaState = outcome.Lama ?? new ERPaperless.Models.LamaFormStateViewModel();
+    var ipdOrder = Model?.IpdAdmissionOrder ?? new ERPaperless.Models.IpdAdmissionOrderStateViewModel();
+    if (string.IsNullOrWhiteSpace(ipdOrder.PatientName))
+    {
+        ipdOrder.PatientName = Model?.PatientName ?? string.Empty;
+    }
+    var ipdMedicineRows = (ipdOrder.Medicines ?? new List<ERPaperless.Models.IpdAdmissionMedicineRowViewModel>()).ToList();
+    if (!ipdMedicineRows.Any())
+    {
+        ipdMedicineRows.Add(new ERPaperless.Models.IpdAdmissionMedicineRowViewModel());
+    }
+    var ipdInvestigationRows = (ipdOrder.Investigations ?? new List<ERPaperless.Models.IpdAdmissionServiceRowViewModel>()).ToList();
+    if (!ipdInvestigationRows.Any())
+    {
+        ipdInvestigationRows.Add(new ERPaperless.Models.IpdAdmissionServiceRowViewModel());
+    }
+    var ipdRoutineRows = (ipdOrder.RoutineServices ?? new List<ERPaperless.Models.IpdAdmissionRoutineServiceRowViewModel>()).ToList();
+    if (!ipdRoutineRows.Any())
+    {
+        ipdRoutineRows.Add(new ERPaperless.Models.IpdAdmissionRoutineServiceRowViewModel());
+    }
     var dischargeRows = (dischargeState.Medicines ?? new List<ERPaperless.Models.DischargeMedicineStateViewModel>()).ToList();
     if (!dischargeRows.Any())
     {
@@ -182,10 +210,10 @@
                                id="referralMoSearch"
                                class="form-control searchable-dropdown lov-autocomplete"
                                data-lov-hidden="referralMoCode"
-                               list="consultantOptionsList"
+                               list="moEmployeeOptionsList"
                                autocomplete="off"
                                placeholder="MO on duty..."
-                               value="@optionNameById(consultantOptions, referralState.MoOnDutyCode)" />
+                               value="@optionNameById(moEmployeeOptions, referralState.MoOnDutyCode)" />
                         <input type="hidden" id="referralMoCode" value="@(referralState.MoOnDutyCode.HasValue ? referralState.MoOnDutyCode.Value.ToString() : "")" />
                     </div>
                 </div>
@@ -228,9 +256,9 @@
                                 <thead>
                                     <tr>
                                         <th style="width:33%">Medicine</th>
-                                        <th style="width:6%">Dose</th>
+                                        <th style="width:7%">Dose</th>
                                         <th style="width:20%">Frequency</th>
-                                        <th style="width:6%">Days</th>
+                                        <th style="width:7%">Days</th>
                                         <th style="width:25%">Instruction</th>
                                         <th style="width:8%">Action</th>
                                     </tr>
@@ -238,7 +266,7 @@
                                 <tbody>
                                     @foreach (var med in dischargeRows)
                                     {
-                                    <tr>
+                                    <tr data-discharge-med-id="@(med.Id > 0 ? med.Id.ToString() : "")">
                                         <td>
                                             <input type="search"
                                                    class="form-control form-control-sm discharge-med-item-name searchable-dropdown"
@@ -249,6 +277,9 @@
                                             <input type="hidden"
                                                    class="discharge-med-item-code"
                                                    value="@(med.ItemCode.HasValue ? med.ItemCode.Value.ToString() : "")" />
+                                            <input type="hidden"
+                                                   class="discharge-med-id"
+                                                   value="@(med.Id > 0 ? med.Id.ToString() : "")" />
                                         </td>
                                         <td><input type="text" class="form-control form-control-sm discharge-med-dose" value="@(med.Dose ?? "")" /></td>
                                         <td>
@@ -279,7 +310,7 @@
                         <textarea class="form-control" rows="2" id="dischargeBriefHistory">@defaultDischargeBriefHistory</textarea>
                     </div>
                     <div class="outcome-field">
-                        <label class="form-label">Treatment</label>
+                        <label class="form-label">Other Treatment</label>
                         <textarea class="form-control" rows="2" id="dischargeSurgeryProcedures">@defaultDischargeTreatment</textarea>
                     </div>
                     <div class="outcome-field">
@@ -372,10 +403,10 @@
                                id="deathDutyMoSearch"
                                class="form-control searchable-dropdown lov-autocomplete"
                                data-lov-hidden="deathDutyMoCode"
-                               list="consultantOptionsList"
+                               list="moEmployeeOptionsList"
                                autocomplete="off"
                                placeholder="MO on duty..."
-                               value="@optionNameById(consultantOptions, deathState.DutyMoCode)" />
+                               value="@optionNameById(moEmployeeOptions, deathState.DutyMoCode)" />
                         <input type="hidden" id="deathDutyMoCode" value="@(deathState.DutyMoCode.HasValue ? deathState.DutyMoCode.Value.ToString() : "")" />
                     </div>
                     <div class="outcome-field">
@@ -450,10 +481,10 @@
                                id="lamaDutyMoSearch"
                                class="form-control searchable-dropdown lov-autocomplete"
                                data-lov-hidden="lamaDutyMoCode"
-                               list="consultantOptionsList"
+                               list="moEmployeeOptionsList"
                                autocomplete="off"
                                placeholder="MO on duty..."
-                               value="@optionNameById(consultantOptions, lamaState.DutyMoCode)" />
+                               value="@optionNameById(moEmployeeOptions, lamaState.DutyMoCode)" />
                         <input type="hidden" id="lamaDutyMoCode" value="@(lamaState.DutyMoCode.HasValue ? lamaState.DutyMoCode.Value.ToString() : "")" />
                     </div>
                     <div class="outcome-field">
@@ -476,8 +507,226 @@
     </div>
 </div>
 
+<div class="modal fade" id="outcomeAdmissionModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false" aria-labelledby="outcomeAdmissionTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-scrollable">
+        <div class="modal-content outcome-modal-content">
+            <div class="outcome-modal-banner outcome-modal-banner-admission">
+                <h5 class="modal-title" id="outcomeAdmissionTitle">IPD Admission Order</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="form-check outcome-finalize-check mb-2">
+                    <input class="form-check-input" type="checkbox" id="ipdAdmissionFinalize" @(ipdOrder.IsFinal ? "checked=\"checked\"" : "") @(ipdOrder.IsFinal ? "disabled=\"disabled\"" : "") />
+                    <label class="form-check-label" for="ipdAdmissionFinalize">Finalize IPD Admission Order</label>
+                </div>
+
+                <h6 class="outcome-section-title">Admission Information</h6>
+                <div class="outcome-modal-grid outcome-modal-grid-2">
+                    <div class="outcome-field">
+                        <label class="form-label">Admission #</label>
+                        <input type="text" class="form-control" id="ipdAdmissionOrderNo" value="@(ipdOrder.OrderNo ?? "")" readonly="readonly" placeholder="Generated on save (IADO-n)" />
+                    </div>
+                    <div class="outcome-field">
+                        <label class="form-label">Patient</label>
+                        <input type="text" class="form-control" id="ipdAdmissionPatientName" value="@(ipdOrder.PatientName ?? Model.PatientName)" readonly="readonly" />
+                    </div>
+                    <div class="outcome-field">
+                        <label class="form-label">Admitting Consultant</label>
+                        <input type="search"
+                               id="ipdAdmittingConsultantSearch"
+                               class="form-control searchable-dropdown lov-autocomplete"
+                               data-lov-hidden="ipdAdmittingConsultantCode"
+                               list="consultantOptionsList"
+                               autocomplete="off"
+                               placeholder="Consultant..."
+                               value="@optionNameById(consultantOptions, ipdOrder.AdmittingConsultantCode)"
+                               @(ipdOrder.IsFinal ? "disabled=\"disabled\"" : "") />
+                        <input type="hidden" id="ipdAdmittingConsultantCode" value="@(ipdOrder.AdmittingConsultantCode.HasValue && ipdOrder.AdmittingConsultantCode.Value > 0 ? ipdOrder.AdmittingConsultantCode.Value.ToString() : "")" />
+                    </div>
+                    <div class="outcome-field">
+                        <label class="form-label">Referring Consultant</label>
+                        <input type="search"
+                               id="ipdReferringConsultantSearch"
+                               class="form-control searchable-dropdown lov-autocomplete"
+                               data-lov-hidden="ipdReferringConsultantCode"
+                               list="consultantOptionsList"
+                               autocomplete="off"
+                               placeholder="Consultant..."
+                               value="@optionNameById(consultantOptions, ipdOrder.ReferringConsultantCode)"
+                               @(ipdOrder.IsFinal ? "disabled=\"disabled\"" : "") />
+                        <input type="hidden" id="ipdReferringConsultantCode" value="@(ipdOrder.ReferringConsultantCode.HasValue && ipdOrder.ReferringConsultantCode.Value > 0 ? ipdOrder.ReferringConsultantCode.Value.ToString() : "")" />
+                    </div>
+                    <div class="outcome-field">
+                        <label class="form-label">Admission Type</label>
+                        <input type="search" id="ipdAdmissionTypeSearch" class="form-control searchable-dropdown lov-autocomplete"
+                               data-lov-hidden="ipdAdmissionTypeCode" list="admissionTypeOptionsList" autocomplete="off"
+                               placeholder="Select admission type..."
+                               value="@optionNameById(admissionTypeOptions, ipdOrder.AdmissionTypeCode)"
+                               @(ipdOrder.IsFinal ? "disabled=\"disabled\"" : "") />
+                        <input type="hidden" id="ipdAdmissionTypeCode" value="@(ipdOrder.AdmissionTypeCode.HasValue ? ipdOrder.AdmissionTypeCode.Value.ToString() : "")" />
+                    </div>
+                    <div class="outcome-field">
+                        <label class="form-label">Care Level</label>
+                        <input type="search" id="ipdCareLevelSearch" class="form-control searchable-dropdown lov-autocomplete"
+                               data-lov-hidden="ipdCareLevelCode" list="admissionCareLevelOptionsList" autocomplete="off"
+                               placeholder="Select care level..."
+                               value="@optionNameById(admissionCareLevelOptions, ipdOrder.CareLevelCode)"
+                               @(ipdOrder.IsFinal ? "disabled=\"disabled\"" : "") />
+                        <input type="hidden" id="ipdCareLevelCode" value="@(ipdOrder.CareLevelCode.HasValue ? ipdOrder.CareLevelCode.Value.ToString() : "")" />
+                    </div>
+                    <div class="outcome-field outcome-field-span-2">
+                        <label class="form-label">Diagnosis</label>
+                        <textarea class="form-control" rows="2" id="ipdAdmissionDiagnosis" @(ipdOrder.IsFinal ? "disabled=\"disabled\"" : "")>@(ipdOrder.Diagnosis ?? "")</textarea>
+                    </div>
+                    <div class="outcome-field outcome-field-span-2">
+                        <label class="form-label">HOPI</label>
+                        <textarea class="form-control" rows="3" id="ipdAdmissionHopi" @(ipdOrder.IsFinal ? "disabled=\"disabled\"" : "")>@(ipdOrder.Hopi ?? "")</textarea>
+                    </div>
+                    <div class="outcome-field">
+                        <label class="form-label">Diet Instruction</label>
+                        <textarea class="form-control" rows="2" id="ipdAdmissionDiet" @(ipdOrder.IsFinal ? "disabled=\"disabled\"" : "")>@(ipdOrder.DietInstruction ?? "")</textarea>
+                    </div>
+                    <div class="outcome-field">
+                        <label class="form-label">Comments</label>
+                        <textarea class="form-control" rows="2" id="ipdAdmissionComments" @(ipdOrder.IsFinal ? "disabled=\"disabled\"" : "")>@(ipdOrder.Comments ?? "")</textarea>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-between align-items-center gap-2 mt-3 mb-1">
+                    <h6 class="outcome-section-title mb-0">Medication</h6>
+                    <button type="button" class="btn btn-sm btn-outline-primary" id="btnAddIpdMedicineRow" @(ipdOrder.IsFinal ? "disabled=\"disabled\"" : "")>Add Medicine</button>
+                </div>
+                <div class="table-wrap">
+                    <table class="app-table outcome-medicine-table" id="ipdMedicineTable">
+                        <thead>
+                            <tr>
+                                <th style="width:22%">Medicine</th>
+                                <th style="width:10%">Dose</th>
+                                <th style="width:12%">Unit</th>
+                                <th style="width:14%">Frequency</th>
+                                <th style="width:12%">Route</th>
+                                <th style="width:8%">Days</th>
+                                <th style="width:14%">Instruction</th>
+                                <th style="width:8%">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var med in ipdMedicineRows)
+                            {
+                                <tr data-ipd-med-id="@(med.Id > 0 ? med.Id.ToString() : "")">
+                                    <td>
+                                        <input type="search" class="form-control form-control-sm ipd-med-name searchable-dropdown"
+                                               list="ipdMedicineOptionsList" autocomplete="off" placeholder="Select medicine..."
+                                               value="@(med.MedicineName ?? "")" @(ipdOrder.IsFinal ? "disabled=\"disabled\"" : "") />
+                                        <input type="hidden" class="ipd-med-item-code" value="@(med.ItemCode.HasValue ? med.ItemCode.Value.ToString() : "")" />
+                                        <input type="hidden" class="ipd-med-id" value="@(med.Id > 0 ? med.Id.ToString() : "")" />
+                                    </td>
+                                    <td><input type="number" step="0.01" class="form-control form-control-sm ipd-med-dose" value="@(med.PrescribedDose.HasValue ? med.PrescribedDose.Value.ToString(System.Globalization.CultureInfo.InvariantCulture) : "")" @(ipdOrder.IsFinal ? "disabled=\"disabled\"" : "") /></td>
+                                    <td>
+                                        <input type="search" class="form-control form-control-sm ipd-med-unit-name searchable-dropdown"
+                                               list="doseUnitOptionsList" autocomplete="off" placeholder="Unit..."
+                                               value="@optionNameById(doseUnitOptions, med.DoseUnitCode)" @(ipdOrder.IsFinal ? "disabled=\"disabled\"" : "") />
+                                        <input type="hidden" class="ipd-med-unit-code" value="@(med.DoseUnitCode.HasValue ? med.DoseUnitCode.Value.ToString() : "")" />
+                                    </td>
+                                    <td>
+                                        <input type="search" class="form-control form-control-sm ipd-med-freq-name searchable-dropdown"
+                                               list="drugFrequencyOptionsList" autocomplete="off" placeholder="Frequency..."
+                                               value="@optionNameById(drugFrequencyOptions, med.FrequencyCode)" @(ipdOrder.IsFinal ? "disabled=\"disabled\"" : "") />
+                                        <input type="hidden" class="ipd-med-freq-code" value="@(med.FrequencyCode.HasValue ? med.FrequencyCode.Value.ToString() : "")" />
+                                    </td>
+                                    <td>
+                                        <input type="search" class="form-control form-control-sm ipd-med-route-name searchable-dropdown"
+                                               list="drugRouteOptionsList" autocomplete="off" placeholder="Route..."
+                                               value="@optionNameById(drugRouteOptions, med.RouteCode)" @(ipdOrder.IsFinal ? "disabled=\"disabled\"" : "") />
+                                        <input type="hidden" class="ipd-med-route-code" value="@(med.RouteCode.HasValue ? med.RouteCode.Value.ToString() : "")" />
+                                    </td>
+                                    <td><input type="number" class="form-control form-control-sm ipd-med-days" value="@(med.Days.HasValue ? med.Days.Value.ToString() : "")" @(ipdOrder.IsFinal ? "disabled=\"disabled\"" : "") /></td>
+                                    <td><input type="text" class="form-control form-control-sm ipd-med-instruction" value="@(med.Instruction ?? "")" @(ipdOrder.IsFinal ? "disabled=\"disabled\"" : "") /></td>
+                                    <td class="text-center"><button type="button" class="btn btn-link btn-sm text-danger p-0 ipd-med-remove-btn" title="Remove" @(ipdOrder.IsFinal ? "disabled=\"disabled\"" : "")>&#x2715;</button></td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="d-flex justify-content-between align-items-center gap-2 mt-3 mb-1">
+                    <h6 class="outcome-section-title mb-0">Investigation &amp; Procedures</h6>
+                    <button type="button" class="btn btn-sm btn-outline-primary" id="btnAddIpdInvestigationRow" @(ipdOrder.IsFinal ? "disabled=\"disabled\"" : "")>Add Service</button>
+                </div>
+                <div class="table-wrap">
+                    <table class="app-table outcome-medicine-table" id="ipdInvestigationTable">
+                        <thead>
+                            <tr>
+                                <th>Service</th>
+                                <th style="width:10%">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var svc in ipdInvestigationRows)
+                            {
+                                <tr data-ipd-inv-id="@(svc.Id > 0 ? svc.Id.ToString() : "")">
+                                    <td>
+                                        <input type="search" class="form-control form-control-sm ipd-inv-name searchable-dropdown"
+                                               list="ipdInvestigationOptionsList" autocomplete="off" placeholder="Select service..."
+                                               value="@(svc.ServiceName ?? "")" @(ipdOrder.IsFinal ? "disabled=\"disabled\"" : "") />
+                                        <input type="hidden" class="ipd-inv-code" value="@(svc.ServiceCode.HasValue ? svc.ServiceCode.Value.ToString() : "")" />
+                                        <input type="hidden" class="ipd-inv-id" value="@(svc.Id > 0 ? svc.Id.ToString() : "")" />
+                                    </td>
+                                    <td class="text-center"><button type="button" class="btn btn-link btn-sm text-danger p-0 ipd-inv-remove-btn" title="Remove" @(ipdOrder.IsFinal ? "disabled=\"disabled\"" : "")>&#x2715;</button></td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="d-flex justify-content-between align-items-center gap-2 mt-3 mb-1">
+                    <h6 class="outcome-section-title mb-0">Routine Services</h6>
+                    <button type="button" class="btn btn-sm btn-outline-primary" id="btnAddIpdRoutineRow" @(ipdOrder.IsFinal ? "disabled=\"disabled\"" : "")>Add Service</button>
+                </div>
+                <div class="table-wrap">
+                    <table class="app-table outcome-medicine-table" id="ipdRoutineTable">
+                        <thead>
+                            <tr>
+                                <th style="width:40%">Service</th>
+                                <th style="width:50%">Instruction</th>
+                                <th style="width:10%">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var svc in ipdRoutineRows)
+                            {
+                                <tr data-ipd-routine-id="@(svc.Id > 0 ? svc.Id.ToString() : "")">
+                                    <td>
+                                        <input type="search" class="form-control form-control-sm ipd-routine-name searchable-dropdown"
+                                               list="ipdRoutineOptionsList" autocomplete="off" placeholder="Select service..."
+                                               value="@(svc.ServiceName ?? "")" @(ipdOrder.IsFinal ? "disabled=\"disabled\"" : "") />
+                                        <input type="hidden" class="ipd-routine-code" value="@(svc.ServiceCode.HasValue ? svc.ServiceCode.Value.ToString() : "")" />
+                                        <input type="hidden" class="ipd-routine-id" value="@(svc.Id > 0 ? svc.Id.ToString() : "")" />
+                                    </td>
+                                    <td><input type="text" class="form-control form-control-sm ipd-routine-instruction" value="@(svc.Instruction ?? "")" @(ipdOrder.IsFinal ? "disabled=\"disabled\"" : "") /></td>
+                                    <td class="text-center"><button type="button" class="btn btn-link btn-sm text-danger p-0 ipd-routine-remove-btn" title="Remove" @(ipdOrder.IsFinal ? "disabled=\"disabled\"" : "")>&#x2715;</button></td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-danger" id="btnSaveIpdAdmissionOrder" @(ipdOrder.IsFinal ? "disabled=\"disabled\"" : "")>Save</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <datalist id="referralReasonOptionsList">
     @foreach (var option in referralReasonOptions)
+    {
+        <option value="@option.Name" data-value="@option.Id"></option>
+    }
+</datalist>
+<datalist id="moEmployeeOptionsList">
+    @foreach (var option in moEmployeeOptions)
     {
         <option value="@option.Name" data-value="@option.Id"></option>
     }
@@ -508,6 +757,48 @@
 </datalist>
 <datalist id="drugFrequencyOptionsList">
     @foreach (var option in drugFrequencyOptions)
+    {
+        <option value="@option.Name" data-value="@option.Id"></option>
+    }
+</datalist>
+<datalist id="drugRouteOptionsList">
+    @foreach (var option in drugRouteOptions)
+    {
+        <option value="@option.Name" data-value="@option.Id"></option>
+    }
+</datalist>
+<datalist id="doseUnitOptionsList">
+    @foreach (var option in doseUnitOptions)
+    {
+        <option value="@option.Name" data-value="@option.Id"></option>
+    }
+</datalist>
+<datalist id="admissionTypeOptionsList">
+    @foreach (var option in admissionTypeOptions)
+    {
+        <option value="@option.Name" data-value="@option.Id"></option>
+    }
+</datalist>
+<datalist id="admissionCareLevelOptionsList">
+    @foreach (var option in admissionCareLevelOptions)
+    {
+        <option value="@option.Name" data-value="@option.Id"></option>
+    }
+</datalist>
+<datalist id="ipdMedicineOptionsList">
+    @foreach (var option in ipdMedicineOptions)
+    {
+        <option value="@option.Name" data-value="@option.Id"></option>
+    }
+</datalist>
+<datalist id="ipdInvestigationOptionsList">
+    @foreach (var option in ipdInvestigationServiceOptions)
+    {
+        <option value="@option.Name" data-value="@option.Id"></option>
+    }
+</datalist>
+<datalist id="ipdRoutineOptionsList">
+    @foreach (var option in ipdRoutineServiceOptions)
     {
         <option value="@option.Name" data-value="@option.Id"></option>
     }

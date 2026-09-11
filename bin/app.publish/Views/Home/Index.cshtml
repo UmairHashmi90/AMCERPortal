@@ -1,73 +1,40 @@
-﻿@{
+@model ERPaperless.Models.DashboardViewModel
+@{
     ViewBag.Title = "ER Dashboard";
-
-    var kpis = new System.Collections.Generic.List<ERPaperless.Models.KpiCardViewModel>
-    {
-        new ERPaperless.Models.KpiCardViewModel { Title = "Total Active Patients", Value = "28", Subtitle = "Across beds, chairs and OT", ToneClass = "tone-primary" },
-        new ERPaperless.Models.KpiCardViewModel { Title = "Pending Tasks", Value = "12", Subtitle = "Needs MO/Nursing action", ToneClass = "tone-warning" },
-        new ERPaperless.Models.KpiCardViewModel { Title = "Billing Queue", Value = "7", Subtitle = "Awaiting bill closure", ToneClass = "tone-info" },
-        new ERPaperless.Models.KpiCardViewModel { Title = "Pharmacy Requests", Value = "15", Subtitle = "Issued + pending mix", ToneClass = "tone-danger" }
-    };
-
-    var locations = new System.Collections.Generic.List<ERPaperless.Models.LocationCardViewModel>
-    {
-        new ERPaperless.Models.LocationCardViewModel { SlotName = "BED 1", PatientName = "MR. TARIQ", AgeGender = "50Y / MALE", MrNo = "PMR-12345", AdmissionNo = "ERA-225454", AdmissionDate = System.DateTime.Parse("2026-04-10 09:30"), StateClass = "status-red", StateLabel = "Occupied" },
-        new ERPaperless.Models.LocationCardViewModel { SlotName = "BED 4", PatientName = "MS. UZMA", AgeGender = "30Y / FEMALE", MrNo = "PMR-25555", AdmissionNo = "ERA-225455", AdmissionDate = System.DateTime.Parse("2026-04-10 09:55"), StateClass = "status-orange", StateLabel = "Assigned Pending" },
-        new ERPaperless.Models.LocationCardViewModel { SlotName = "CHAIR 3", PatientName = "MR. HASAN", AgeGender = "30Y / MALE", MrNo = "PMR-256669", AdmissionNo = "ERA-225457", AdmissionDate = System.DateTime.Parse("2026-04-10 11:55"), StateClass = "status-red", StateLabel = "Occupied" },
-        new ERPaperless.Models.LocationCardViewModel { SlotName = "MINOR OT", PatientName = "-", AgeGender = "-", MrNo = "-", AdmissionNo = "-", AdmissionDate = null, StateClass = "status-green", StateLabel = "Available" }
-    };
-
-    var taskQueue = new System.Collections.Generic.List<ERPaperless.Models.QueueItemViewModel>
-    {
-        new ERPaperless.Models.QueueItemViewModel { SrNo = 1, BedNo = "BED 1", MrNo = "PMR-12345", Name = "MR. TARIQ", RequestDate = "10/04/2026 09:36", RequestBy = "DR. ALI", RequestDetail = "CBC, LFT, RFT", StatusClass = "status-green", StatusLabel = "Done" },
-        new ERPaperless.Models.QueueItemViewModel { SrNo = 2, BedNo = "BED 4", MrNo = "PMR-25555", Name = "MS. UZMA", RequestDate = "10/04/2026 09:55", RequestBy = "DR. UMAR", RequestDetail = "RFT", StatusClass = "status-orange", StatusLabel = "Pending" },
-        new ERPaperless.Models.QueueItemViewModel { SrNo = 3, BedNo = "CHAIR 1", MrNo = "PENDING MR", Name = "Unknown", RequestDate = "10/04/2026 11:00", RequestBy = "SYSTEM", RequestDetail = "XRAY CHEST", StatusClass = "status-orange", StatusLabel = "Pending" }
-    };
+    var cards = Model?.Cards ?? new System.Collections.Generic.List<ERPaperless.Models.KpiCardViewModel>();
 }
 
-<section class="page-section">
-    <div class="section-head">
-        <h2>Realtime ER Operations</h2>
-        <p>Single-window overview for MO, Nursing, Billing, and Pharmacy coordination.</p>
+<section class="page-section dashboard-page">
+    <div class="section-head d-flex flex-wrap align-items-center justify-content-between gap-2">
+        <div>
+            <h2 class="mb-1">ER Dashboard</h2>
+            <p class="mb-0 text-muted">Live operational counts from ER Portal.</p>
+        </div>
+        <div class="d-flex flex-wrap align-items-center gap-2">
+            <a class="btn btn-sm btn-outline-secondary" href="@Url.Action("Patients", "Home")">All Patients</a>
+            @if (ViewBag.IsMO == true || ViewBag.IsNursing == true)
+            {
+                @Html.ActionLink("Discharged Patients", "DischargedPatients", "Home", null,
+                         new { @class = "btn btn-sm patient-form-nav-btn btn-outline-danger" })
+            }
+        </div>
     </div>
 
     <div class="kpi-grid">
-        @foreach (var card in kpis)
+        @if (cards.Count == 0)
         {
-            @Html.Partial("_KpiCard", card)
+            <article class="kpi-card tone-primary">
+                <p class="kpi-title">No data</p>
+                <h3 class="kpi-value">0</h3>
+                <p class="kpi-subtitle">Dashboard procedure returned no rows.</p>
+            </article>
         }
-    </div>
-</section>
-
-<section class="page-section">
-    <div class="section-head">
-        <h2>Bed / Chair Allocation</h2>
-        <p>Color indicators follow the flow document: occupied, assigned pending, and available.</p>
-    </div>
-    <div class="location-grid">
-        @foreach (var spot in locations)
+        else
         {
-            @Html.Partial("_LocationCard", spot)
+            foreach (var card in cards)
+            {
+                @Html.Partial("_KpiCard", card)
+            }
         }
-    </div>
-</section>
-
-@Html.Partial("_QueueTable", taskQueue, new ViewDataDictionary { { "Title", "Pending Tasks - All Admitted Patients" } })
-
-<section class="page-section">
-    <div class="panel-card legend-card">
-        <h3>Status Legend</h3>
-        <div class="legend-row">
-            <span class="status-chip status-red">Red</span>
-            <span>Bed occupied</span>
-        </div>
-        <div class="legend-row">
-            <span class="status-chip status-orange">Orange</span>
-            <span>Occupied but not assigned</span>
-        </div>
-        <div class="legend-row">
-            <span class="status-chip status-green">Green</span>
-            <span>Vacant and available</span>
-        </div>
     </div>
 </section>

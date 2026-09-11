@@ -15,6 +15,7 @@ namespace ERPaperless.Models
         Outcome = 11,
         ConditionUponRelease = 12,
         Adr = 13,
-        Conciousness = 14
+        Conciousness = 14,
+        SPo2 = 15
     }
 }

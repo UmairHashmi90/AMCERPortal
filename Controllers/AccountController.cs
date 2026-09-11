@@ -109,6 +109,14 @@ namespace ERPaperless.Controllers
             Session.Clear();
             Session.Abandon();
             _currentUserContext.ClearCurrentUser(Session);
+
+            var authCookie = new System.Web.HttpCookie(FormsAuthentication.FormsCookieName, string.Empty)
+            {
+                Expires = DateTime.Now.AddDays(-1)
+            };
+            Response.Cookies.Add(authCookie);
+
+            SetSecurityHeaders();
             return RedirectToAction("Login", "Account");
         }
 
@@ -161,7 +169,7 @@ namespace ERPaperless.Controllers
 
             var user = _currentUserContext.GetCurrentUser(HttpContext);
             if (user == null)
-                return RedirectToAction("Index", "Home");
+                return RedirectToAction("Login", "Account");
 
             // Multiple roles → Dashboard
             if (user.HasMultipleWorkRoles)

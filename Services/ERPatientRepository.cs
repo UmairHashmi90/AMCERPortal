@@ -1,5 +1,7 @@
 using ERPaperless.Models;
 using System;
+using System.Data;
+using System.Data.SqlClient;
 using System.Linq;
 
 namespace ERPaperless.Services
@@ -54,7 +56,7 @@ namespace ERPaperless.Services
                 return null;
             }
 
-            var byCode = GetByCode(numericId, companyCode);
+            var byCode = GetByCode(numericId, companyCode, includeDischarged: true);
             if (byCode != null) return byCode;
 
             if (createIfMissing && userCode > 0)
@@ -67,7 +69,7 @@ namespace ERPaperless.Services
             return null;
         }
 
-        public static tblERPatient GetByCode(long erPatientCode, int companyCode)
+        public static tblERPatient GetByCode(long erPatientCode, int companyCode, bool includeDischarged = false)
         {
             if (erPatientCode <= 0 || companyCode <= 0) return null;
 
@@ -75,11 +77,13 @@ namespace ERPaperless.Services
             {
                 using (var db = dbAMCEntities.Create())
                 {
-                    return db.tblERPatients.FirstOrDefault(p =>
+                    var query = db.tblERPatients.Where(p =>
                         p.intERPatientCode == erPatientCode &&
                         p.intCompanyCode == companyCode &&
-                        p.bolIsDischarge != true &&
-                        p.intRecordStatusCode == 1);
+                        (p.intRecordStatusCode == 1 || p.intRecordStatusCode == 2));
+                    if (!includeDischarged)
+                        query = query.Where(p => p.bolIsDischarge != true);
+                    return query.FirstOrDefault();
                 }
             }
             catch (Exception ex)
@@ -102,7 +106,7 @@ namespace ERPaperless.Services
                                     p.intBranchCode == branchCode &&
                                     p.intCompanyCode == companyCode &&
                                     p.bolIsDischarge != true &&
-                                    p.intRecordStatusCode == 1)
+                                    (p.intRecordStatusCode == 1 || p.intRecordStatusCode == 2))
                         .OrderByDescending(p => p.dtmAdmission)
                         .FirstOrDefault();
                 }
@@ -139,14 +143,24 @@ namespace ERPaperless.Services
                                     p.intCompanyCode == companyCode &&
                                     p.intERAdmissionCode == null &&
                                     p.bolIsDischarge != true &&
-                                    p.intRecordStatusCode == 1)
+                                    (p.intRecordStatusCode == 1 || p.intRecordStatusCode == 2))
                         .OrderByDescending(p => p.dtmAdmission)
                         .FirstOrDefault();
 
-                    var displayName = BuildDisplayName(patientName, bedCode, branchCode);
+                    var bedName = BedRepository.GetWardBedName(bedCode, branchCode, companyCode)
+                                  ?? (bedCode > 0 ? ("BED-" + bedCode) : "Pending");
+                    var displayName = !string.IsNullOrWhiteSpace(patientName)
+                        ? patientName.Trim()
+                        : bedName;
+
                     if (existing != null)
                     {
-                        existing.strName = displayName;
+                        // Only overwrite name when caller supplied one, or existing is empty / old BED# placeholder.
+                        if (!string.IsNullOrWhiteSpace(patientName)
+                            || IsPlaceholderPendingName(existing.strName, bedCode))
+                        {
+                            existing.strName = displayName;
+                        }
                         existing.dtmLastM = DateTime.Now;
                         existing.intAlteredByCode = userCode;
                         db.SaveChanges();
@@ -182,6 +196,19 @@ namespace ERPaperless.Services
             }
         }
 
+        private static bool IsPlaceholderPendingName(string name, int bedCode)
+        {
+            if (string.IsNullOrWhiteSpace(name) || name == "-")
+                return true;
+
+            var trimmed = name.Trim();
+            if (string.Equals(trimmed, "BED#" + bedCode, StringComparison.OrdinalIgnoreCase))
+                return true;
+            if (string.Equals(trimmed, "BED-" + bedCode, StringComparison.OrdinalIgnoreCase))
+                return true;
+            return false;
+        }
+
         public static tblERPatient GetOrCreateAdmissionPatient(
             int admissionCode,
             int companyCode,
@@ -196,10 +223,12 @@ namespace ERPaperless.Services
                 using (var db = dbAMCEntities.Create())
                 {
                     var existing = db.tblERPatients
-                        .FirstOrDefault(p => p.intERAdmissionCode == admissionCode &&
-                                             p.intCompanyCode == companyCode &&
-                                             p.bolIsDischarge != true &&
-                                             p.intRecordStatusCode == 1);
+                        .Where(p => p.intERAdmissionCode == admissionCode &&
+                                    p.intCompanyCode == companyCode &&
+                                    (p.intRecordStatusCode == 1 || p.intRecordStatusCode == 2))
+                        .OrderBy(p => p.bolIsDischarge == true)
+                        .ThenByDescending(p => p.intERPatientCode)
+                        .FirstOrDefault();
                     if (existing != null) return existing;
                 }
 
@@ -257,7 +286,7 @@ namespace ERPaperless.Services
                         p.intERPatientCode == erPatientCode &&
                         p.intCompanyCode == companyCode &&
                         p.bolIsDischarge != true &&
-                        p.intRecordStatusCode == 1);
+                        (p.intRecordStatusCode == 1 || p.intRecordStatusCode == 2));
 
                     if (patient == null) return false;
 
@@ -303,7 +332,7 @@ namespace ERPaperless.Services
                         p.intERPatientCode == erPatientCode &&
                         p.intCompanyCode == companyCode &&
                         p.bolIsDischarge != true &&
-                        p.intRecordStatusCode == 1);
+                        (p.intRecordStatusCode == 1 || p.intRecordStatusCode == 2));
 
                     if (patient == null)
                     {
@@ -340,8 +369,9 @@ namespace ERPaperless.Services
 
         private static string BuildDisplayName(string patientName, int bedCode, int branchCode)
         {
+            // Kept for callers; pending MR default is resolved in GetOrCreatePendingPatient via bed name.
             return string.IsNullOrWhiteSpace(patientName)
-                ? $"BED#{bedCode}"
+                ? (bedCode > 0 ? ("BED-" + bedCode) : "Pending")
                 : patientName.Trim();
         }
 
@@ -376,6 +406,87 @@ namespace ERPaperless.Services
                 case "Green": return "status-green";
                 case "Blue": return "status-blue";
                 default: return null;
+            }
+        }
+
+        /// <summary>
+        /// Billing cancel of a Pending MR patient: soft-delete tblERPatient (status 8)
+        /// and set the matching tblWardBed to Unoccupied (status 1).
+        /// </summary>
+        public static bool CancelPendingMr(int bedCode, int branchCode, int companyCode, int userCode)
+        {
+            LastError = null;
+
+            if (bedCode <= 0 || branchCode <= 0 || companyCode <= 0 || userCode <= 0)
+            {
+                LastError = "Invalid bed, branch, company, or user.";
+                return false;
+            }
+
+            try
+            {
+                using (var conn = DBHelper.GetConnection())
+                {
+                    conn.Open();
+                    using (var tx = conn.BeginTransaction())
+                    {
+                        int patientRows;
+                        using (var cmd = new SqlCommand(@"
+UPDATE tblERPatient
+SET intRecordStatusCode = 8,
+    dtmLastM = GETDATE(),
+    intAlteredByCode = @userCode
+WHERE intWardBedCode = @bedCode
+  AND intBranchCode = @branchCode
+  AND intCompanyCode = @companyCode
+  AND intRecordStatusCode IN (1, 2)
+  AND intERAdmissionCode IS NULL", conn, tx))
+                        {
+                            cmd.Parameters.Add("@userCode", SqlDbType.Int).Value = userCode;
+                            cmd.Parameters.Add("@bedCode", SqlDbType.Int).Value = bedCode;
+                            cmd.Parameters.Add("@branchCode", SqlDbType.Int).Value = branchCode;
+                            cmd.Parameters.Add("@companyCode", SqlDbType.Int).Value = companyCode;
+                            patientRows = cmd.ExecuteNonQuery();
+                        }
+
+                        if (patientRows <= 0)
+                        {
+                            tx.Rollback();
+                            LastError = "No active Pending MR patient found on this bed.";
+                            return false;
+                        }
+
+                        int bedRows;
+                        using (var cmd = new SqlCommand(@"
+UPDATE tblWardBed
+SET intWardBedStatusCode = 1
+WHERE intWardBedCode = @bedCode
+  AND intBranchCode = @branchCode
+  AND intCompanyCode = @companyCode", conn, tx))
+                        {
+                            cmd.Parameters.Add("@bedCode", SqlDbType.Int).Value = bedCode;
+                            cmd.Parameters.Add("@branchCode", SqlDbType.Int).Value = branchCode;
+                            cmd.Parameters.Add("@companyCode", SqlDbType.Int).Value = companyCode;
+                            bedRows = cmd.ExecuteNonQuery();
+                        }
+
+                        if (bedRows <= 0)
+                        {
+                            tx.Rollback();
+                            LastError = "Patient was found but the bed status could not be updated.";
+                            return false;
+                        }
+
+                        tx.Commit();
+                        return true;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                ErrorLogging.Log(nameof(ERPatientRepository), nameof(CancelPendingMr), ex);
+                LastError = ex.GetBaseException().Message;
+                return false;
             }
         }
     }

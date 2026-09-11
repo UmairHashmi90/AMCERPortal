@@ -1,0 +1,5 @@
+@model IEnumerable<ERPaperless.Models.LocationCardViewModel>
+@foreach (var bed in Model)
+{
+    @Html.Partial("_LocationCard", bed)
+}

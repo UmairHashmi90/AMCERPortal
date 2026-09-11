@@ -54,5 +54,8 @@ namespace ERPaperless.Models
 
         /// <summary>Selected Consciousness LOV key (tblERPatientVitals.intConciousness).</summary>
         public int? ConsciousnessCode { get; set; }
+
+        /// <summary>Selected SPO2 LOV key (ERLovType.SPo2 = 15). Text is stored in strSPo2.</summary>
+        public int? Spo2Code { get; set; }
     }
 }
